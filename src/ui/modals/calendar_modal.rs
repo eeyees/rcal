@@ -164,23 +164,50 @@ fn render_create_form(f: &mut Frame, app: &mut App, state: &CalendarModalState, 
 }
 
 fn render_calendar_list(f: &mut Frame, app: &mut App, area: Rect) {
+    let calendars = app.calendars.clone();
+    let lang = app.lang;
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(1), // Header
+            Constraint::Length(1), // Spacer
             Constraint::Min(6),    // List of calendars
+            Constraint::Length(1), // Spacer
             Constraint::Length(1), // Action Buttons
         ])
         .split(area);
 
-    let lang = app.lang;
-    let mut lines = Vec::new();
     let header_text = match lang {
         crate::i18n::Language::Ko => "등록된 캘린더 목록 (일정 등록 시 선택하여 분류 가능):",
         crate::i18n::Language::En => "Registered Calendars (Select when creating events):",
     };
-    lines.push(Line::from(Span::styled(header_text, Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD))));
+    f.render_widget(
+        Paragraph::new(Span::styled(header_text, Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD))),
+        chunks[0],
+    );
 
-    for (idx, cal) in app.calendars.iter().enumerate() {
+    for (idx, cal) in calendars.iter().enumerate() {
+        let row_y = chunks[2].y + idx as u16;
+        if row_y >= chunks[2].y + chunks[2].height {
+            break;
+        }
+
+        let row_rect = Rect {
+            x: chunks[2].x,
+            y: row_y,
+            width: chunks[2].width,
+            height: 1,
+        };
+
+        let row_parts = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Min(30),    // Left: Calendar info
+                Constraint::Length(12), // Right: [ 삭제 ] button
+            ])
+            .split(row_rect);
+
         let cal_color = cal.ratatui_color();
         let status_text = if cal.enabled {
             match lang {
@@ -194,44 +221,35 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, area: Rect) {
             }
         };
 
-        let del_label = match lang {
-            crate::i18n::Language::Ko => "[ 삭제 ]",
-            crate::i18n::Language::En => "[ Delete ]",
-        };
-
-        let line = Line::from(vec![
+        let info_line = Line::from(vec![
             Span::styled(" ● ", Style::default().fg(cal_color)),
             Span::styled(&cal.name, Style::default().fg(Theme::TEXT_NORMAL).add_modifier(Modifier::BOLD)),
             Span::styled(format!(" ({}) ", cal.provider.as_str()), Style::default().fg(Theme::TEXT_DIM)),
             Span::styled(status_text, Style::default().fg(if cal.enabled { Theme::SECONDARY } else { Theme::TEXT_DIM })),
-            Span::raw("  "),
-            if !cal.is_default {
-                Span::styled(del_label, Style::default().fg(Theme::DANGER).add_modifier(Modifier::BOLD))
-            } else {
-                Span::styled(match lang {
-                    crate::i18n::Language::Ko => "(기본)",
-                    crate::i18n::Language::En => "(Default)",
-                }, Style::default().fg(Theme::TEXT_DIM))
-            },
         ]);
-        lines.push(line);
+        f.render_widget(Paragraph::new(info_line), row_parts[0]);
 
-        // Register delete button if not default
         if !cal.is_default {
-            let row_y = chunks[0].y + 1 + idx as u16;
-            if row_y < chunks[0].y + chunks[0].height {
-                let del_rect = Rect {
-                    x: chunks[0].x + chunks[0].width.saturating_sub(14),
-                    y: row_y,
-                    width: 12,
-                    height: 1,
-                };
-                app.hit_map.register(del_rect, HitTarget::ModalCalDelete(cal.id.clone()));
-            }
+            let del_label = match lang {
+                crate::i18n::Language::Ko => "[ 삭제 ]",
+                crate::i18n::Language::En => "[ Delete ]",
+            };
+            let del_btn = Paragraph::new(Line::from(vec![Span::raw(del_label)]))
+                .style(Style::default().fg(Theme::DANGER).add_modifier(Modifier::BOLD))
+                .alignment(Alignment::Center);
+            f.render_widget(del_btn, row_parts[1]);
+            app.hit_map.register(row_parts[1], HitTarget::ModalCalDelete(cal.id.clone()));
+        } else {
+            let def_label = match lang {
+                crate::i18n::Language::Ko => "(기본)",
+                crate::i18n::Language::En => "(Default)",
+            };
+            let def_text = Paragraph::new(Line::from(vec![Span::raw(def_label)]))
+                .style(Style::default().fg(Theme::TEXT_DIM))
+                .alignment(Alignment::Center);
+            f.render_widget(def_text, row_parts[1]);
         }
     }
-
-    f.render_widget(Paragraph::new(lines), chunks[0]);
 
     // Bottom Action Buttons
     let btn_chunks = Layout::default()
@@ -241,7 +259,7 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Min(1),
             Constraint::Length(14), // [ 닫기 ]
         ])
-        .split(chunks[1]);
+        .split(chunks[4]);
 
     let add_label = match lang {
         crate::i18n::Language::Ko => " [ + 새 캘린더 생성 ] ",

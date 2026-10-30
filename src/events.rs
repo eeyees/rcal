@@ -127,6 +127,35 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Esc | KeyCode::Char('q') => acc_action_close = true,
                 KeyCode::Char('a') | KeyCode::Char('n') | KeyCode::Enter => state.is_adding = true,
                 KeyCode::Char('r') => acc_action_sync = true,
+                KeyCode::Char('d') | KeyCode::Char('D') => {
+                    let accounts = app.db.get_accounts().unwrap_or_default();
+                    if let Some(acc) = accounts.get(state.selected_account_idx) {
+                        let _ = app.db.delete_account(&acc.id);
+                        let _ = app.reload_calendars();
+                        let _ = app.reload_events();
+                        let msg = match app.lang {
+                            crate::i18n::Language::Ko => "계정이 삭제되었습니다.",
+                            crate::i18n::Language::En => "Account removed.",
+                        };
+                        app.set_status(msg);
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    let count = app.db.get_accounts().unwrap_or_default().len();
+                    if count > 0 {
+                        state.selected_account_idx = (state.selected_account_idx + 1) % count;
+                    }
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    let count = app.db.get_accounts().unwrap_or_default().len();
+                    if count > 0 {
+                        if state.selected_account_idx == 0 {
+                            state.selected_account_idx = count - 1;
+                        } else {
+                            state.selected_account_idx -= 1;
+                        }
+                    }
+                }
                 _ => {}
             }
         } else {

@@ -591,9 +591,14 @@ impl App {
                     self.db.delete_account(&id)?;
                     self.reload_calendars()?;
                     self.reload_events()?;
-                    self.set_status("Account removed");
+                    let msg = match self.lang {
+                        crate::i18n::Language::Ko => "계정이 삭제되었습니다.",
+                        crate::i18n::Language::En => "Account removed.",
+                    };
+                    self.set_status(msg);
                     if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
                         acc_state.is_adding = false;
+                        acc_state.selected_account_idx = 0;
                     }
                 }
 

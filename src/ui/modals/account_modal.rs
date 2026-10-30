@@ -209,33 +209,71 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     app.hit_map.register(btn_chunks[3], HitTarget::ModalCancel);
 }
 
-fn render_account_list(f: &mut Frame, app: &mut App, _state: &AccountModalState, area: Rect) {
+fn render_account_list(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rect) {
     let accounts = app.db.get_accounts().unwrap_or_default();
+    let lang = app.lang;
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(1), // Title line
+            Constraint::Length(1), // Spacer
             Constraint::Min(6),    // List of accounts
-            Constraint::Length(1), // Buttons
+            Constraint::Length(1), // Spacer
+            Constraint::Length(1), // Bottom Buttons
         ])
         .split(area);
 
-    let mut lines = Vec::new();
-    if accounts.is_empty() {
-        lines.push(Line::from(Span::styled(
-            "No cloud accounts linked yet. Click '+ Add Account' to link Google, Microsoft, Samsung, Naver, or Apple calendars!",
-            Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC),
-        )));
-    } else {
-        lines.push(Line::from(Span::styled(
-            "Configured Sync Accounts:",
+    let title_text = match lang {
+        crate::i18n::Language::Ko => " 📋 연동된 캘린더 계정 목록 (삭제하려면 [ 삭제 ] 버튼 클릭):",
+        crate::i18n::Language::En => " 📋 Configured Sync Accounts (Click [ Delete ] to remove):",
+    };
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            title_text,
             Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD),
-        )));
+        )),
+        chunks[0],
+    );
 
+    if accounts.is_empty() {
+        let empty_msg = match lang {
+            crate::i18n::Language::Ko => "  연동된 클라우드 계정이 없습니다. 아래의 '[ + 계정 추가 ]'를 클릭하여 Google, Microsoft, Samsung, Naver, Apple 캘린더를 연동하세요!",
+            crate::i18n::Language::En => "  No cloud accounts linked yet. Click '[ + Add Account ]' below to link Google, Microsoft, Samsung, Naver, or Apple calendars!",
+        };
+        let p = Paragraph::new(Span::styled(
+            empty_msg,
+            Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC),
+        ));
+        f.render_widget(p, chunks[2]);
+    } else {
         for (idx, acc) in accounts.iter().enumerate() {
+            let row_y = chunks[2].y + idx as u16;
+            if row_y >= chunks[2].y + chunks[2].height {
+                break;
+            }
+
+            let row_rect = Rect {
+                x: chunks[2].x,
+                y: row_y,
+                width: chunks[2].width,
+                height: 1,
+            };
+
+            let row_parts = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Min(30),    // Left: Account details
+                    Constraint::Length(12), // Right: [ 삭제 ] button
+                ])
+                .split(row_rect);
+
             let last_sync = acc.last_synced_at
                 .map(|t| t.format("%Y-%m-%d %H:%M").to_string())
-                .unwrap_or_else(|| "Never".to_string());
+                .unwrap_or_else(|| match lang {
+                    crate::i18n::Language::Ko => "동기화 이력 없음".to_string(),
+                    crate::i18n::Language::En => "Never".to_string(),
+                });
 
             let provider_color = match acc.provider {
                 crate::model::ProviderType::Google => Color::Rgb(66, 133, 244),
@@ -246,57 +284,71 @@ fn render_account_list(f: &mut Frame, app: &mut App, _state: &AccountModalState,
                 crate::model::ProviderType::Local => Color::Cyan,
             };
 
-            let line = Line::from(vec![
-                Span::styled(" • ", Style::default().fg(Theme::PRIMARY)),
+            let is_selected = idx == state.selected_account_idx;
+            let bullet = if is_selected { " ▶ " } else { " • " };
+
+            let info_line = Line::from(vec![
+                Span::styled(bullet, Style::default().fg(if is_selected { Theme::ACCENT } else { Theme::PRIMARY })),
                 Span::styled(&acc.name, Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD)),
                 Span::styled(format!(" [{}]", acc.provider.as_str()), Style::default().fg(provider_color)),
-                Span::styled(format!(" - User: {} | Last: {}", acc.username, last_sync), Style::default().fg(Theme::TEXT_MUTED)),
-                Span::raw("  "),
-                Span::styled("[ Delete ]", Style::default().fg(Theme::DANGER).add_modifier(Modifier::BOLD)),
+                Span::styled(format!(" (ID: {})", acc.username), Style::default().fg(Theme::TEXT_NORMAL)),
+                Span::styled(format!(" | {}", last_sync), Style::default().fg(Theme::TEXT_MUTED)),
             ]);
-            lines.push(line);
+            f.render_widget(Paragraph::new(info_line), row_parts[0]);
 
-            // Register delete button hit for this row
-            let row_y = chunks[0].y + 1 + idx as u16;
-            if row_y < chunks[0].y + chunks[0].height {
-                let del_rect = Rect {
-                    x: chunks[0].x + chunks[0].width.saturating_sub(14),
-                    y: row_y,
-                    width: 12,
-                    height: 1,
-                };
-                app.hit_map.register(del_rect, HitTarget::ModalAccountDelete(acc.id.clone()));
-            }
+            let del_label = match lang {
+                crate::i18n::Language::Ko => "[ 삭제 ]",
+                crate::i18n::Language::En => "[ Delete ]",
+            };
+            let del_btn = Paragraph::new(Line::from(vec![Span::raw(del_label)]))
+                .style(
+                    Style::default()
+                        .fg(Theme::DANGER)
+                        .add_modifier(Modifier::BOLD),
+                )
+                .alignment(Alignment::Center);
+            f.render_widget(del_btn, row_parts[1]);
+            app.hit_map.register(row_parts[1], HitTarget::ModalAccountDelete(acc.id.clone()));
         }
     }
-
-    f.render_widget(Paragraph::new(lines), chunks[0]);
 
     // Bottom Action Buttons
     let btn_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(22), // [ + Add Account ]
+            Constraint::Length(20), // [ + 계정 추가 ]
             Constraint::Length(2),
-            Constraint::Length(14), // [ ⟳ Sync Now ]
+            Constraint::Length(18), // [ ⟳ 동기화 실행 ]
             Constraint::Min(1),
-            Constraint::Length(12), // [ Close ]
+            Constraint::Length(14), // [ 닫기 (q) ]
         ])
-        .split(chunks[1]);
+        .split(chunks[4]);
 
-    let btn_add = Paragraph::new(Line::from(vec![Span::raw(" [ + Add Account ] ")]))
+    let add_label = match lang {
+        crate::i18n::Language::Ko => " [ + 계정 추가 ] ",
+        crate::i18n::Language::En => " [ + Add Account ] ",
+    };
+    let btn_add = Paragraph::new(Line::from(vec![Span::raw(add_label)]))
         .style(Style::default().fg(Color::Black).bg(Theme::PRIMARY).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center);
     f.render_widget(btn_add, btn_chunks[0]);
     app.hit_map.register(btn_chunks[0], HitTarget::ModalAccountAdd);
 
-    let btn_sync = Paragraph::new(Line::from(vec![Span::raw(" [ ⟳ Sync Now ] ")]))
+    let sync_label = match lang {
+        crate::i18n::Language::Ko => " [ ⟳ 동기화 실행 ] ",
+        crate::i18n::Language::En => " [ ⟳ Sync Now ] ",
+    };
+    let btn_sync = Paragraph::new(Line::from(vec![Span::raw(sync_label)]))
         .style(Style::default().fg(Color::Black).bg(Theme::SECONDARY).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center);
     f.render_widget(btn_sync, btn_chunks[2]);
     app.hit_map.register(btn_chunks[2], HitTarget::BtnSync);
 
-    let btn_close = Paragraph::new(Line::from(vec![Span::raw(" [ Close (q) ] ")]))
+    let close_label = match lang {
+        crate::i18n::Language::Ko => " [ 닫기 (q) ] ",
+        crate::i18n::Language::En => " [ Close (q) ] ",
+    };
+    let btn_close = Paragraph::new(Line::from(vec![Span::raw(close_label)]))
         .style(Theme::button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_close, btn_chunks[4]);

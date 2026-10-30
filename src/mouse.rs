@@ -65,6 +65,10 @@ impl HitMap {
         self.targets.clear();
     }
 
+    pub fn targets(&self) -> &[(Rect, HitTarget)] {
+        &self.targets
+    }
+
     pub fn register(&mut self, rect: Rect, target: HitTarget) {
         if rect.width > 0 && rect.height > 0 {
             self.targets.push((rect, target));
