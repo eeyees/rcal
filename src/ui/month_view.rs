@@ -41,7 +41,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .constraints([Constraint::Ratio(1, 7); 7])
         .split(vertical_chunks[0]);
 
-    let dows = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+    let dows = app.lang.weekday_headers();
     for (i, dow) in dows.iter().enumerate() {
         let style = if i == 0 || i == 6 {
             Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)
@@ -154,9 +154,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
             if events_for_day.len() > max_displayable {
                 let more_count = events_for_day.len() - max_displayable;
+                let more_label = match app.lang {
+                    crate::i18n::Language::Ko => format!(" +{}개 더보기", more_count),
+                    crate::i18n::Language::En => format!(" +{} more", more_count),
+                };
                 cell_lines.push(Line::from(vec![
                     Span::styled(
-                        format!(" +{} more", more_count),
+                        more_label,
                         Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC),
                     ),
                 ]));

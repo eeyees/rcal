@@ -80,15 +80,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             .split(col_rect);
 
         // Header for this day
-        let dow_str = match col {
-            0 => "SUN",
-            1 => "MON",
-            2 => "TUE",
-            3 => "WED",
-            4 => "THU",
-            5 => "FRI",
-            _ => "SAT",
-        };
+        let dow_str = app.lang.weekday_name_short(col as usize);
         let date_header_text = format!("{} {:02}/{:02}", dow_str, current_date.month(), current_date.day());
         let header_style = if is_today {
             Theme::today_style()

@@ -14,15 +14,17 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(26), // Title & Month display
-            Constraint::Length(23), // Navigation buttons (<, Today, >)
-            Constraint::Min(38),    // View tabs (Month, Week, Day, Agenda)
-            Constraint::Length(39), // Action buttons (+ New, ⟳ Sync, Accounts, ? Help)
+            Constraint::Length(25), // Title & Month display
+            Constraint::Length(22), // Navigation buttons (<, Today, >)
+            Constraint::Min(36),    // View tabs (Month, Week, Day, Agenda)
+            Constraint::Length(48), // Action buttons (+ New, ⟳ Sync, Accounts, L:Lang, ? Help)
         ])
         .split(area);
 
+    let lang = app.lang;
+
     // 1. Title & Month Year display
-    let month_year_str = format!(" {} ", app.selected_date.format("%B %Y"));
+    let month_year_str = format!(" {} ", lang.format_month_year(app.selected_date));
     let title_line = Line::from(vec![
         Span::styled(
             " rcal ",
@@ -47,7 +49,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .constraints([
             Constraint::Length(5), // [ < ]
             Constraint::Length(1),
-            Constraint::Length(9), // [ Today ]
+            Constraint::Length(8), // [ 오늘 / Today ]
             Constraint::Length(1),
             Constraint::Length(5), // [ > ]
             Constraint::Min(1),
@@ -60,7 +62,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_prev, nav_chunks[0]);
     app.hit_map.register(nav_chunks[0], HitTarget::NavPrev);
 
-    let btn_today = Paragraph::new(Line::from(vec![Span::raw(" Today ")]))
+    let btn_today = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_today()))]))
         .style(Theme::button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_today, nav_chunks[2]);
@@ -76,22 +78,22 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let tab_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(11), // Month
+            Constraint::Length(9), // Month / 월간
             Constraint::Length(1),
-            Constraint::Length(10), // Week
+            Constraint::Length(9), // Week / 주간
             Constraint::Length(1),
-            Constraint::Length(9),  // Day
+            Constraint::Length(9), // Day / 일간
             Constraint::Length(1),
-            Constraint::Length(12), // Agenda
+            Constraint::Length(9), // Agenda / 목록
             Constraint::Min(1),
         ])
         .split(chunks[2]);
 
     let views = [
-        (ViewMode::Month, " 1:Month ", tab_chunks[0], HitTarget::TabMonth),
-        (ViewMode::Week, " 2:Week ", tab_chunks[2], HitTarget::TabWeek),
-        (ViewMode::Day, " 3:Day ", tab_chunks[4], HitTarget::TabDay),
-        (ViewMode::Agenda, " 4:Agenda ", tab_chunks[6], HitTarget::TabAgenda),
+        (ViewMode::Month, format!(" {} ", lang.view_month()), tab_chunks[0], HitTarget::TabMonth),
+        (ViewMode::Week, format!(" {} ", lang.view_week()), tab_chunks[2], HitTarget::TabWeek),
+        (ViewMode::Day, format!(" {} ", lang.view_day()), tab_chunks[4], HitTarget::TabDay),
+        (ViewMode::Agenda, format!(" {} ", lang.view_agenda()), tab_chunks[6], HitTarget::TabAgenda),
     ];
 
     for (mode, label, rect, hit) in views {
@@ -107,22 +109,24 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         app.hit_map.register(rect, hit);
     }
 
-    // 4. Action buttons: [+ New Event], [⟳ Sync], [Accounts], [? Help]
+    // 4. Action buttons: [+ New Event], [⟳ Sync], [Accounts], [L: Language], [? Help]
     let action_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(8),  // [+ New]
+            Constraint::Length(10), // [+ 새 일정]
             Constraint::Length(1),
-            Constraint::Length(9),  // [⟳ Sync]
+            Constraint::Length(10), // [⟳ 동기화]
             Constraint::Length(1),
-            Constraint::Length(11), // [Accounts]
+            Constraint::Length(10), // [계정연동]
             Constraint::Length(1),
-            Constraint::Length(8),  // [? Help]
+            Constraint::Length(9),  // [L: 한/EN]
+            Constraint::Length(1),
+            Constraint::Length(9),  // [? 도움말]
             Constraint::Min(0),
         ])
         .split(chunks[3]);
 
-    let btn_new = Paragraph::new(Line::from(vec![Span::raw(" + New ")]))
+    let btn_new = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_new_event()))]))
         .style(
             Style::default()
                 .fg(Color::Black)
@@ -133,9 +137,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_new, action_chunks[0]);
     app.hit_map.register(action_chunks[0], HitTarget::BtnNewEvent);
 
-    let sync_label = if app.is_syncing { " ⟳ ... " } else { " ⟳ Sync " };
+    let sync_label = if app.is_syncing {
+        lang.btn_syncing()
+    } else {
+        lang.btn_sync()
+    };
     let sync_bg = if app.is_syncing { Theme::ACCENT } else { Color::Rgb(45, 90, 160) };
-    let btn_sync = Paragraph::new(Line::from(vec![Span::raw(sync_label)]))
+    let btn_sync = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", sync_label))]))
         .style(
             Style::default()
                 .fg(Color::White)
@@ -146,15 +154,26 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_sync, action_chunks[2]);
     app.hit_map.register(action_chunks[2], HitTarget::BtnSync);
 
-    let btn_acc = Paragraph::new(Line::from(vec![Span::raw(" Accounts ")]))
+    let btn_acc = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_accounts()))]))
         .style(Theme::button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_acc, action_chunks[4]);
     app.hit_map.register(action_chunks[4], HitTarget::BtnAccounts);
 
-    let btn_help = Paragraph::new(Line::from(vec![Span::raw(" ? Help ")]))
+    // Language toggle button: [ L: 한/EN ]
+    let lang_btn_text = match lang {
+        crate::i18n::Language::Ko => " L: 한 ",
+        crate::i18n::Language::En => " L: EN ",
+    };
+    let btn_lang = Paragraph::new(Line::from(vec![Span::raw(lang_btn_text)]))
         .style(Theme::button_style())
         .alignment(Alignment::Center);
-    f.render_widget(btn_help, action_chunks[6]);
-    app.hit_map.register(action_chunks[6], HitTarget::BtnHelp);
+    f.render_widget(btn_lang, action_chunks[6]);
+    app.hit_map.register(action_chunks[6], HitTarget::BtnLanguage);
+
+    let btn_help = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_help()))]))
+        .style(Theme::button_style())
+        .alignment(Alignment::Center);
+    f.render_widget(btn_help, action_chunks[8]);
+    app.hit_map.register(action_chunks[8], HitTarget::BtnHelp);
 }

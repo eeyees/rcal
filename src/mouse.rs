@@ -15,6 +15,7 @@ pub enum HitTarget {
     BtnHelp,
     BtnSync,
     BtnAccounts,
+    BtnLanguage,
 
     // Sidebar
     CalendarToggle(String /* calendar_id */),

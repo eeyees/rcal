@@ -14,7 +14,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Theme::BORDER))
-        .title(" My Calendars ");
+        .title(app.lang.sidebar_calendars());
     let inner = block.inner(area);
     f.render_widget(block, area);
 
@@ -59,19 +59,18 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     f.render_widget(Paragraph::new(cal_lines), chunks[0]);
 
-    // 2. Quick Tips in sidebar
-    let tips = vec![
-        Line::from(Span::styled("Quick Navigation:", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(" • Click tabs to switch", Style::default().fg(Theme::TEXT_MUTED))),
-        Line::from(Span::styled(" • Click date / slot to add", Style::default().fg(Theme::TEXT_MUTED))),
-        Line::from(Span::styled(" • Click event to view/edit", Style::default().fg(Theme::TEXT_MUTED))),
-        Line::from(Span::styled(" • [x] Click cal to toggle", Style::default().fg(Theme::TEXT_MUTED))),
-        Line::from(""),
-        Line::from(Span::styled("Keys:", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(" • h/j/k/l : Navigate", Style::default().fg(Theme::TEXT_MUTED))),
-        Line::from(Span::styled(" • c or n  : New event", Style::default().fg(Theme::TEXT_MUTED))),
-        Line::from(Span::styled(" • t       : Jump to today", Style::default().fg(Theme::TEXT_MUTED))),
-        Line::from(Span::styled(" • q / Esc : Quit / Close", Style::default().fg(Theme::TEXT_MUTED))),
-    ];
+    // 2. Localized Quick Tips in sidebar
+    let mut tips = Vec::new();
+    tips.push(Line::from(Span::styled(app.lang.sidebar_quick_nav(), Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD))));
+    for t in app.lang.sidebar_tips() {
+        tips.push(Line::from(Span::styled(t, Style::default().fg(Theme::TEXT_MUTED))));
+    }
+
+    tips.push(Line::from(""));
+    tips.push(Line::from(Span::styled(app.lang.sidebar_keys(), Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD))));
+    for k in app.lang.sidebar_key_tips() {
+        tips.push(Line::from(Span::styled(k, Style::default().fg(Theme::TEXT_MUTED))));
+    }
+
     f.render_widget(Paragraph::new(tips), chunks[2]);
 }

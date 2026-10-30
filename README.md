@@ -9,6 +9,11 @@
 ## ✨ Features (Step 1 MVP Completed)
 
 - ⚡ **Zero-lag Startup**: Instant offline-first load using an embedded SQLite database (`rusqlite` WAL mode).
+- 🌐 **Full Multi-Language (i18n) Support**:
+  - Auto-detection from system locale (`LANG` / `LC_ALL` / `LC_MESSAGES`).
+  - Seamless toggle between **한국어 (Korean)** and **English** at runtime via `L` key or mouse click on `[ L: 한/EN ]`.
+  - Localized date/time formats (`2026년 10월 30일 금요일`, `일, 월, 화, 수, 목, 금, 토`).
+  - All views, modals, forms, buttons, and status messages fully localized.
 - 🖱️ **Full Mouse Interactivity**:
   - Click view tabs to switch views (`[ 1:Month ]`, `[ 2:Week ]`, `[ 3:Day ]`, `[ 4:Agenda ]`).
   - Click `[ < ]`, `[ Today ]`, `[ > ]` to navigate through time.

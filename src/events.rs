@@ -277,6 +277,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('c') | KeyCode::Char('n') => app.open_new_event_modal(None),
         KeyCode::Char('r') => app.trigger_sync(),
         KeyCode::Char('A') | KeyCode::Char('S') => app.open_accounts_modal(),
+        KeyCode::Char('L') => app.toggle_language(),
         KeyCode::Char('?') => app.open_help_modal(),
 
         // Inspect/Select

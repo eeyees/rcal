@@ -11,8 +11,7 @@ use crate::mouse::HitTarget;
 use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
-    // Center popup dialog
-    let popup_width = 64.min(area.width.saturating_sub(4));
+    let popup_width = 66.min(area.width.saturating_sub(4));
     let popup_height = 20.min(area.height.saturating_sub(4));
 
     let popup_rect = Rect {
@@ -24,7 +23,12 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     f.render_widget(Clear, popup_rect);
 
-    let title_text = if form.is_new { " New Event " } else { " Edit Event " };
+    let lang = app.lang;
+    let title_text = if form.is_new {
+        lang.modal_new_event()
+    } else {
+        lang.modal_edit_event()
+    };
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Theme::PRIMARY))
@@ -53,9 +57,9 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     // 0: Title
     let title_line = Line::from(vec![
-        Span::styled(" Title:       ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(lang.field_title(), Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
-            if form.title.is_empty() { "(Type event title...)" } else { &form.title },
+            if form.title.is_empty() { lang.placeholder_title() } else { &form.title },
             if form.active_field == 0 { active_style } else { normal_style },
         ),
     ]);
@@ -67,10 +71,14 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
         .find(|c| c.id == form.calendar_id)
         .map(|c| c.name.as_str())
         .unwrap_or("Default");
+    let cal_hint = match lang {
+        crate::i18n::Language::Ko => "(스페이스바로 변경)",
+        crate::i18n::Language::En => "(Space to cycle)",
+    };
     let cal_line = Line::from(vec![
-        Span::styled(" Calendar:    ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(lang.field_calendar(), Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
-            format!("[ {} ] (Space to cycle)", cal_name),
+            format!("[ {} ] {}", cal_name, cal_hint),
             if form.active_field == 1 { active_style } else { normal_style },
         ),
     ]);
@@ -79,7 +87,7 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     // 2: Date
     let date_line = Line::from(vec![
-        Span::styled(" Date:        ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(lang.field_date(), Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
             &form.date_str,
             if form.active_field == 2 { active_style } else { normal_style },
@@ -90,7 +98,7 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     // 3: Start Time
     let start_line = Line::from(vec![
-        Span::styled(" Start Time:  ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(lang.field_start_time(), Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
             &form.start_time_str,
             if form.active_field == 3 { active_style } else { normal_style },
@@ -101,7 +109,7 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     // 4: End Time
     let end_line = Line::from(vec![
-        Span::styled(" End Time:    ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(lang.field_end_time(), Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
             &form.end_time_str,
             if form.active_field == 4 { active_style } else { normal_style },
@@ -111,9 +119,19 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
     app.hit_map.register(chunks[4], HitTarget::ModalField(4));
 
     // 5: All Day
-    let all_day_str = if form.all_day { "[x] Yes" } else { "[ ] No" };
+    let all_day_str = if form.all_day {
+        match lang {
+            crate::i18n::Language::Ko => "[x] 예",
+            crate::i18n::Language::En => "[x] Yes",
+        }
+    } else {
+        match lang {
+            crate::i18n::Language::Ko => "[ ] 아니오",
+            crate::i18n::Language::En => "[ ] No",
+        }
+    };
     let all_day_line = Line::from(vec![
-        Span::styled(" All Day:     ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(lang.field_all_day(), Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
             all_day_str,
             if form.active_field == 5 { active_style } else { normal_style },
@@ -124,9 +142,9 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     // 6: Location
     let loc_line = Line::from(vec![
-        Span::styled(" Location:    ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(lang.field_location(), Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
-            if form.location.is_empty() { "(Optional)" } else { &form.location },
+            if form.location.is_empty() { lang.placeholder_location() } else { &form.location },
             if form.active_field == 6 { active_style } else { normal_style },
         ),
     ]);
@@ -135,9 +153,9 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     // 7: Description
     let desc_line = Line::from(vec![
-        Span::styled(" Description: ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(lang.field_description(), Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
-            if form.description.is_empty() { "(Optional notes)" } else { &form.description },
+            if form.description.is_empty() { lang.placeholder_description() } else { &form.description },
             if form.active_field == 7 { active_style } else { normal_style },
         ),
     ]);
@@ -149,14 +167,14 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
         .direction(Direction::Horizontal)
         .constraints([
             Constraint::Min(1),
-            Constraint::Length(12), // [ Save ]
+            Constraint::Length(14), // [ Save ]
             Constraint::Length(3),
-            Constraint::Length(12), // [ Cancel ]
+            Constraint::Length(14), // [ Cancel ]
             Constraint::Min(1),
         ])
         .split(chunks[9]);
 
-    let btn_save = Paragraph::new(Line::from(vec![Span::raw(" [ Save ] ")]))
+    let btn_save = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_save()))]))
         .style(
             Style::default()
                 .fg(Color::Black)
@@ -167,7 +185,7 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
     f.render_widget(btn_save, btn_chunks[1]);
     app.hit_map.register(btn_chunks[1], HitTarget::ModalSave);
 
-    let btn_cancel = Paragraph::new(Line::from(vec![Span::raw(" [ Cancel ] ")]))
+    let btn_cancel = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_cancel()))]))
         .style(Theme::button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_cancel, btn_chunks[3]);

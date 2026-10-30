@@ -25,7 +25,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .split(area);
 
     // 1. Header Banner
-    let day_name = selected_date.format("%A, %B %d, %Y").to_string();
+    let day_name = app.lang.format_date_long(selected_date);
+    let hint_text = match app.lang {
+        crate::i18n::Language::Ko => "(시간 슬롯을 클릭하여 일정을 추가하세요)",
+        crate::i18n::Language::En => "(Click any time slot to add an event)",
+    };
     let header_line = Line::from(vec![
         Span::styled(
             format!(" {} ", day_name),
@@ -37,7 +41,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         ),
         Span::raw("  "),
         Span::styled(
-            "(Click any time slot to add an event)",
+            hint_text,
             Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC),
         ),
     ]);

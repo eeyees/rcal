@@ -2,6 +2,7 @@ use std::time::{Duration, Instant};
 use anyhow::Result;
 use chrono::{Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime, TimeZone};
 
+use crate::i18n::Language;
 use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus};
 use crate::mouse::{HitMap, HitTarget};
 use crate::storage::Database;
@@ -150,6 +151,7 @@ pub struct App {
     pub modal: ActiveModal,
     pub hit_map: HitMap,
     pub status_message: Option<(String, Instant)>,
+    pub lang: Language,
 
     // Synchronization state
     pub is_syncing: bool,
@@ -160,6 +162,7 @@ pub struct App {
 impl App {
     pub fn new(db: Database) -> Result<Self> {
         let today = Local::now().date_naive();
+        let lang = Language::detect();
         let mut app = Self {
             running: true,
             current_view: ViewMode::Month,
@@ -171,7 +174,8 @@ impl App {
             events_cache: Vec::new(),
             modal: ActiveModal::None,
             hit_map: HitMap::new(),
-            status_message: Some(("Welcome to rcal! Press ? or click [ Help ] for shortcuts.".to_string(), Instant::now())),
+            status_message: Some((lang.msg_welcome().to_string(), Instant::now())),
+            lang,
             is_syncing: false,
             last_sync_status: None,
             sync_tx: None,
@@ -203,6 +207,11 @@ impl App {
                     .map(|c| c.id.clone())
                     .unwrap_or_else(|| "cal_personal".to_string())
             })
+    }
+
+    pub fn toggle_language(&mut self) {
+        self.lang = self.lang.toggle();
+        self.set_status(self.lang.msg_lang_changed());
     }
 
     pub fn set_status(&mut self, msg: impl Into<String>) {
@@ -275,7 +284,8 @@ impl App {
 
     pub fn nav_today(&mut self) {
         self.selected_date = Local::now().date_naive();
-        self.set_status(format!("Jumped to today ({})", self.selected_date.format("%b %d, %Y")));
+        let formatted = self.lang.format_month_year(self.selected_date);
+        self.set_status(self.lang.msg_jump_today(&formatted));
     }
 
     // Modal triggers
@@ -373,7 +383,7 @@ impl App {
         self.db.save_event(&event)?;
         self.reload_events()?;
         self.close_modal();
-        self.set_status("Event saved successfully");
+        self.set_status(self.lang.msg_saved());
         Ok(())
     }
 
@@ -381,7 +391,7 @@ impl App {
         self.db.delete_event(event_id)?;
         self.reload_events()?;
         self.close_modal();
-        self.set_status("Event deleted");
+        self.set_status(self.lang.msg_deleted());
         Ok(())
     }
 
@@ -408,6 +418,7 @@ impl App {
                 HitTarget::BtnHelp => self.open_help_modal(),
                 HitTarget::BtnSync => self.trigger_sync(),
                 HitTarget::BtnAccounts => self.open_accounts_modal(),
+                HitTarget::BtnLanguage => self.toggle_language(),
 
                 HitTarget::ModalAccountPreset(idx) => {
                     if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
