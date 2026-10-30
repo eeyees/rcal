@@ -16,8 +16,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .constraints([
             Constraint::Length(24), // Title & Month display
             Constraint::Length(20), // Navigation buttons (<, Today, >)
-            Constraint::Min(32),    // View tabs (Month, Week, Day, Agenda)
-            Constraint::Length(57), // Action buttons (+ New, ⟳ Sync, Accounts, L:Lang, ? Help)
+            Constraint::Min(28),    // View tabs (Month, Week, Day, Agenda)
+            Constraint::Length(68), // Action buttons (+ New, ⟳ Sync, Accounts, Settings, L:Lang, ? Help)
         ])
         .split(area);
 
@@ -109,7 +109,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         app.hit_map.register(rect, hit);
     }
 
-    // 4. Action buttons: [+ New Event], [⟳ Sync], [Accounts], [L: Language], [? Help]
+    // 4. Action buttons: [+ New Event], [⟳ Sync], [Accounts], [⚙ Settings], [L: Language], [? Help]
     let action_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -117,9 +117,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(1),
             Constraint::Length(12), // [⟳ 동기화] / [⟳ 동기화중]
             Constraint::Length(1),
-            Constraint::Length(11), // [계정연동]
+            Constraint::Length(10), // [계정연동]
             Constraint::Length(1),
-            Constraint::Length(9),  // [L: 한/EN]
+            Constraint::Length(10), // [⚙ 설정]
+            Constraint::Length(1),
+            Constraint::Length(8),  // [L: 한/EN]
             Constraint::Length(1),
             Constraint::Length(9),  // [? 도움말]
             Constraint::Min(0),
@@ -160,6 +162,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_acc, action_chunks[4]);
     app.hit_map.register(action_chunks[4], HitTarget::BtnAccounts);
 
+    // Settings button: [ ⚙ 설정 ]
+    let btn_settings = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_settings()))]))
+        .style(Theme::button_style())
+        .alignment(Alignment::Center);
+    f.render_widget(btn_settings, action_chunks[6]);
+    app.hit_map.register(action_chunks[6], HitTarget::BtnSettings);
+
     // Language toggle button: [ L: 한/EN ]
     let lang_btn_text = match lang {
         crate::i18n::Language::Ko => " L: 한 ",
@@ -168,12 +177,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let btn_lang = Paragraph::new(Line::from(vec![Span::raw(lang_btn_text)]))
         .style(Theme::button_style())
         .alignment(Alignment::Center);
-    f.render_widget(btn_lang, action_chunks[6]);
-    app.hit_map.register(action_chunks[6], HitTarget::BtnLanguage);
+    f.render_widget(btn_lang, action_chunks[8]);
+    app.hit_map.register(action_chunks[8], HitTarget::BtnLanguage);
 
     let btn_help = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_help()))]))
         .style(Theme::button_style())
         .alignment(Alignment::Center);
-    f.render_widget(btn_help, action_chunks[8]);
-    app.hit_map.register(action_chunks[8], HitTarget::BtnHelp);
+    f.render_widget(btn_help, action_chunks[10]);
+    app.hit_map.register(action_chunks[10], HitTarget::BtnHelp);
 }

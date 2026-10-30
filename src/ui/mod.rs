@@ -86,6 +86,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
             let state_clone = state.clone();
             modals::calendar_modal::render(f, app, &state_clone, size);
         }
+        ActiveModal::Settings => {
+            modals::settings_modal::render(f, app, size);
+        }
         ActiveModal::ConfirmDelete(_) => {
             // Can be extended or handled via EventDetail
         }

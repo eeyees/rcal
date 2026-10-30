@@ -18,14 +18,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     let first_day = NaiveDate::from_ymd_opt(selected_year, selected_month, 1).unwrap();
 
-    // Day of week for 1st day (0 = Sun, 1 = Mon, ..., 6 = Sat)
-    let start_offset = first_day.weekday().num_days_from_sunday();
+    // Day of week offset for 1st day based on week start setting
+    let start_offset = app.week_start_day.days_offset(first_day);
 
     // 6 rows of weeks
     let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Days of week header (SUN MON TUE WED THU FRI SAT)
+            Constraint::Length(1), // Days of week header
             Constraint::Ratio(1, 6),
             Constraint::Ratio(1, 6),
             Constraint::Ratio(1, 6),
@@ -35,15 +35,21 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         ])
         .split(area);
 
+    // Determine calendar date for grid index (0..42)
+    let grid_start_date = first_day - Duration::days(start_offset as i64);
+
     // 1. Render Weekday Header
     let dow_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Ratio(1, 7); 7])
         .split(vertical_chunks[0]);
 
-    let dows = app.lang.weekday_headers();
+    let dows = app.week_start_day.weekday_headers(app.lang);
     for (i, dow) in dows.iter().enumerate() {
-        let style = if i == 0 || i == 6 {
+        let col_date = grid_start_date + Duration::days(i as i64);
+        let weekday = col_date.weekday();
+        let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
+        let style = if is_weekend {
             Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::BOLD)
@@ -53,10 +59,6 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             .alignment(Alignment::Center);
         f.render_widget(p, dow_chunks[i]);
     }
-
-    // Determine calendar date for grid index (0..42)
-    // Starting Sunday before 1st of month
-    let grid_start_date = first_day - Duration::days(start_offset as i64);
 
     for row in 0..6 {
         let week_area = vertical_chunks[row + 1];

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local, NaiveDate};
+use chrono::{DateTime, Datelike, Local, NaiveDate};
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +47,79 @@ pub struct Calendar {
     pub is_default: bool,
     pub remote_url: Option<String>,
     pub ctag: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WeekStartDay {
+    Sunday,
+    Monday,
+    Saturday,
+}
+
+impl WeekStartDay {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            WeekStartDay::Sunday => "sunday",
+            WeekStartDay::Monday => "monday",
+            WeekStartDay::Saturday => "saturday",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "monday" | "mon" => WeekStartDay::Monday,
+            "saturday" | "sat" => WeekStartDay::Saturday,
+            _ => WeekStartDay::Sunday,
+        }
+    }
+
+    pub fn days_offset(&self, date: NaiveDate) -> u32 {
+        let dow = date.weekday();
+        match self {
+            WeekStartDay::Sunday => dow.num_days_from_sunday(),
+            WeekStartDay::Monday => dow.num_days_from_monday(),
+            WeekStartDay::Saturday => (dow.num_days_from_sunday() + 1) % 7,
+        }
+    }
+
+    pub fn week_start_date(&self, date: NaiveDate) -> NaiveDate {
+        let offset = self.days_offset(date);
+        date - chrono::Duration::days(offset as i64)
+    }
+
+    pub fn weekday_headers(&self, lang: crate::i18n::Language) -> Vec<&'static str> {
+        match self {
+            WeekStartDay::Sunday => match lang {
+                crate::i18n::Language::Ko => vec!["일", "월", "화", "수", "목", "금", "토"],
+                crate::i18n::Language::En => vec!["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"],
+            },
+            WeekStartDay::Monday => match lang {
+                crate::i18n::Language::Ko => vec!["월", "화", "수", "목", "금", "토", "일"],
+                crate::i18n::Language::En => vec!["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+            },
+            WeekStartDay::Saturday => match lang {
+                crate::i18n::Language::Ko => vec!["토", "일", "월", "화", "수", "목", "금"],
+                crate::i18n::Language::En => vec!["SAT", "SUN", "MON", "TUE", "WED", "THU", "FRI"],
+            },
+        }
+    }
+
+    pub fn label(&self, lang: crate::i18n::Language) -> &'static str {
+        match self {
+            WeekStartDay::Sunday => match lang {
+                crate::i18n::Language::Ko => "일요일 시작 (Sunday)",
+                crate::i18n::Language::En => "Sunday start",
+            },
+            WeekStartDay::Monday => match lang {
+                crate::i18n::Language::Ko => "월요일 시작 (Monday)",
+                crate::i18n::Language::En => "Monday start",
+            },
+            WeekStartDay::Saturday => match lang {
+                crate::i18n::Language::Ko => "토요일 시작 (Saturday)",
+                crate::i18n::Language::En => "Saturday start",
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

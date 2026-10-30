@@ -11,8 +11,8 @@ use crate::mouse::HitTarget;
 use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
-    let popup_width = 70.min(area.width.saturating_sub(4));
-    let popup_height = 22.min(area.height.saturating_sub(4));
+    let popup_width = 72.min(area.width.saturating_sub(4));
+    let popup_height = 24.min(area.height.saturating_sub(4));
 
     let popup_rect = Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
@@ -39,7 +39,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(16),
+            Constraint::Min(18),
             Constraint::Length(1), // [ Close ]
         ])
         .split(inner);
@@ -66,8 +66,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Line::from("  • [ / ]                 : 이전 / 다음 월/주/일 이동"),
             Line::from("  • t                     : 오늘 날짜로 이동"),
             Line::from("  • c 또는 n              : 새 일정 생성"),
-            Line::from("  • r                     : 클라우드 실시간 동기화 실행 (CalDAV)"),
-            Line::from("  • A                     : 계정 관리 및 CalDAV 연동 설정 열기"),
+            Line::from("  • r                     : 클라우드 실시간 동기화 실행 (CalDAV/OAuth2)"),
+            Line::from("  • A                     : 계정 관리 (Google / MS / Naver / Apple)"),
+            Line::from("  • C                     : 캘린더 카테고리 관리 및 추가/삭제"),
+            Line::from("  • o 또는 S              : 환경 설정 (주간 시작 요일 등)"),
             Line::from("  • L                     : 언어 즉시 전환 (한국어 ↔ English)"),
             Line::from("  • ?                     : 도움말 화면 표시"),
             Line::from("  • q / Esc               : 닫기 또는 프로그램 종료"),
@@ -93,8 +95,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Line::from("  • [ / ]                 : Previous / Next period"),
             Line::from("  • t                     : Jump to today"),
             Line::from("  • c / n                 : Create new event"),
-            Line::from("  • r                     : Trigger CalDAV sync"),
-            Line::from("  • A                     : Open Accounts management modal"),
+            Line::from("  • r                     : Trigger sync (CalDAV / Google / MS)"),
+            Line::from("  • A                     : Manage accounts & cloud providers"),
+            Line::from("  • C                     : Manage & Create calendars / categories"),
+            Line::from("  • o / S                 : Preferences (Week start day, etc.)"),
             Line::from("  • L                     : Toggle Language (Korean ↔ English)"),
             Line::from("  • ?                     : Toggle this help screen"),
             Line::from("  • q / Esc               : Close modal or quit"),

@@ -56,6 +56,11 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         conn.execute_batch(
             r#"
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS accounts (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -403,6 +408,27 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM events WHERE calendar_id = ?1", params![id])?;
         conn.execute("DELETE FROM calendars WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    // Settings
+    pub fn get_setting(&self, key: &str) -> Result<Option<String>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ?1")?;
+        let res = stmt.query_row(params![key], |r| r.get(0)).optional()?;
+        Ok(res)
+    }
+
+    pub fn set_setting(&self, key: &str, value: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            r#"
+            INSERT INTO settings (key, value)
+            VALUES (?1, ?2)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            "#,
+            params![key, value],
+        )?;
         Ok(())
     }
 

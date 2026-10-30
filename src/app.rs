@@ -3,7 +3,7 @@ use anyhow::Result;
 use chrono::{Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime, TimeZone};
 
 use crate::i18n::Language;
-use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus};
+use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus, WeekStartDay};
 use crate::mouse::{HitMap, HitTarget};
 use crate::storage::Database;
 
@@ -172,6 +172,7 @@ pub enum ActiveModal {
     EventDetail(String /* event_id */),
     Accounts(AccountModalState),
     CalendarManager(CalendarModalState),
+    Settings,
     Help,
     #[allow(dead_code)]
     ConfirmDelete(String /* event_id */),
@@ -192,6 +193,7 @@ pub struct App {
     pub hit_map: HitMap,
     pub status_message: Option<(String, Instant)>,
     pub lang: Language,
+    pub week_start_day: WeekStartDay,
 
     // Synchronization state
     pub is_syncing: bool,
@@ -203,6 +205,12 @@ impl App {
     pub fn new(db: Database) -> Result<Self> {
         let today = Local::now().date_naive();
         let lang = Language::detect();
+        let week_start_day = db.get_setting("week_start_day")
+            .ok()
+            .flatten()
+            .map(|s| WeekStartDay::from_str(&s))
+            .unwrap_or(WeekStartDay::Sunday);
+
         let mut app = Self {
             running: true,
             current_view: ViewMode::Month,
@@ -216,6 +224,7 @@ impl App {
             hit_map: HitMap::new(),
             status_message: Some((lang.msg_welcome().to_string(), Instant::now())),
             lang,
+            week_start_day,
             is_syncing: false,
             last_sync_status: None,
             sync_tx: None,
@@ -360,6 +369,21 @@ impl App {
         self.modal = ActiveModal::CalendarManager(CalendarModalState::new());
     }
 
+    pub fn open_settings_modal(&mut self) {
+        self.modal = ActiveModal::Settings;
+    }
+
+    pub fn set_week_start_day(&mut self, day: WeekStartDay) {
+        self.week_start_day = day;
+        let _ = self.db.set_setting("week_start_day", day.as_str());
+        let label = day.label(self.lang);
+        let msg = match self.lang {
+            Language::Ko => format!("주간 시작 요일이 '{}'로 설정되었습니다.", label),
+            Language::En => format!("Week start day set to '{}'.", label),
+        };
+        self.set_status(msg);
+    }
+
     pub fn trigger_sync(&mut self) {
         if self.is_syncing {
             return;
@@ -464,6 +488,11 @@ impl App {
                 HitTarget::BtnAccounts => self.open_accounts_modal(),
                 HitTarget::BtnLanguage => self.toggle_language(),
                 HitTarget::BtnManageCalendars => self.open_calendar_modal(),
+                HitTarget::BtnSettings => self.open_settings_modal(),
+
+                HitTarget::ModalSettingWeekStart(day) => {
+                    self.set_week_start_day(day);
+                }
 
                 HitTarget::ModalCalNameField => {}
                 HitTarget::ModalCalNew => {

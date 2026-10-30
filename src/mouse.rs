@@ -1,5 +1,6 @@
 use chrono::NaiveDate;
 use ratatui::layout::Rect;
+use crate::model::WeekStartDay;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HitTarget {
@@ -17,6 +18,7 @@ pub enum HitTarget {
     BtnAccounts,
     BtnLanguage,
     BtnManageCalendars,
+    BtnSettings,
 
     // Sidebar
     CalendarToggle(String /* calendar_id */),
@@ -44,6 +46,7 @@ pub enum HitTarget {
     ModalCalSave,
     ModalCalDelete(String),
     ModalCalNew,
+    ModalSettingWeekStart(WeekStartDay),
 }
 
 #[derive(Default, Debug, Clone)]

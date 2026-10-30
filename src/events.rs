@@ -256,6 +256,44 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             return Ok(());
         }
+        ActiveModal::Settings => {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
+                KeyCode::Char('1') | KeyCode::Char('s') => {
+                    app.set_week_start_day(crate::model::WeekStartDay::Sunday);
+                }
+                KeyCode::Char('2') | KeyCode::Char('m') | KeyCode::Char('M') => {
+                    app.set_week_start_day(crate::model::WeekStartDay::Monday);
+                }
+                KeyCode::Char('3') | KeyCode::Char('t') | KeyCode::Char('T') => {
+                    app.set_week_start_day(crate::model::WeekStartDay::Saturday);
+                }
+                KeyCode::Tab | KeyCode::Right | KeyCode::Down => {
+                    let next = match app.week_start_day {
+                        crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Monday,
+                        crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Saturday,
+                        crate::model::WeekStartDay::Saturday => crate::model::WeekStartDay::Sunday,
+                    };
+                    app.set_week_start_day(next);
+                }
+                KeyCode::BackTab | KeyCode::Left | KeyCode::Up => {
+                    let prev = match app.week_start_day {
+                        crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Saturday,
+                        crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Sunday,
+                        crate::model::WeekStartDay::Saturday => crate::model::WeekStartDay::Monday,
+                    };
+                    app.set_week_start_day(prev);
+                }
+                KeyCode::Char('l') | KeyCode::Char('L') => {
+                    app.toggle_language();
+                }
+                KeyCode::Enter => {
+                    app.close_modal();
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
         ActiveModal::ConfirmDelete(ref id) => {
             let id_clone = id.clone();
             if matches!(key.code, KeyCode::Char('y') | KeyCode::Enter) {
@@ -328,7 +366,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('c') | KeyCode::Char('n') => app.open_new_event_modal(None),
         KeyCode::Char('C') => app.open_calendar_modal(),
         KeyCode::Char('r') => app.trigger_sync(),
-        KeyCode::Char('A') | KeyCode::Char('S') => app.open_accounts_modal(),
+        KeyCode::Char('A') => app.open_accounts_modal(),
+        KeyCode::Char('o') | KeyCode::Char('O') | KeyCode::Char('S') => app.open_settings_modal(),
         KeyCode::Char('L') => app.toggle_language(),
         KeyCode::Char('?') => app.open_help_modal(),
 

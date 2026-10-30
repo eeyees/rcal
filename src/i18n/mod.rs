@@ -101,6 +101,13 @@ impl Language {
         }
     }
 
+    pub fn btn_settings(&self) -> &'static str {
+        match self {
+            Language::Ko => "⚙ 설정",
+            Language::En => "⚙ Setup",
+        }
+    }
+
     pub fn btn_help(&self) -> &'static str {
         match self {
             Language::Ko => "? 도움말",

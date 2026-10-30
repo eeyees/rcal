@@ -15,9 +15,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let today = Local::now().date_naive();
     let selected_date = app.selected_date;
 
-    // Determine week start (Sunday)
-    let offset_from_sun = selected_date.weekday().num_days_from_sunday();
-    let week_start = selected_date - Duration::days(offset_from_sun as i64);
+    // Determine week start based on week_start_day setting
+    let week_start = app.week_start_day.week_start_date(selected_date);
 
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -80,12 +79,16 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             .split(col_rect);
 
         // Header for this day
-        let dow_str = app.lang.weekday_name_short(col as usize);
+        let dows = app.week_start_day.weekday_headers(app.lang);
+        let dow_str = dows[col as usize];
         let date_header_text = format!("{} {:02}/{:02}", dow_str, current_date.month(), current_date.day());
+        let is_weekend = current_date.weekday() == chrono::Weekday::Sat || current_date.weekday() == chrono::Weekday::Sun;
         let header_style = if is_today {
             Theme::today_style()
         } else if is_selected {
             Theme::selected_day_style()
+        } else if is_weekend {
+            Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Theme::TEXT_NORMAL).add_modifier(Modifier::BOLD)
         };
