@@ -126,22 +126,29 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
                 KeyCode::Enter => {
-                    let provider = match state.provider_idx {
-                        0 => ProviderType::Naver,
-                        1 => ProviderType::Apple,
-                        _ => ProviderType::Local,
+                    let (provider, auth_type) = match state.provider_idx {
+                        0 => (ProviderType::Naver, crate::model::AuthType::Basic),
+                        1 => (ProviderType::Apple, crate::model::AuthType::Basic),
+                        2 => (ProviderType::Google, crate::model::AuthType::OAuth2),
+                        3 => (ProviderType::Microsoft, crate::model::AuthType::OAuth2),
+                        4 => (ProviderType::Samsung, crate::model::AuthType::Basic),
+                        _ => (ProviderType::Local, crate::model::AuthType::Basic),
                     };
-                    let new_acc = CalDavAccount::new(
+                    let mut new_acc = CalDavAccount::new(
                         state.name.clone(),
                         provider,
                         state.url.clone(),
                         state.username.clone(),
                         state.password.clone(),
                     );
+                    new_acc.auth_type = auth_type;
+                    if auth_type == crate::model::AuthType::OAuth2 {
+                        new_acc.access_token = Some(state.password.clone());
+                    }
                     acc_action_save = Some(new_acc);
                 }
                 KeyCode::Char(' ') if state.active_field == 0 => {
-                    let next_idx = (state.provider_idx + 1) % 3;
+                    let next_idx = (state.provider_idx + 1) % 6;
                     state.set_preset(next_idx);
                 }
                 KeyCode::Backspace => {

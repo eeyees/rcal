@@ -108,7 +108,7 @@ impl AccountModalState {
     }
 
     pub fn set_preset(&mut self, idx: usize) {
-        self.provider_idx = idx % 3;
+        self.provider_idx = idx % 6;
         match self.provider_idx {
             0 => {
                 self.name = "Naver Calendar".to_string();
@@ -117,6 +117,18 @@ impl AccountModalState {
             1 => {
                 self.name = "Apple iCloud".to_string();
                 self.url = "https://caldav.icloud.com/".to_string();
+            }
+            2 => {
+                self.name = "Google Calendar".to_string();
+                self.url = "https://www.googleapis.com/calendar/v3".to_string();
+            }
+            3 => {
+                self.name = "Microsoft 365".to_string();
+                self.url = "https://graph.microsoft.com/v1.0".to_string();
+            }
+            4 => {
+                self.name = "Samsung Calendar".to_string();
+                self.url = "https://caldav.samsung.com/".to_string();
             }
             _ => {
                 self.name = "CalDAV Server".to_string();
@@ -440,18 +452,26 @@ impl App {
 
                 HitTarget::ModalAccountConnect => {
                     if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
-                        let provider = match acc_state.provider_idx {
-                            0 => ProviderType::Naver,
-                            1 => ProviderType::Apple,
-                            _ => ProviderType::Local,
+                        let (provider, auth_type) = match acc_state.provider_idx {
+                            0 => (ProviderType::Naver, crate::model::AuthType::Basic),
+                            1 => (ProviderType::Apple, crate::model::AuthType::Basic),
+                            2 => (ProviderType::Google, crate::model::AuthType::OAuth2),
+                            3 => (ProviderType::Microsoft, crate::model::AuthType::OAuth2),
+                            4 => (ProviderType::Samsung, crate::model::AuthType::Basic),
+                            _ => (ProviderType::Local, crate::model::AuthType::Basic),
                         };
-                        let new_acc = CalDavAccount::new(
+                        let mut new_acc = CalDavAccount::new(
                             acc_state.name.clone(),
                             provider,
                             acc_state.url.clone(),
                             acc_state.username.clone(),
                             acc_state.password.clone(),
                         );
+                        new_acc.auth_type = auth_type;
+                        if auth_type == crate::model::AuthType::OAuth2 {
+                            new_acc.access_token = Some(acc_state.password.clone());
+                        }
+
                         self.db.save_account(&new_acc)?;
                         self.set_status(format!("Added account '{}'", new_acc.name));
                         self.trigger_sync();

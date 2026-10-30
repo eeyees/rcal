@@ -36,11 +36,19 @@ pub fn render(f: &mut Frame, app: &mut App) {
     header::render(f, app, chunks[0]);
 
     // 2. Main Workspace (Sidebar + View)
+    let sidebar_width = if size.width >= 120 {
+        34
+    } else if size.width >= 100 {
+        32
+    } else {
+        28
+    };
+
     let main_workspace = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(26), // Sidebar: Calendars + tips
-            Constraint::Min(50),    // Active View
+            Constraint::Length(sidebar_width), // Adaptive sidebar width to prevent any clipping
+            Constraint::Min(50),               // Active View
         ])
         .split(chunks[2]);
 

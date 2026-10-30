@@ -11,8 +11,8 @@ use crate::mouse::HitTarget;
 use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rect) {
-    let popup_width = 72.min(area.width.saturating_sub(4));
-    let popup_height = 20.min(area.height.saturating_sub(4));
+    let popup_width = 78.min(area.width.saturating_sub(4));
+    let popup_height = 22.min(area.height.saturating_sub(4));
 
     let popup_rect = Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
@@ -23,10 +23,17 @@ pub fn render(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rec
 
     f.render_widget(Clear, popup_rect);
 
+    let lang = app.lang;
     let title = if state.is_adding {
-        " Add CalDAV Account (Naver / Apple iCloud) "
+        match lang {
+            crate::i18n::Language::Ko => " 캘린더 계정 연동 (Google / MS 365 / Samsung / Naver / Apple) ",
+            crate::i18n::Language::En => " Add Calendar Account (Google / MS 365 / Samsung / Naver / Apple) ",
+        }
     } else {
-        " CalDAV Accounts & Cloud Sync "
+        match lang {
+            crate::i18n::Language::Ko => " 캘린더 계정 & 클라우드 실시간 동기화 ",
+            crate::i18n::Language::En => " Calendar Accounts & Multi-Cloud Sync ",
+        }
     };
 
     let block = Block::default()
@@ -47,34 +54,43 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(2), // Preset buttons
+            Constraint::Length(2), // Preset buttons row
             Constraint::Length(1), // Spacer
             Constraint::Length(1), // Name
-            Constraint::Length(1), // URL
-            Constraint::Length(1), // Username
-            Constraint::Length(1), // Password
-            Constraint::Min(2),    // Notes/help
-            Constraint::Length(1), // Buttons
+            Constraint::Length(1), // URL / Endpoint
+            Constraint::Length(1), // Username / ID
+            Constraint::Length(1), // Password / OAuth Token
+            Constraint::Min(2),    // Help notes
+            Constraint::Length(1), // Action Buttons
         ])
         .split(area);
 
-    // 1. Presets (Naver, Apple iCloud, Generic)
+    // 6 Provider Presets: Naver, Apple, Google, Microsoft, Samsung, Generic CalDAV
     let preset_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(18), // Naver
+            Constraint::Length(11), // [ Naver ]
             Constraint::Length(1),
-            Constraint::Length(18), // Apple
+            Constraint::Length(11), // [ Apple ]
             Constraint::Length(1),
-            Constraint::Length(18), // Generic
+            Constraint::Length(11), // [ Google ]
+            Constraint::Length(1),
+            Constraint::Length(11), // [ MS 365 ]
+            Constraint::Length(1),
+            Constraint::Length(12), // [ Samsung ]
+            Constraint::Length(1),
+            Constraint::Length(11), // [ CalDAV ]
             Constraint::Min(0),
         ])
         .split(chunks[0]);
 
     let presets = [
-        (0, " [ Naver CalDAV ] ", preset_chunks[0]),
-        (1, " [ Apple iCloud ] ", preset_chunks[2]),
-        (2, " [ Custom CalDAV ] ", preset_chunks[4]),
+        (0, " Naver ", preset_chunks[0]),
+        (1, " Apple ", preset_chunks[2]),
+        (2, " Google ", preset_chunks[4]),
+        (3, " MS 365 ", preset_chunks[6]),
+        (4, " Samsung ", preset_chunks[8]),
+        (5, " CalDAV ", preset_chunks[10]),
     ];
 
     for (idx, label, rect) in presets {
@@ -94,9 +110,11 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     let active_style = Style::default().fg(Theme::TEXT_HIGHLIGHT).bg(Color::Rgb(40, 60, 100)).add_modifier(Modifier::BOLD);
     let normal_style = Style::default().fg(Theme::TEXT_NORMAL);
 
+    let is_oauth = state.provider_idx == 2 || state.provider_idx == 3;
+
     // Name
     let name_line = Line::from(vec![
-        Span::styled(" Name:     ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(" Name:      ", Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
             if state.name.is_empty() { "(Account name)" } else { &state.name },
             if state.active_field == 1 { active_style } else { normal_style },
@@ -106,8 +124,9 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     app.hit_map.register(chunks[2], HitTarget::ModalAccountField(1));
 
     // URL
+    let url_label = if is_oauth { " Endpoint:  " } else { " URL:       " };
     let url_line = Line::from(vec![
-        Span::styled(" URL:      ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(url_label, Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
             &state.url,
             if state.active_field == 2 { active_style } else { normal_style },
@@ -116,23 +135,35 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     f.render_widget(Paragraph::new(url_line), chunks[3]);
     app.hit_map.register(chunks[3], HitTarget::ModalAccountField(2));
 
-    // Username
+    // Username / Client ID
+    let user_label = if is_oauth { " Client ID: " } else { " User / ID: " };
+    let user_placeholder = if is_oauth {
+        "(OAuth Client ID or Account Email)"
+    } else {
+        "(e.g. ID or username@server.com)"
+    };
     let user_line = Line::from(vec![
-        Span::styled(" User/ID:  ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(user_label, Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
-            if state.username.is_empty() { "(e.g. naver_id or apple_id@icloud.com)" } else { &state.username },
+            if state.username.is_empty() { user_placeholder } else { &state.username },
             if state.active_field == 3 { active_style } else { normal_style },
         ),
     ]);
     f.render_widget(Paragraph::new(user_line), chunks[4]);
     app.hit_map.register(chunks[4], HitTarget::ModalAccountField(3));
 
-    // Password
+    // Password / Token
+    let pw_label = if is_oauth { " Token/Key: " } else { " Password:  " };
+    let pw_placeholder = if is_oauth {
+        "(Access Token or API Secret)"
+    } else {
+        "(App-specific password)"
+    };
     let masked_pw = "•".repeat(state.password.len());
     let pw_line = Line::from(vec![
-        Span::styled(" Password: ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(pw_label, Style::default().fg(Theme::TEXT_MUTED)),
         Span::styled(
-            if state.password.is_empty() { "(App password or 2-factor app password)" } else { &masked_pw },
+            if state.password.is_empty() { pw_placeholder } else { &masked_pw },
             if state.active_field == 4 { active_style } else { normal_style },
         ),
     ]);
@@ -140,8 +171,16 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     app.hit_map.register(chunks[5], HitTarget::ModalAccountField(4));
 
     // Help note
+    let tip_text = match state.provider_idx {
+        2 => " Google: Enter OAuth Bearer Token or API key for direct Google Calendar sync.",
+        3 => " MS 365: Enter Microsoft Graph Access Token for Outlook calendar sync.",
+        4 => " Samsung: Syncs via Samsung Cloud CalDAV or Samsung-Outlook Exchange integration.",
+        0 => " Naver: Use your Naver ID and 2-step App Password.",
+        1 => " Apple: Use your Apple ID and App-Specific Password.",
+        _ => " CalDAV: Enter your custom CalDAV URL and server credentials.",
+    };
     let note = vec![
-        Line::from(Span::styled(" Tip: For Apple/Naver, use a generated App-Specific Password.", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::ITALIC))),
+        Line::from(Span::styled(tip_text, Style::default().fg(Theme::ACCENT).add_modifier(Modifier::ITALIC))),
     ];
     f.render_widget(Paragraph::new(note), chunks[6]);
 
@@ -184,7 +223,7 @@ fn render_account_list(f: &mut Frame, app: &mut App, _state: &AccountModalState,
     let mut lines = Vec::new();
     if accounts.is_empty() {
         lines.push(Line::from(Span::styled(
-            "No CalDAV accounts configured yet. Add your Naver or Apple iCloud calendar below!",
+            "No cloud accounts linked yet. Click '+ Add Account' to link Google, Microsoft, Samsung, Naver, or Apple calendars!",
             Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC),
         )));
     } else {
@@ -198,11 +237,20 @@ fn render_account_list(f: &mut Frame, app: &mut App, _state: &AccountModalState,
                 .map(|t| t.format("%Y-%m-%d %H:%M").to_string())
                 .unwrap_or_else(|| "Never".to_string());
 
+            let provider_color = match acc.provider {
+                crate::model::ProviderType::Google => Color::Rgb(66, 133, 244),
+                crate::model::ProviderType::Microsoft => Color::Rgb(0, 120, 212),
+                crate::model::ProviderType::Samsung => Color::Rgb(3, 78, 162),
+                crate::model::ProviderType::Naver => Color::Rgb(3, 199, 90),
+                crate::model::ProviderType::Apple => Color::Rgb(90, 200, 250),
+                crate::model::ProviderType::Local => Color::Cyan,
+            };
+
             let line = Line::from(vec![
                 Span::styled(" • ", Style::default().fg(Theme::PRIMARY)),
                 Span::styled(&acc.name, Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD)),
-                Span::styled(format!(" [{}]", acc.provider.as_str()), Style::default().fg(Theme::SECONDARY)),
-                Span::styled(format!(" - User: {} | Last synced: {}", acc.username, last_sync), Style::default().fg(Theme::TEXT_MUTED)),
+                Span::styled(format!(" [{}]", acc.provider.as_str()), Style::default().fg(provider_color)),
+                Span::styled(format!(" - User: {} | Last: {}", acc.username, last_sync), Style::default().fg(Theme::TEXT_MUTED)),
                 Span::raw("  "),
                 Span::styled("[ Delete ]", Style::default().fg(Theme::DANGER).add_modifier(Modifier::BOLD)),
             ]);
@@ -228,7 +276,7 @@ fn render_account_list(f: &mut Frame, app: &mut App, _state: &AccountModalState,
     let btn_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(22), // [ + Add CalDAV Account ]
+            Constraint::Length(22), // [ + Add Account ]
             Constraint::Length(2),
             Constraint::Length(14), // [ ⟳ Sync Now ]
             Constraint::Min(1),

@@ -82,5 +82,5 @@ cargo test
 
 - [x] **Step 1**: Local TUI MVP with Month/Week/Day/Agenda views, Mouse hit-testing, SQLite persistence, and Event CRUD.
 - [x] **Step 2**: CalDAV Sync Engine (Apple iCloud & Naver Calendar two-way synchronization, Background Tokio worker, Account modal).
-- [ ] **Step 3**: OAuth2 Cloud Adapters (Google Calendar API & Microsoft 365 Graph API).
+- [x] **Step 3**: Multi-Cloud Adapters (Google Calendar API, Microsoft 365 Graph API, Samsung Calendar integration & OAuth2 token engine).
 - [ ] **Step 4**: Recurrence rules (RRULE), Quick natural-language event add, and OS notifications.

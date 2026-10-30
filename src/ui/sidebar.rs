@@ -34,10 +34,18 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let check_color = if cal.enabled { Theme::SECONDARY } else { Theme::TEXT_DIM };
         let cal_color = cal.ratatui_color();
 
+        let max_name_len = (chunks[0].width as usize).saturating_sub(16);
+        let display_name = if cal.name.chars().count() > max_name_len && max_name_len > 3 {
+            let truncated: String = cal.name.chars().take(max_name_len.saturating_sub(2)).collect();
+            format!("{}..", truncated)
+        } else {
+            cal.name.clone()
+        };
+
         let line = Line::from(vec![
             Span::styled(check_box, Style::default().fg(check_color).add_modifier(Modifier::BOLD)),
             Span::styled("● ", Style::default().fg(cal_color)),
-            Span::styled(&cal.name, Style::default().fg(if cal.enabled { Theme::TEXT_NORMAL } else { Theme::TEXT_MUTED })),
+            Span::styled(display_name, Style::default().fg(if cal.enabled { Theme::TEXT_NORMAL } else { Theme::TEXT_MUTED })),
             Span::styled(
                 format!(" ({})", cal.provider.as_str()),
                 Style::default().fg(Theme::TEXT_DIM),

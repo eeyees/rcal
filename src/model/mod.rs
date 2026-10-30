@@ -9,6 +9,7 @@ pub enum ProviderType {
     Apple,
     Naver,
     Microsoft,
+    Samsung,
 }
 
 impl ProviderType {
@@ -19,6 +20,7 @@ impl ProviderType {
             ProviderType::Apple => "Apple",
             ProviderType::Naver => "Naver",
             ProviderType::Microsoft => "Microsoft",
+            ProviderType::Samsung => "Samsung",
         }
     }
 
@@ -28,6 +30,7 @@ impl ProviderType {
             "Apple" => ProviderType::Apple,
             "Naver" => ProviderType::Naver,
             "Microsoft" => ProviderType::Microsoft,
+            "Samsung" => ProviderType::Samsung,
             _ => ProviderType::Local,
         }
     }
@@ -46,6 +49,28 @@ pub struct Calendar {
     pub ctag: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AuthType {
+    Basic,
+    OAuth2,
+}
+
+impl AuthType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            AuthType::Basic => "basic",
+            AuthType::OAuth2 => "oauth2",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "oauth2" => AuthType::OAuth2,
+            _ => AuthType::Basic,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CalDavAccount {
     pub id: String,
@@ -54,6 +79,11 @@ pub struct CalDavAccount {
     pub url: String,
     pub username: String,
     pub password: String,
+    pub auth_type: AuthType,
+    pub client_id: Option<String>,
+    pub access_token: Option<String>,
+    pub refresh_token: Option<String>,
+    pub token_expires_at: Option<DateTime<Local>>,
     pub last_synced_at: Option<DateTime<Local>>,
 }
 
@@ -72,6 +102,41 @@ impl CalDavAccount {
             url,
             username,
             password,
+            auth_type: AuthType::Basic,
+            client_id: None,
+            access_token: None,
+            refresh_token: None,
+            token_expires_at: None,
+            last_synced_at: None,
+        }
+    }
+
+    pub fn new_oauth(
+        name: String,
+        provider: ProviderType,
+        client_id: String,
+        client_secret: String,
+        access_token: Option<String>,
+        refresh_token: Option<String>,
+    ) -> Self {
+        let default_url = match provider {
+            ProviderType::Google => "https://www.googleapis.com/calendar/v3".to_string(),
+            ProviderType::Microsoft => "https://graph.microsoft.com/v1.0".to_string(),
+            _ => String::new(),
+        };
+
+        Self {
+            id: format!("acc_{}", uuid::Uuid::new_v4()),
+            name,
+            provider,
+            url: default_url,
+            username: client_id.clone(),
+            password: client_secret,
+            auth_type: AuthType::OAuth2,
+            client_id: Some(client_id),
+            access_token,
+            refresh_token,
+            token_expires_at: None,
             last_synced_at: None,
         }
     }
@@ -80,13 +145,15 @@ impl CalDavAccount {
 impl Calendar {
     pub fn ratatui_color(&self) -> Color {
         match self.color_code.as_str() {
-            "blue" | "#4285F4" => Color::Rgb(66, 133, 244),
-            "green" | "#0F9D58" => Color::Rgb(15, 157, 88),
+            "blue" | "#4285F4" => Color::Rgb(66, 133, 244),      // Google Blue
+            "green" | "#0F9D58" | "#03C75A" => Color::Rgb(15, 157, 88), // Naver Green
             "yellow" | "#F4B400" => Color::Rgb(244, 180, 0),
             "red" | "#DB4437" => Color::Rgb(219, 68, 55),
             "purple" | "#9C27B0" => Color::Rgb(156, 39, 176),
             "cyan" | "#00ACC1" => Color::Rgb(0, 172, 193),
             "orange" | "#FF9800" => Color::Rgb(255, 152, 0),
+            "#0078D4" => Color::Rgb(0, 120, 212),                // Microsoft Blue
+            "#034EA2" | "samsung" => Color::Rgb(3, 78, 162),    // Samsung Iconic Blue
             _ => Color::Cyan,
         }
     }

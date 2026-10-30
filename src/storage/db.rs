@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Local, TimeZone};
 use rusqlite::{params, Connection, OptionalExtension};
 
-use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus};
+use crate::model::{AuthType, CalDavAccount, Calendar, Event, ProviderType, SyncStatus};
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -63,6 +63,11 @@ impl Database {
                 url TEXT NOT NULL,
                 username TEXT NOT NULL,
                 password TEXT NOT NULL,
+                auth_type TEXT NOT NULL DEFAULT 'basic',
+                client_id TEXT,
+                access_token TEXT,
+                refresh_token TEXT,
+                token_expires_at TEXT,
                 last_synced_at TEXT
             );
 
@@ -104,6 +109,12 @@ impl Database {
         let _ = conn.execute("ALTER TABLE calendars ADD COLUMN account_id TEXT", []);
         let _ = conn.execute("ALTER TABLE calendars ADD COLUMN remote_url TEXT", []);
         let _ = conn.execute("ALTER TABLE calendars ADD COLUMN ctag TEXT", []);
+
+        let _ = conn.execute("ALTER TABLE accounts ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'basic'", []);
+        let _ = conn.execute("ALTER TABLE accounts ADD COLUMN client_id TEXT", []);
+        let _ = conn.execute("ALTER TABLE accounts ADD COLUMN access_token TEXT", []);
+        let _ = conn.execute("ALTER TABLE accounts ADD COLUMN refresh_token TEXT", []);
+        let _ = conn.execute("ALTER TABLE accounts ADD COLUMN token_expires_at TEXT", []);
 
         Ok(())
     }
@@ -296,12 +307,22 @@ impl Database {
     pub fn get_accounts(&self) -> Result<Vec<CalDavAccount>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, name, provider, url, username, password, last_synced_at FROM accounts ORDER BY name ASC"
+            r#"
+            SELECT id, name, provider, url, username, password,
+                   auth_type, client_id, access_token, refresh_token, token_expires_at, last_synced_at
+            FROM accounts ORDER BY name ASC
+            "#,
         )?;
 
         let iter = stmt.query_map([], |row| {
             let provider_str: String = row.get(2)?;
-            let last_sync_str: Option<String> = row.get(6)?;
+            let auth_type_str: String = row.get::<_, Option<String>>(6)?.unwrap_or_else(|| "basic".to_string());
+            let expires_str: Option<String> = row.get(10)?;
+            let token_expires_at = expires_str.and_then(|s| {
+                DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
+            });
+
+            let last_sync_str: Option<String> = row.get(11)?;
             let last_synced_at = last_sync_str.and_then(|s| {
                 DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
             });
@@ -313,6 +334,11 @@ impl Database {
                 url: row.get(3)?,
                 username: row.get(4)?,
                 password: row.get(5)?,
+                auth_type: AuthType::from_str(&auth_type_str),
+                client_id: row.get(7)?,
+                access_token: row.get(8)?,
+                refresh_token: row.get(9)?,
+                token_expires_at,
                 last_synced_at,
             })
         })?;
@@ -326,17 +352,26 @@ impl Database {
 
     pub fn save_account(&self, acc: &CalDavAccount) -> Result<()> {
         let last_sync_str = acc.last_synced_at.map(|t| t.to_rfc3339());
+        let expires_str = acc.token_expires_at.map(|t| t.to_rfc3339());
         let conn = self.conn.lock().unwrap();
         conn.execute(
             r#"
-            INSERT INTO accounts (id, name, provider, url, username, password, last_synced_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            INSERT INTO accounts (
+                id, name, provider, url, username, password,
+                auth_type, client_id, access_token, refresh_token, token_expires_at, last_synced_at
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 provider = excluded.provider,
                 url = excluded.url,
                 username = excluded.username,
                 password = excluded.password,
+                auth_type = excluded.auth_type,
+                client_id = excluded.client_id,
+                access_token = excluded.access_token,
+                refresh_token = excluded.refresh_token,
+                token_expires_at = excluded.token_expires_at,
                 last_synced_at = excluded.last_synced_at
             "#,
             params![
@@ -346,6 +381,11 @@ impl Database {
                 acc.url,
                 acc.username,
                 acc.password,
+                acc.auth_type.as_str(),
+                acc.client_id,
+                acc.access_token,
+                acc.refresh_token,
+                expires_str,
                 last_sync_str
             ],
         )?;

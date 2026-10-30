@@ -199,18 +199,18 @@ impl Language {
     pub fn sidebar_tips(&self) -> Vec<&'static str> {
         match self {
             Language::Ko => vec![
-                " • 상단 탭 클릭 : 뷰 전환",
-                " • 날짜 / 슬롯 클릭 : 일정 추가",
-                " • 일정 클릭 : 상세 정보 / 수정",
-                " • [x] 체크박스 : 캘린더 표시/숨김",
-                " • L 키 : 언어 전환 (한/EN)",
+                " • 탭 클릭: 뷰 전환",
+                " • 셀 클릭: 일정 추가",
+                " • 일정 클릭: 상세/수정",
+                " • [x] 클릭: 표시 토글",
+                " • L 키: 언어 전환",
             ],
             Language::En => vec![
-                " • Click tabs to switch views",
-                " • Click date / slot to add event",
-                " • Click event to view/edit",
-                " • [x] Checkbox to toggle calendar",
-                " • 'L' key to toggle Language",
+                " • Click tab: switch view",
+                " • Click slot: add event",
+                " • Click event: details/edit",
+                " • [x] Checkbox: toggle cal",
+                " • 'L' key: toggle language",
             ],
         }
     }
@@ -225,20 +225,20 @@ impl Language {
     pub fn sidebar_key_tips(&self) -> Vec<&'static str> {
         match self {
             Language::Ko => vec![
-                " • h/j/k/l : 날짜/시간 이동",
-                " • c 또는 n : 새 일정 생성",
-                " • r       : 캘린더 동기화",
-                " • A       : 계정 관리 설정",
-                " • t       : 오늘로 이동",
-                " • q / Esc : 닫기 / 종료",
+                " • h/j/k/l: 탐색",
+                " • c/n: 새 일정",
+                " • r: 실시간 동기화",
+                " • A: 계정 연동 설정",
+                " • t: 오늘로 점프",
+                " • q: 닫기 / 종료",
             ],
             Language::En => vec![
-                " • h/j/k/l : Navigate dates/time",
-                " • c or n  : New event",
-                " • r       : Sync now",
-                " • A       : Accounts modal",
-                " • t       : Jump to today",
-                " • q / Esc : Close / Quit",
+                " • h/j/k/l: Navigate",
+                " • c/n: New event",
+                " • r: Sync now",
+                " • A: Accounts modal",
+                " • t: Jump to today",
+                " • q: Close / Quit",
             ],
         }
     }
