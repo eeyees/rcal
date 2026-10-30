@@ -21,7 +21,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(app.calendars.len() as u16 + 2), // Calendar list
+            Constraint::Length(app.calendars.len() as u16 + 4), // Calendar list + manage button
             Constraint::Length(1),                              // Divider
             Constraint::Min(6),                                 // Shortcuts hint
         ])
@@ -64,6 +64,27 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             app.hit_map.register(row_rect, HitTarget::CalendarToggle(cal.id.clone()));
         }
     }
+
+    // Add "[ + 관리/추가 (C) ]" button under calendars
+    let manage_label = match app.lang {
+        crate::i18n::Language::Ko => " + 캘린더 관리/추가 (C) ",
+        crate::i18n::Language::En => " + Manage Calendars (C) ",
+    };
+    cal_lines.push(Line::from(""));
+    cal_lines.push(Line::from(vec![
+        Span::styled(
+            manage_label,
+            Style::default().fg(Theme::PRIMARY).add_modifier(Modifier::BOLD),
+        ),
+    ]));
+
+    let btn_rect = Rect {
+        x: chunks[0].x,
+        y: chunks[0].y + app.calendars.len() as u16 + 1,
+        width: chunks[0].width,
+        height: 1,
+    };
+    app.hit_map.register(btn_rect, HitTarget::BtnManageCalendars);
 
     f.render_widget(Paragraph::new(cal_lines), chunks[0]);
 

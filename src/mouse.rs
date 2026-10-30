@@ -16,6 +16,7 @@ pub enum HitTarget {
     BtnSync,
     BtnAccounts,
     BtnLanguage,
+    BtnManageCalendars,
 
     // Sidebar
     CalendarToggle(String /* calendar_id */),
@@ -38,6 +39,11 @@ pub enum HitTarget {
     ModalAccountDelete(String),
     ModalAccountAdd,
     ModalAccountPreset(usize),
+    ModalCalNameField,
+    ModalCalColor(usize),
+    ModalCalSave,
+    ModalCalDelete(String),
+    ModalCalNew,
 }
 
 #[derive(Default, Debug, Clone)]

@@ -399,6 +399,13 @@ impl Database {
         Ok(())
     }
 
+    pub fn delete_calendar(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM events WHERE calendar_id = ?1", params![id])?;
+        conn.execute("DELETE FROM calendars WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
     pub fn get_pending_sync_events(&self, calendar_id: &str) -> Result<Vec<Event>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(

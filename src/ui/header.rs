@@ -14,10 +14,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(25), // Title & Month display
-            Constraint::Length(22), // Navigation buttons (<, Today, >)
-            Constraint::Min(36),    // View tabs (Month, Week, Day, Agenda)
-            Constraint::Length(48), // Action buttons (+ New, ⟳ Sync, Accounts, L:Lang, ? Help)
+            Constraint::Length(24), // Title & Month display
+            Constraint::Length(20), // Navigation buttons (<, Today, >)
+            Constraint::Min(32),    // View tabs (Month, Week, Day, Agenda)
+            Constraint::Length(57), // Action buttons (+ New, ⟳ Sync, Accounts, L:Lang, ? Help)
         ])
         .split(area);
 
@@ -113,11 +113,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let action_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(10), // [+ 새 일정]
+            Constraint::Length(11), // [+ 새 일정]
             Constraint::Length(1),
-            Constraint::Length(10), // [⟳ 동기화]
+            Constraint::Length(12), // [⟳ 동기화] / [⟳ 동기화중]
             Constraint::Length(1),
-            Constraint::Length(10), // [계정연동]
+            Constraint::Length(11), // [계정연동]
             Constraint::Length(1),
             Constraint::Length(9),  // [L: 한/EN]
             Constraint::Length(1),

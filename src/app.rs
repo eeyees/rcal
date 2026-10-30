@@ -80,6 +80,33 @@ impl EventFormState {
 }
 
 #[derive(Debug, Clone)]
+pub struct CalendarModalState {
+    pub is_creating: bool,
+    pub name: String,
+    pub color_idx: usize,
+}
+
+impl CalendarModalState {
+    pub const PALETTE: [&'static str; 7] = [
+        "#4285F4", // Blue
+        "#0F9D58", // Green
+        "#F4B400", // Yellow
+        "#DB4437", // Red
+        "#9C27B0", // Purple
+        "#00ACC1", // Cyan
+        "#FF9800", // Orange
+    ];
+
+    pub fn new() -> Self {
+        Self {
+            is_creating: false,
+            name: String::new(),
+            color_idx: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct AccountModalState {
     pub is_adding: bool,
     pub provider_idx: usize, // 0: Naver, 1: Apple iCloud, 2: CalDAV
@@ -144,6 +171,7 @@ pub enum ActiveModal {
     EventForm(EventFormState),
     EventDetail(String /* event_id */),
     Accounts(AccountModalState),
+    CalendarManager(CalendarModalState),
     Help,
     #[allow(dead_code)]
     ConfirmDelete(String /* event_id */),
@@ -328,6 +356,10 @@ impl App {
         self.modal = ActiveModal::Accounts(AccountModalState::new());
     }
 
+    pub fn open_calendar_modal(&mut self) {
+        self.modal = ActiveModal::CalendarManager(CalendarModalState::new());
+    }
+
     pub fn trigger_sync(&mut self) {
         if self.is_syncing {
             return;
@@ -431,6 +463,53 @@ impl App {
                 HitTarget::BtnSync => self.trigger_sync(),
                 HitTarget::BtnAccounts => self.open_accounts_modal(),
                 HitTarget::BtnLanguage => self.toggle_language(),
+                HitTarget::BtnManageCalendars => self.open_calendar_modal(),
+
+                HitTarget::ModalCalNameField => {}
+                HitTarget::ModalCalNew => {
+                    if let ActiveModal::CalendarManager(ref mut cal_state) = self.modal {
+                        cal_state.is_creating = true;
+                    }
+                }
+
+                HitTarget::ModalCalColor(idx) => {
+                    if let ActiveModal::CalendarManager(ref mut cal_state) = self.modal {
+                        cal_state.color_idx = idx % CalendarModalState::PALETTE.len();
+                    }
+                }
+
+                HitTarget::ModalCalSave => {
+                    if let ActiveModal::CalendarManager(ref cal_state) = self.modal {
+                        if !cal_state.name.trim().is_empty() {
+                            let color = CalendarModalState::PALETTE[cal_state.color_idx % CalendarModalState::PALETTE.len()];
+                            let new_cal = Calendar {
+                                id: format!("cal_custom_{}", uuid::Uuid::new_v4()),
+                                account_id: None,
+                                name: cal_state.name.clone(),
+                                color_code: color.to_string(),
+                                provider: ProviderType::Local,
+                                enabled: true,
+                                is_default: false,
+                                remote_url: None,
+                                ctag: None,
+                            };
+                            self.db.save_calendar(&new_cal)?;
+                            self.reload_calendars()?;
+                            self.set_status(format!("Created calendar '{}'", new_cal.name));
+                            self.close_modal();
+                        }
+                    }
+                }
+
+                HitTarget::ModalCalDelete(id) => {
+                    self.db.delete_calendar(&id)?;
+                    self.reload_calendars()?;
+                    self.reload_events()?;
+                    self.set_status("Calendar deleted");
+                    if let ActiveModal::CalendarManager(ref mut cal_state) = self.modal {
+                        cal_state.is_creating = false;
+                    }
+                }
 
                 HitTarget::ModalAccountPreset(idx) => {
                     if let ActiveModal::Accounts(ref mut acc_state) = self.modal {

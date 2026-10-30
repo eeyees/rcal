@@ -189,7 +189,51 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
     }
 
     // 3. Handle Other modals
-    match &app.modal {
+    match &mut app.modal {
+        ActiveModal::CalendarManager(ref mut cal_state) => {
+            if !cal_state.is_creating {
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
+                    KeyCode::Char('n') | KeyCode::Char('c') | KeyCode::Enter => cal_state.is_creating = true,
+                    _ => {}
+                }
+            } else {
+                match key.code {
+                    KeyCode::Esc => cal_state.is_creating = false,
+                    KeyCode::Tab | KeyCode::Char(' ') => {
+                        cal_state.color_idx = (cal_state.color_idx + 1) % 7;
+                    }
+                    KeyCode::Enter => {
+                        if !cal_state.name.trim().is_empty() {
+                            let color = crate::app::CalendarModalState::PALETTE[cal_state.color_idx % 7];
+                            let new_cal = crate::model::Calendar {
+                                id: format!("cal_custom_{}", uuid::Uuid::new_v4()),
+                                account_id: None,
+                                name: cal_state.name.clone(),
+                                color_code: color.to_string(),
+                                provider: ProviderType::Local,
+                                enabled: true,
+                                is_default: false,
+                                remote_url: None,
+                                ctag: None,
+                            };
+                            let _ = app.db.save_calendar(&new_cal);
+                            let _ = app.reload_calendars();
+                            app.set_status(format!("Created calendar '{}'", new_cal.name));
+                            app.close_modal();
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        cal_state.name.pop();
+                    }
+                    KeyCode::Char(c) => {
+                        cal_state.name.push(c);
+                    }
+                    _ => {}
+                }
+            }
+            return Ok(());
+        }
         ActiveModal::EventDetail(ref id) => {
             let id_clone = id.clone();
             match key.code {
@@ -282,6 +326,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
 
         // Actions
         KeyCode::Char('c') | KeyCode::Char('n') => app.open_new_event_modal(None),
+        KeyCode::Char('C') => app.open_calendar_modal(),
         KeyCode::Char('r') => app.trigger_sync(),
         KeyCode::Char('A') | KeyCode::Char('S') => app.open_accounts_modal(),
         KeyCode::Char('L') => app.toggle_language(),
