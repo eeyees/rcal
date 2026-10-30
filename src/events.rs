@@ -5,7 +5,23 @@ use crossterm::event::{
 };
 
 use crate::app::{ActiveModal, App, EventFormState, ViewMode};
+use crate::i18n::hangul_to_qwerty;
 use crate::model::{CalDavAccount, ProviderType};
+
+/// Normalize key events so that Korean 2-beolsik keystrokes (Jamo / Syllables)
+/// transparently map to standard English QWERTY shortcuts during navigation & commands.
+fn normalize_key_event(key: KeyEvent) -> KeyCode {
+    match key.code {
+        KeyCode::Char(c) => {
+            let mut mapped = hangul_to_qwerty(c);
+            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                mapped = mapped.to_ascii_uppercase();
+            }
+            KeyCode::Char(mapped)
+        }
+        other => other,
+    }
+}
 
 pub fn handle_crossterm_event(app: &mut App, event: CrosstermEvent) -> Result<()> {
     match event {
@@ -106,7 +122,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
 
     if let ActiveModal::Accounts(ref mut state) = app.modal {
         if !state.is_adding {
-            match key.code {
+            let norm_code = normalize_key_event(key);
+            match norm_code {
                 KeyCode::Esc | KeyCode::Char('q') => acc_action_close = true,
                 KeyCode::Char('a') | KeyCode::Char('n') | KeyCode::Enter => state.is_adding = true,
                 KeyCode::Char('r') => acc_action_sync = true,
@@ -192,7 +209,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
     match &mut app.modal {
         ActiveModal::CalendarManager(ref mut cal_state) => {
             if !cal_state.is_creating {
-                match key.code {
+                let norm_code = normalize_key_event(key);
+                match norm_code {
                     KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
                     KeyCode::Char('n') | KeyCode::Char('c') | KeyCode::Enter => cal_state.is_creating = true,
                     _ => {}
@@ -236,7 +254,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         }
         ActiveModal::EventDetail(ref id) => {
             let id_clone = id.clone();
-            match key.code {
+            let norm_code = normalize_key_event(key);
+            match norm_code {
                 KeyCode::Char('e') | KeyCode::Char('E') => {
                     app.open_edit_event_modal(&id_clone);
                 }
@@ -251,15 +270,17 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             return Ok(());
         }
         ActiveModal::Help => {
-            if matches!(key.code, KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter) {
+            let norm_code = normalize_key_event(key);
+            if matches!(norm_code, KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter) {
                 app.close_modal();
             }
             return Ok(());
         }
         ActiveModal::Settings => {
-            match key.code {
+            let norm_code = normalize_key_event(key);
+            match norm_code {
                 KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
-                KeyCode::Char('1') | KeyCode::Char('s') => {
+                KeyCode::Char('1') | KeyCode::Char('s') | KeyCode::Char('S') => {
                     app.set_week_start_day(crate::model::WeekStartDay::Sunday);
                 }
                 KeyCode::Char('2') | KeyCode::Char('m') | KeyCode::Char('M') => {
@@ -296,9 +317,10 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         }
         ActiveModal::ConfirmDelete(ref id) => {
             let id_clone = id.clone();
-            if matches!(key.code, KeyCode::Char('y') | KeyCode::Enter) {
+            let norm_code = normalize_key_event(key);
+            if matches!(norm_code, KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter) {
                 app.delete_event(&id_clone)?;
-            } else if matches!(key.code, KeyCode::Char('n') | KeyCode::Esc) {
+            } else if matches!(norm_code, KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc) {
                 app.close_modal();
             }
             return Ok(());
@@ -308,7 +330,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
     }
 
     // 4. Normal Mode Navigation & Shortcuts
-    match key.code {
+    let norm_code = normalize_key_event(key);
+    match norm_code {
         // App termination
         KeyCode::Char('q') => app.running = false,
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.running = false,

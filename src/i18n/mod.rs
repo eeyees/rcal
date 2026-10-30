@@ -1,6 +1,9 @@
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 
+pub mod hangul;
+pub use hangul::hangul_to_qwerty;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Language {
     Ko,
