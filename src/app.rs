@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 use anyhow::Result;
 use chrono::{Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime, TimeZone};
 
-use crate::model::{Calendar, Event, SyncStatus};
+use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus};
 use crate::mouse::{HitMap, HitTarget};
 use crate::storage::Database;
 
@@ -79,10 +79,58 @@ impl EventFormState {
 }
 
 #[derive(Debug, Clone)]
+pub struct AccountModalState {
+    pub is_adding: bool,
+    pub provider_idx: usize, // 0: Naver, 1: Apple iCloud, 2: CalDAV
+    pub name: String,
+    pub url: String,
+    pub username: String,
+    pub password: String,
+    pub active_field: usize, // 0..=4
+    pub selected_account_idx: usize,
+    pub error_msg: Option<String>,
+}
+
+impl AccountModalState {
+    pub fn new() -> Self {
+        Self {
+            is_adding: false,
+            provider_idx: 0,
+            name: "Naver Calendar".to_string(),
+            url: "https://caldav.calendar.naver.com/".to_string(),
+            username: String::new(),
+            password: String::new(),
+            active_field: 0,
+            selected_account_idx: 0,
+            error_msg: None,
+        }
+    }
+
+    pub fn set_preset(&mut self, idx: usize) {
+        self.provider_idx = idx % 3;
+        match self.provider_idx {
+            0 => {
+                self.name = "Naver Calendar".to_string();
+                self.url = "https://caldav.calendar.naver.com/".to_string();
+            }
+            1 => {
+                self.name = "Apple iCloud".to_string();
+                self.url = "https://caldav.icloud.com/".to_string();
+            }
+            _ => {
+                self.name = "CalDAV Server".to_string();
+                self.url = "https://".to_string();
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum ActiveModal {
     None,
     EventForm(EventFormState),
     EventDetail(String /* event_id */),
+    Accounts(AccountModalState),
     Help,
     #[allow(dead_code)]
     ConfirmDelete(String /* event_id */),
@@ -102,6 +150,11 @@ pub struct App {
     pub modal: ActiveModal,
     pub hit_map: HitMap,
     pub status_message: Option<(String, Instant)>,
+
+    // Synchronization state
+    pub is_syncing: bool,
+    pub last_sync_status: Option<String>,
+    pub sync_tx: Option<tokio::sync::mpsc::Sender<()>>,
 }
 
 impl App {
@@ -119,6 +172,9 @@ impl App {
             modal: ActiveModal::None,
             hit_map: HitMap::new(),
             status_message: Some(("Welcome to rcal! Press ? or click [ Help ] for shortcuts.".to_string(), Instant::now())),
+            is_syncing: false,
+            last_sync_status: None,
+            sync_tx: None,
         };
 
         app.reload_calendars()?;
@@ -246,6 +302,21 @@ impl App {
         self.modal = ActiveModal::Help;
     }
 
+    pub fn open_accounts_modal(&mut self) {
+        self.modal = ActiveModal::Accounts(AccountModalState::new());
+    }
+
+    pub fn trigger_sync(&mut self) {
+        if self.is_syncing {
+            return;
+        }
+        self.is_syncing = true;
+        self.set_status("⟳ Synchronizing with CalDAV servers...");
+        if let Some(ref tx) = self.sync_tx {
+            let _ = tx.try_send(());
+        }
+    }
+
     pub fn close_modal(&mut self) {
         self.modal = ActiveModal::None;
     }
@@ -335,6 +406,57 @@ impl App {
                 HitTarget::NavNext => self.nav_next(),
                 HitTarget::BtnNewEvent => self.open_new_event_modal(None),
                 HitTarget::BtnHelp => self.open_help_modal(),
+                HitTarget::BtnSync => self.trigger_sync(),
+                HitTarget::BtnAccounts => self.open_accounts_modal(),
+
+                HitTarget::ModalAccountPreset(idx) => {
+                    if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
+                        acc_state.set_preset(idx);
+                    }
+                }
+
+                HitTarget::ModalAccountField(idx) => {
+                    if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
+                        acc_state.active_field = idx;
+                    }
+                }
+
+                HitTarget::ModalAccountAdd => {
+                    if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
+                        acc_state.is_adding = true;
+                    }
+                }
+
+                HitTarget::ModalAccountConnect => {
+                    if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
+                        let provider = match acc_state.provider_idx {
+                            0 => ProviderType::Naver,
+                            1 => ProviderType::Apple,
+                            _ => ProviderType::Local,
+                        };
+                        let new_acc = CalDavAccount::new(
+                            acc_state.name.clone(),
+                            provider,
+                            acc_state.url.clone(),
+                            acc_state.username.clone(),
+                            acc_state.password.clone(),
+                        );
+                        self.db.save_account(&new_acc)?;
+                        self.set_status(format!("Added account '{}'", new_acc.name));
+                        self.trigger_sync();
+                        self.close_modal();
+                    }
+                }
+
+                HitTarget::ModalAccountDelete(id) => {
+                    self.db.delete_account(&id)?;
+                    self.reload_calendars()?;
+                    self.reload_events()?;
+                    self.set_status("Account removed");
+                    if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
+                        acc_state.is_adding = false;
+                    }
+                }
 
                 HitTarget::CalendarToggle(cal_id) => {
                     self.toggle_calendar(&cal_id)?;

@@ -5,6 +5,7 @@ use crossterm::event::{
 };
 
 use crate::app::{ActiveModal, App, EventFormState, ViewMode};
+use crate::model::{CalDavAccount, ProviderType};
 
 pub fn handle_crossterm_event(app: &mut App, event: CrosstermEvent) -> Result<()> {
     match event {
@@ -98,7 +99,89 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
-    // 2. Handle other modals
+    // 2. Handle Accounts modal
+    let mut acc_action_close = false;
+    let mut acc_action_sync = false;
+    let mut acc_action_save: Option<CalDavAccount> = None;
+
+    if let ActiveModal::Accounts(ref mut state) = app.modal {
+        if !state.is_adding {
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') => acc_action_close = true,
+                KeyCode::Char('a') | KeyCode::Char('n') | KeyCode::Enter => state.is_adding = true,
+                KeyCode::Char('r') => acc_action_sync = true,
+                _ => {}
+            }
+        } else {
+            match key.code {
+                KeyCode::Esc => state.is_adding = false,
+                KeyCode::Tab | KeyCode::Down => {
+                    state.active_field = (state.active_field + 1) % 5;
+                }
+                KeyCode::BackTab | KeyCode::Up => {
+                    if state.active_field == 0 {
+                        state.active_field = 4;
+                    } else {
+                        state.active_field -= 1;
+                    }
+                }
+                KeyCode::Enter => {
+                    let provider = match state.provider_idx {
+                        0 => ProviderType::Naver,
+                        1 => ProviderType::Apple,
+                        _ => ProviderType::Local,
+                    };
+                    let new_acc = CalDavAccount::new(
+                        state.name.clone(),
+                        provider,
+                        state.url.clone(),
+                        state.username.clone(),
+                        state.password.clone(),
+                    );
+                    acc_action_save = Some(new_acc);
+                }
+                KeyCode::Char(' ') if state.active_field == 0 => {
+                    let next_idx = (state.provider_idx + 1) % 3;
+                    state.set_preset(next_idx);
+                }
+                KeyCode::Backspace => {
+                    match state.active_field {
+                        1 => { state.name.pop(); }
+                        2 => { state.url.pop(); }
+                        3 => { state.username.pop(); }
+                        4 => { state.password.pop(); }
+                        _ => {}
+                    }
+                }
+                KeyCode::Char(c) => {
+                    match state.active_field {
+                        1 => state.name.push(c),
+                        2 => state.url.push(c),
+                        3 => state.username.push(c),
+                        4 => state.password.push(c),
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    if acc_action_close {
+        app.close_modal();
+        return Ok(());
+    } else if acc_action_sync {
+        app.trigger_sync();
+        return Ok(());
+    } else if let Some(new_acc) = acc_action_save {
+        app.db.save_account(&new_acc)?;
+        app.set_status(format!("Added account '{}'", new_acc.name));
+        app.trigger_sync();
+        app.close_modal();
+        return Ok(());
+    }
+
+    // 3. Handle Other modals
     match &app.modal {
         ActiveModal::EventDetail(ref id) => {
             let id_clone = id.clone();
@@ -131,11 +214,11 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             return Ok(());
         }
-        ActiveModal::EventForm(_) => return Ok(()),
+        ActiveModal::EventForm(_) | ActiveModal::Accounts(_) => return Ok(()),
         ActiveModal::None => {}
     }
 
-    // 3. Normal Mode Navigation & Shortcuts
+    // 4. Normal Mode Navigation & Shortcuts
     match key.code {
         // App termination
         KeyCode::Char('q') => app.running = false,
@@ -192,6 +275,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
 
         // Actions
         KeyCode::Char('c') | KeyCode::Char('n') => app.open_new_event_modal(None),
+        KeyCode::Char('r') => app.trigger_sync(),
+        KeyCode::Char('A') | KeyCode::Char('S') => app.open_accounts_modal(),
         KeyCode::Char('?') => app.open_help_modal(),
 
         // Inspect/Select

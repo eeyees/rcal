@@ -13,6 +13,8 @@ pub enum HitTarget {
     NavNext,
     BtnNewEvent,
     BtnHelp,
+    BtnSync,
+    BtnAccounts,
 
     // Sidebar
     CalendarToggle(String /* calendar_id */),
@@ -30,6 +32,11 @@ pub enum HitTarget {
     ModalEdit,
     ModalDelete,
     ModalClose,
+    ModalAccountField(usize),
+    ModalAccountConnect,
+    ModalAccountDelete(String),
+    ModalAccountAdd,
+    ModalAccountPreset(usize),
 }
 
 #[derive(Default, Debug, Clone)]

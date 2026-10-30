@@ -1,12 +1,13 @@
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, TimeZone};
 use rusqlite::{params, Connection, OptionalExtension};
 
-use crate::model::{Calendar, Event, ProviderType, SyncStatus};
+use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus};
 
 pub struct Database {
-    conn: Connection,
+    conn: Mutex<Connection>,
 }
 
 impl Database {
@@ -27,7 +28,7 @@ impl Database {
         // Enable WAL mode for high performance concurrent reads
         conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;")?;
 
-        let db = Self { conn };
+        let db = Self { conn: Mutex::new(conn) };
         db.init_schema()?;
         db.ensure_default_data()?;
 
@@ -37,7 +38,7 @@ impl Database {
     #[allow(dead_code)]
     pub fn in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;
-        let db = Self { conn };
+        let db = Self { conn: Mutex::new(conn) };
         db.init_schema()?;
         db.ensure_default_data()?;
         Ok(db)
@@ -52,15 +53,30 @@ impl Database {
     }
 
     fn init_schema(&self) -> Result<()> {
-        self.conn.execute_batch(
+        let conn = self.conn.lock().unwrap();
+        conn.execute_batch(
             r#"
+            CREATE TABLE IF NOT EXISTS accounts (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                url TEXT NOT NULL,
+                username TEXT NOT NULL,
+                password TEXT NOT NULL,
+                last_synced_at TEXT
+            );
+
             CREATE TABLE IF NOT EXISTS calendars (
                 id TEXT PRIMARY KEY,
+                account_id TEXT,
                 name TEXT NOT NULL,
                 color_code TEXT NOT NULL,
                 provider TEXT NOT NULL,
                 enabled INTEGER NOT NULL DEFAULT 1,
-                is_default INTEGER NOT NULL DEFAULT 0
+                is_default INTEGER NOT NULL DEFAULT 0,
+                remote_url TEXT,
+                ctag TEXT,
+                FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS events (
@@ -84,41 +100,58 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_events_calendar ON events(calendar_id);
             "#,
         )?;
+
+        let _ = conn.execute("ALTER TABLE calendars ADD COLUMN account_id TEXT", []);
+        let _ = conn.execute("ALTER TABLE calendars ADD COLUMN remote_url TEXT", []);
+        let _ = conn.execute("ALTER TABLE calendars ADD COLUMN ctag TEXT", []);
+
         Ok(())
     }
 
     fn ensure_default_data(&self) -> Result<()> {
-        let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM calendars",
-            [],
-            |row| row.get(0),
-        )?;
+        let count: i64 = {
+            let conn = self.conn.lock().unwrap();
+            conn.query_row(
+                "SELECT COUNT(*) FROM calendars",
+                [],
+                |row| row.get(0),
+            )?
+        };
 
         if count == 0 {
             let default_calendars = vec![
                 Calendar {
                     id: "cal_personal".to_string(),
+                    account_id: None,
                     name: "Personal".to_string(),
                     color_code: "#4285F4".to_string(),
                     provider: ProviderType::Local,
                     enabled: true,
                     is_default: true,
+                    remote_url: None,
+                    ctag: None,
                 },
                 Calendar {
                     id: "cal_work".to_string(),
+                    account_id: None,
                     name: "Work".to_string(),
                     color_code: "#0F9D58".to_string(),
                     provider: ProviderType::Local,
                     enabled: true,
                     is_default: false,
+                    remote_url: None,
+                    ctag: None,
                 },
                 Calendar {
                     id: "cal_holidays".to_string(),
+                    account_id: None,
                     name: "Holidays".to_string(),
                     color_code: "#F4B400".to_string(),
                     provider: ProviderType::Local,
                     enabled: true,
                     is_default: false,
+                    remote_url: None,
+                    ctag: None,
                 },
             ];
 
@@ -201,19 +234,23 @@ impl Database {
     }
 
     pub fn get_calendars(&self) -> Result<Vec<Calendar>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, name, color_code, provider, enabled, is_default FROM calendars ORDER BY is_default DESC, name ASC"
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, account_id, name, color_code, provider, enabled, is_default, remote_url, ctag FROM calendars ORDER BY is_default DESC, name ASC"
         )?;
 
         let iter = stmt.query_map([], |row| {
-            let provider_str: String = row.get(3)?;
+            let provider_str: String = row.get(4)?;
             Ok(Calendar {
                 id: row.get(0)?,
-                name: row.get(1)?,
-                color_code: row.get(2)?,
+                account_id: row.get(1)?,
+                name: row.get(2)?,
+                color_code: row.get(3)?,
                 provider: ProviderType::from_str(&provider_str),
-                enabled: row.get::<_, i64>(4)? != 0,
-                is_default: row.get::<_, i64>(5)? != 0,
+                enabled: row.get::<_, i64>(5)? != 0,
+                is_default: row.get::<_, i64>(6)? != 0,
+                remote_url: row.get(7)?,
+                ctag: row.get(8)?,
             })
         })?;
 
@@ -225,37 +262,132 @@ impl Database {
     }
 
     pub fn save_calendar(&self, cal: &Calendar) -> Result<()> {
-        self.conn.execute(
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             r#"
-            INSERT INTO calendars (id, name, color_code, provider, enabled, is_default)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            INSERT INTO calendars (id, account_id, name, color_code, provider, enabled, is_default, remote_url, ctag)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
             ON CONFLICT(id) DO UPDATE SET
+                account_id = excluded.account_id,
                 name = excluded.name,
                 color_code = excluded.color_code,
                 provider = excluded.provider,
                 enabled = excluded.enabled,
-                is_default = excluded.is_default
+                is_default = excluded.is_default,
+                remote_url = excluded.remote_url,
+                ctag = excluded.ctag
             "#,
             params![
                 cal.id,
+                cal.account_id,
                 cal.name,
                 cal.color_code,
                 cal.provider.as_str(),
                 if cal.enabled { 1 } else { 0 },
-                if cal.is_default { 1 } else { 0 }
+                if cal.is_default { 1 } else { 0 },
+                cal.remote_url,
+                cal.ctag
             ],
         )?;
         Ok(())
     }
 
+    // Account management
+    pub fn get_accounts(&self) -> Result<Vec<CalDavAccount>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, name, provider, url, username, password, last_synced_at FROM accounts ORDER BY name ASC"
+        )?;
+
+        let iter = stmt.query_map([], |row| {
+            let provider_str: String = row.get(2)?;
+            let last_sync_str: Option<String> = row.get(6)?;
+            let last_synced_at = last_sync_str.and_then(|s| {
+                DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
+            });
+
+            Ok(CalDavAccount {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                provider: ProviderType::from_str(&provider_str),
+                url: row.get(3)?,
+                username: row.get(4)?,
+                password: row.get(5)?,
+                last_synced_at,
+            })
+        })?;
+
+        let mut list = Vec::new();
+        for item in iter {
+            list.push(item?);
+        }
+        Ok(list)
+    }
+
+    pub fn save_account(&self, acc: &CalDavAccount) -> Result<()> {
+        let last_sync_str = acc.last_synced_at.map(|t| t.to_rfc3339());
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            r#"
+            INSERT INTO accounts (id, name, provider, url, username, password, last_synced_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                provider = excluded.provider,
+                url = excluded.url,
+                username = excluded.username,
+                password = excluded.password,
+                last_synced_at = excluded.last_synced_at
+            "#,
+            params![
+                acc.id,
+                acc.name,
+                acc.provider.as_str(),
+                acc.url,
+                acc.username,
+                acc.password,
+                last_sync_str
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_account(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM accounts WHERE id = ?1", params![id])?;
+        conn.execute("DELETE FROM calendars WHERE account_id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn get_pending_sync_events(&self, calendar_id: &str) -> Result<Vec<Event>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT id, calendar_id, title, description, location,
+                   start_time, end_time, all_day, rrule, sync_status,
+                   remote_id, etag, updated_at
+            FROM events
+            WHERE calendar_id = ?1 AND sync_status IN ('created_locally', 'updated_locally', 'deleted_locally')
+            "#,
+        )?;
+
+        let iter = stmt.query_map(params![calendar_id], |row| Self::row_to_event(row))?;
+        let mut events = Vec::new();
+        for ev in iter {
+            events.push(ev?);
+        }
+        Ok(events)
+    }
+
     pub fn toggle_calendar(&self, id: &str) -> Result<bool> {
-        let current: i64 = self.conn.query_row(
+        let conn = self.conn.lock().unwrap();
+        let current: i64 = conn.query_row(
             "SELECT enabled FROM calendars WHERE id = ?1",
             params![id],
             |r| r.get(0),
         )?;
         let new_state = if current == 0 { 1 } else { 0 };
-        self.conn.execute(
+        conn.execute(
             "UPDATE calendars SET enabled = ?1 WHERE id = ?2",
             params![new_state, id],
         )?;
@@ -263,7 +395,8 @@ impl Database {
     }
 
     pub fn get_all_events(&self) -> Result<Vec<Event>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             r#"
             SELECT e.id, e.calendar_id, e.title, e.description, e.location,
                    e.start_time, e.end_time, e.all_day, e.rrule, e.sync_status,
@@ -292,7 +425,8 @@ impl Database {
         let start_str = start_inclusive.to_rfc3339();
         let end_str = end_inclusive.to_rfc3339();
 
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             r#"
             SELECT e.id, e.calendar_id, e.title, e.description, e.location,
                    e.start_time, e.end_time, e.all_day, e.rrule, e.sync_status,
@@ -315,7 +449,8 @@ impl Database {
     }
 
     pub fn get_event_by_id(&self, id: &str) -> Result<Option<Event>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             r#"
             SELECT id, calendar_id, title, description, location,
                    start_time, end_time, all_day, rrule, sync_status,
@@ -330,7 +465,8 @@ impl Database {
     }
 
     pub fn save_event(&self, event: &Event) -> Result<()> {
-        self.conn.execute(
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             r#"
             INSERT INTO events (
                 id, calendar_id, title, description, location,
@@ -372,21 +508,20 @@ impl Database {
     }
 
     pub fn delete_event(&self, id: &str) -> Result<()> {
-        // If it's a remote synced event, mark as deleted_locally for sync worker
-        // Otherwise, completely delete
-        let remote_id: Option<String> = self.conn.query_row(
+        let conn = self.conn.lock().unwrap();
+        let remote_id: Option<String> = conn.query_row(
             "SELECT remote_id FROM events WHERE id = ?1",
             params![id],
             |r| r.get(0),
         ).optional()?.flatten();
 
         if remote_id.is_some() {
-            self.conn.execute(
+            conn.execute(
                 "UPDATE events SET sync_status = 'deleted_locally', updated_at = ?1 WHERE id = ?2",
                 params![Local::now().to_rfc3339(), id],
             )?;
         } else {
-            self.conn.execute("DELETE FROM events WHERE id = ?1", params![id])?;
+            conn.execute("DELETE FROM events WHERE id = ?1", params![id])?;
         }
         Ok(())
     }

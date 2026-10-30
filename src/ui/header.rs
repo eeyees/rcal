@@ -14,10 +14,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(28), // Title & Month display
-            Constraint::Length(24), // Navigation buttons (<, Today, >)
-            Constraint::Min(40),    // View tabs (Month, Week, Day, Agenda)
-            Constraint::Length(22), // Action buttons (+ New, ? Help)
+            Constraint::Length(26), // Title & Month display
+            Constraint::Length(23), // Navigation buttons (<, Today, >)
+            Constraint::Min(38),    // View tabs (Month, Week, Day, Agenda)
+            Constraint::Length(39), // Action buttons (+ New, ⟳ Sync, Accounts, ? Help)
         ])
         .split(area);
 
@@ -107,13 +107,17 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         app.hit_map.register(rect, hit);
     }
 
-    // 4. Action buttons: [+ New Event] and [? Help]
+    // 4. Action buttons: [+ New Event], [⟳ Sync], [Accounts], [? Help]
     let action_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(10), // [+ New]
+            Constraint::Length(8),  // [+ New]
             Constraint::Length(1),
-            Constraint::Length(9),  // [? Help]
+            Constraint::Length(9),  // [⟳ Sync]
+            Constraint::Length(1),
+            Constraint::Length(11), // [Accounts]
+            Constraint::Length(1),
+            Constraint::Length(8),  // [? Help]
             Constraint::Min(0),
         ])
         .split(chunks[3]);
@@ -129,9 +133,28 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_new, action_chunks[0]);
     app.hit_map.register(action_chunks[0], HitTarget::BtnNewEvent);
 
+    let sync_label = if app.is_syncing { " ⟳ ... " } else { " ⟳ Sync " };
+    let sync_bg = if app.is_syncing { Theme::ACCENT } else { Color::Rgb(45, 90, 160) };
+    let btn_sync = Paragraph::new(Line::from(vec![Span::raw(sync_label)]))
+        .style(
+            Style::default()
+                .fg(Color::White)
+                .bg(sync_bg)
+                .add_modifier(Modifier::BOLD),
+        )
+        .alignment(Alignment::Center);
+    f.render_widget(btn_sync, action_chunks[2]);
+    app.hit_map.register(action_chunks[2], HitTarget::BtnSync);
+
+    let btn_acc = Paragraph::new(Line::from(vec![Span::raw(" Accounts ")]))
+        .style(Theme::button_style())
+        .alignment(Alignment::Center);
+    f.render_widget(btn_acc, action_chunks[4]);
+    app.hit_map.register(action_chunks[4], HitTarget::BtnAccounts);
+
     let btn_help = Paragraph::new(Line::from(vec![Span::raw(" ? Help ")]))
         .style(Theme::button_style())
         .alignment(Alignment::Center);
-    f.render_widget(btn_help, action_chunks[2]);
-    app.hit_map.register(action_chunks[2], HitTarget::BtnHelp);
+    f.render_widget(btn_help, action_chunks[6]);
+    app.hit_map.register(action_chunks[6], HitTarget::BtnHelp);
 }

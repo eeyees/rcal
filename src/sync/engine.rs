@@ -1,0 +1,177 @@
+use anyhow::{Context, Result};
+use chrono::Local;
+
+use crate::model::{CalDavAccount, Calendar, ProviderType, SyncStatus};
+use crate::storage::Database;
+use crate::sync::caldav::CalDavClient;
+use crate::sync::ical;
+
+#[derive(Debug, Default, Clone)]
+pub struct SyncResult {
+    pub accounts_synced: usize,
+    pub events_pushed: usize,
+    pub events_pulled: usize,
+    pub errors: Vec<String>,
+}
+
+pub struct SyncEngine;
+
+impl SyncEngine {
+    /// Synchronize all registered accounts with local database
+    pub async fn sync_all(db: &Database) -> SyncResult {
+        let mut result = SyncResult::default();
+
+        let accounts = match db.get_accounts() {
+            Ok(accs) => accs,
+            Err(e) => {
+                result.errors.push(format!("Failed to read accounts: {}", e));
+                return result;
+            }
+        };
+
+        if accounts.is_empty() {
+            return result;
+        }
+
+        for acc in &accounts {
+            match Self::sync_account(db, acc).await {
+                Ok((pushed, pulled)) => {
+                    result.accounts_synced += 1;
+                    result.events_pushed += pushed;
+                    result.events_pulled += pulled;
+
+                    let mut updated_acc = acc.clone();
+                    updated_acc.last_synced_at = Some(Local::now());
+                    let _ = db.save_account(&updated_acc);
+                }
+                Err(err) => {
+                    result.errors.push(format!("{}: {}", acc.name, err));
+                }
+            }
+        }
+
+        result
+    }
+
+    pub async fn sync_account(db: &Database, account: &CalDavAccount) -> Result<(usize, usize)> {
+        let client = CalDavClient::new(&account.url, account.username.clone(), account.password.clone())
+            .with_context(|| format!("Failed to create client for {}", account.name))?;
+
+        // 1. Discover Calendars
+        let remote_cals = client.discover_calendars().await
+            .with_context(|| "Calendar discovery failed")?;
+
+        let local_cals = db.get_calendars()?;
+        let mut active_calendar_mappings = Vec::new();
+
+        for r_cal in remote_cals {
+            // Find or create local calendar for this remote calendar
+            let existing = local_cals.iter().find(|c| {
+                c.account_id.as_deref() == Some(&account.id)
+                    && c.remote_url.as_deref() == Some(&r_cal.href)
+            });
+
+            let local_cal_id = if let Some(found) = existing {
+                found.id.clone()
+            } else {
+                let default_color = match account.provider {
+                    ProviderType::Naver => "#0F9D58",
+                    ProviderType::Apple => "#4285F4",
+                    _ => "#00ACC1",
+                };
+                let new_cal = Calendar {
+                    id: format!("cal_remote_{}", uuid::Uuid::new_v4()),
+                    account_id: Some(account.id.clone()),
+                    name: format!("{} ({})", r_cal.name, account.name),
+                    color_code: r_cal.color_code.unwrap_or_else(|| default_color.to_string()),
+                    provider: account.provider,
+                    enabled: true,
+                    is_default: false,
+                    remote_url: Some(r_cal.href.clone()),
+                    ctag: r_cal.ctag.clone(),
+                };
+                db.save_calendar(&new_cal)?;
+                new_cal.id
+            };
+
+            active_calendar_mappings.push((local_cal_id, r_cal.href));
+        }
+
+        let mut total_pushed = 0;
+        let mut total_pulled = 0;
+
+        // 2. Synchronize events for each mapped calendar
+        for (local_cal_id, remote_href) in active_calendar_mappings {
+            // 2a. Push Local Changes to Remote
+            let pending_events = db.get_pending_sync_events(&local_cal_id)?;
+            for mut ev in pending_events {
+                match ev.sync_status {
+                    SyncStatus::CreatedLocally => {
+                        let uid = ev.remote_id.clone().unwrap_or_else(|| ev.id.clone());
+                        let ics = ical::event_to_ics(&ev);
+                        if let Ok(new_etag) = client.upload_event(&remote_href, &uid, &ics, None).await {
+                            ev.remote_id = Some(uid);
+                            ev.etag = new_etag;
+                            ev.sync_status = SyncStatus::Synced;
+                            db.save_event(&ev)?;
+                            total_pushed += 1;
+                        }
+                    }
+                    SyncStatus::UpdatedLocally => {
+                        let uid = ev.remote_id.clone().unwrap_or_else(|| ev.id.clone());
+                        let ics = ical::event_to_ics(&ev);
+                        if let Ok(new_etag) = client.upload_event(&remote_href, &uid, &ics, ev.etag.as_deref()).await {
+                            ev.etag = new_etag;
+                            ev.sync_status = SyncStatus::Synced;
+                            db.save_event(&ev)?;
+                            total_pushed += 1;
+                        }
+                    }
+                    SyncStatus::DeletedLocally => {
+                        if let Some(ref r_id) = ev.remote_id {
+                            let event_href = if remote_href.ends_with('/') {
+                                format!("{}{}.ics", remote_href, r_id)
+                            } else {
+                                format!("{}/{}.ics", remote_href, r_id)
+                            };
+                            let _ = client.delete_event(&event_href, ev.etag.as_deref()).await;
+                        }
+                        db.delete_event(&ev.id)?;
+                        total_pushed += 1;
+                    }
+                    SyncStatus::Synced => {}
+                }
+            }
+
+            // 2b. Pull Remote Changes from Server
+            if let Ok(remote_events) = client.fetch_events(&remote_href).await {
+                for r_ev in remote_events {
+                    let parsed_events = ical::ics_to_events(&r_ev.ics_content, &local_cal_id, &r_ev.href, r_ev.etag.as_deref());
+                    for p_ev in parsed_events {
+                        // Check if event already exists locally by remote_id
+                        let all_events = db.get_all_events()?;
+                        let existing = all_events.iter().find(|e| {
+                            e.calendar_id == local_cal_id && e.remote_id == p_ev.remote_id
+                        });
+
+                        if let Some(existing_ev) = existing {
+                            // Update if remote ETag differs or if not matching
+                            if existing_ev.etag != p_ev.etag {
+                                let mut updated = p_ev;
+                                updated.id = existing_ev.id.clone();
+                                db.save_event(&updated)?;
+                                total_pulled += 1;
+                            }
+                        } else {
+                            // New event from remote
+                            db.save_event(&p_ev)?;
+                            total_pulled += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok((total_pushed, total_pulled))
+    }
+}

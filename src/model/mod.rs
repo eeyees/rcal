@@ -36,11 +36,45 @@ impl ProviderType {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Calendar {
     pub id: String,
+    pub account_id: Option<String>,
     pub name: String,
     pub color_code: String, // hex e.g. "#4285F4" or named color
     pub provider: ProviderType,
     pub enabled: bool,
     pub is_default: bool,
+    pub remote_url: Option<String>,
+    pub ctag: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CalDavAccount {
+    pub id: String,
+    pub name: String,
+    pub provider: ProviderType,
+    pub url: String,
+    pub username: String,
+    pub password: String,
+    pub last_synced_at: Option<DateTime<Local>>,
+}
+
+impl CalDavAccount {
+    pub fn new(
+        name: String,
+        provider: ProviderType,
+        url: String,
+        username: String,
+        password: String,
+    ) -> Self {
+        Self {
+            id: format!("acc_{}", uuid::Uuid::new_v4()),
+            name,
+            provider,
+            url,
+            username,
+            password,
+            last_synced_at: None,
+        }
+    }
 }
 
 impl Calendar {

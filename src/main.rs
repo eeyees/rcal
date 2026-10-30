@@ -7,10 +7,12 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
+use tokio::sync::mpsc;
 
 use rcal::app::App;
 use rcal::events;
 use rcal::storage::Database;
+use rcal::sync::{SyncEngine, SyncResult};
 use rcal::ui;
 
 #[tokio::main]
@@ -29,10 +31,41 @@ async fn main() -> Result<()> {
     let db = Database::new(None)?;
     let mut app = App::new(db)?;
 
-    // 4. Main Event Loop
-    let res = run_app(&mut terminal, &mut app).await;
+    // 4. Background Sync Worker Setup
+    let (sync_trigger_tx, mut sync_trigger_rx) = mpsc::channel::<()>(5);
+    let (sync_result_tx, mut sync_result_rx) = mpsc::channel::<SyncResult>(5);
+    app.sync_tx = Some(sync_trigger_tx.clone());
 
-    // 5. Restore terminal
+    tokio::spawn(async move {
+        // Auto-sync ticker (every 5 minutes)
+        let mut interval = tokio::time::interval(Duration::from_secs(300));
+        // Worker DB instance
+        let worker_db = match Database::new(None) {
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("Failed to open worker db: {:?}", e);
+                return;
+            }
+        };
+
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    let res = SyncEngine::sync_all(&worker_db).await;
+                    let _ = sync_result_tx.send(res).await;
+                }
+                Some(_) = sync_trigger_rx.recv() => {
+                    let res = SyncEngine::sync_all(&worker_db).await;
+                    let _ = sync_result_tx.send(res).await;
+                }
+            }
+        }
+    });
+
+    // 5. Main Event Loop
+    let res = run_app(&mut terminal, &mut app, &mut sync_result_rx).await;
+
+    // 6. Restore terminal
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     terminal.show_cursor()?;
@@ -47,8 +80,26 @@ async fn main() -> Result<()> {
 async fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
+    sync_result_rx: &mut mpsc::Receiver<SyncResult>,
 ) -> Result<()> {
     while app.running {
+        // Check for completed background syncs
+        if let Ok(res) = sync_result_rx.try_recv() {
+            app.is_syncing = false;
+            let _ = app.reload_calendars();
+            let _ = app.reload_events();
+
+            if res.errors.is_empty() {
+                if res.events_pulled > 0 || res.events_pushed > 0 {
+                    app.set_status(format!("✓ Synced: +{} pushed, +{} pulled", res.events_pushed, res.events_pulled));
+                } else if res.accounts_synced > 0 {
+                    app.set_status("✓ All calendars up to date");
+                }
+            } else {
+                app.set_status(format!("⚠ Sync note: {}", res.errors.first().unwrap_or(&"Error".to_string())));
+            }
+        }
+
         terminal.draw(|f| ui::render(f, app))?;
 
         // 50ms poll gives responsive 20fps tick for clock updates & smooth responsiveness
