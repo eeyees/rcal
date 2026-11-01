@@ -11,6 +11,7 @@
 
 ### **Fast, Modern, Mouse-interactive Terminal Calendar in Rust with Multi-Cloud Sync**
 
+[![CI](https://github.com/eeyees/rcal/actions/workflows/ci.yml/badge.svg)](https://github.com/eeyees/rcal/actions/workflows/ci.yml)
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg?style=flat-square)](https://github.com/eeyees/rcal)
@@ -91,13 +92,18 @@
   - Runtime 1-key language toggle between **한국어 (Korean)** and **English** with `L` or mouse click.
   - Localized dates, day names, modals, forms, and status notifications.
 - 🎨 **Rich Themes & Customization**:
-  - 7 Built-in color palettes: **Modern Dark**, **Nord**, **Dracula**, **Forest**, **Sunset**, **Monokai**, and **Solarized**.
+  - 37 Curated color palettes: **Modern Dark**, **Nord**, **Dracula**, **Tokyo Night**, **Catppuccin**, **Gruvbox**, **One Dark**, **GitHub Dark/Light**, **Kanagawa**, **Everforest**, **Rose Pine**, and more across 4 categories (Dark, Nature, Vibrant, Light).
+  - Configurable `theme.toml` for fine-tuning any color, high-contrast boost, and custom themes.
   - Configurable week start day: **Sunday**, **Monday**, or **Saturday**.
   - Custom calendar creation with color tags (`Personal`, `Work`, `Holidays`, etc.).
 
 ---
 
 ## 🖥️ UI Views & Preview
+
+<p align="center">
+  <img src="./assets/demo.gif" alt="rcal Interactive TUI Calendar Demo" width="850">
+</p>
 
 ```
 ┌── rcal v0.1.0 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
@@ -190,18 +196,118 @@ To configure your accounts, press `a` inside `rcal` or select the **Accounts** m
 
 ## 🎨 Themes & Customization
 
-Cycle themes quickly anytime by pressing **`T`** (`Shift+T`), or press **`s`** to open the **Settings Modal** to click and select:
+Cycle themes quickly anytime by pressing **`T`** (`Shift+T`), or press **`s`** to open the **Settings Modal** to click and select from **37 rich color palettes**:
 
-### Built-in Color Palettes
-- 🌙 **Modern Dark** (Default clean terminal look)
-- ❄️ **Nord** (Arctic, north-bluish palette)
-- 🧛 **Dracula** (High-contrast dark theme)
-- 🌲 **Forest** (Natural matcha & earthy green tones)
-- 🌆 **Sunset** (Vibrant cyberpunk purple & orange)
-- 🎨 **Monokai** (Classic code editor contrast)
-- ☀️ **Solarized** (Precision tuned low-contrast dark)
+### 37 Curated Color Palettes (4 Categories)
 
-Selected themes are immediately persisted to the SQLite database and restored on startup.
+#### 1. 🌙 Dark Modern & Classic (10 Themes)
+- **Modern Dark**: Clean minimalist default terminal aesthetic
+- **Nord**: Arctic snow storm & frost cyan (`#88C0D0`)
+- **Dracula**: High-contrast violet (`#BD93F9`) & neon pink
+- **Tokyo Night**: Vibrant midnight blue cyberpunk (`#7AA2F7`)
+- **Catppuccin Mocha**: Cozy deep dark pastel base (`#1E1E2E`)
+- **Catppuccin Macchiato**: Medium-contrast dusky pastel (`#24273A`)
+- **One Dark**: Atom / VS Code iconic editor palette (`#282C34`)
+- **GitHub Dark**: Official GitHub dark mode contrast (`#161B22`)
+- **Night Owl**: Sarah Drasner's deeply tuned midnight theme (`#011627`)
+- **Cobalt2**: Wes Bos's punchy cobalt blue & bright yellow (`#19354E`)
+
+#### 2. 🌲 Nature, Earthy & Atmospheric (9 Themes)
+- **Forest**: Organic sage green & earthy matcha tones
+- **Everforest Dark**: Calming natural woodland green (`#2D353B`)
+- **Kanagawa**: Inspired by Japanese woodblock print sumi-e ink (`#1F1F28`)
+- **Rose Pine**: Soho dusky dark with muted rose & pine (`#191724`)
+- **Rose Pine Moon**: Cooler Soho midnight dusk (`#232136`)
+- **Material Palenight**: Deep indigo material elegance (`#292D3E`)
+- **Gruvbox Dark**: Warm retro groove brown & gold (`#282828`)
+- **Ayu Dark**: Minimalist charcoal slate with glowing orange (`#0F1419`)
+- **Catppuccin Frappé**: Soothing twilight pastel (`#303446`)
+
+#### 3. 🌆 Vibrant, Cyberpunk & Retro (8 Themes)
+- **Sunset**: Electric cyberpunk purple & warm amber
+- **Monokai**: Classic vibrant gold, green & coral red
+- **Cyberpunk Neon**: Pitch black with high-voltage cyan & hot pink
+- **Synthwave '84**: Radical 80s neon gradient glow (`#262335`)
+- **Matrix**: Phosphor green CRT terminal hacker vibe
+- **Ayu Mirage**: Balanced mid-tone twilight slate blue (`#1F2430`)
+- **Tokyo Night Storm**: Lighter atmospheric blue storm (`#24283B`)
+- **Solarized Dark**: Low-contrast precision dark teal (`#002B36`)
+
+#### 4. ☀️ Clean Light Themes (10 Themes)
+- **Solarized Light**: Classic warm parchment reading contrast (`#FDF6E3`)
+- **Catppuccin Latte**: Crisp, clean light pastel (`#EFF1F5`)
+- **Tokyo Night Light**: Soft morning light Japanese aesthetic
+- **Gruvbox Light**: Retro warm groove parchment (`#FBF1C7`)
+- **One Light**: Atom clean day mode (`#FAFAFA`)
+- **GitHub Light**: Official GitHub crisp white day mode (`#FFFFFF`)
+- **Rose Pine Dawn**: Vintage newspaper & dusty rose light (`#FAF4ED`)
+- **Everforest Light**: Gentle morning paper warm green (`#FDF6E3`)
+- **Light Owl**: High-legibility day reading theme (`#F0F0F0`)
+- **Ayu Light**: Bright warm sand paper theme (`#FAFAFA`)
+
+---
+
+### ⚙️ Theme Configuration File (`theme.toml`)
+
+`rcal` automatically generates and manages a configuration file located at:
+- **macOS / Linux**: `~/.config/rcal/theme.toml`
+- **Windows**: `%APPDATA%\rcal\theme.toml`
+
+#### 1. Visibility & Contrast Adjustments
+If certain text, borders, or dates are hard to read on your specific terminal emulator or monitor, toggle visibility options:
+
+```toml
+[options]
+# Force solid opaque background (avoids contrast loss on transparent terminal windows)
+force_opaque_bg = false
+
+# High-contrast mode: sharpens borders and boosts text brightness
+high_contrast = false
+
+# Boost muted text: brightens secondary dates, shortcut hints, and dimmed hours
+boost_muted_text = false
+```
+
+#### 2. Per-Theme Color Overrides
+You can fine-tune any color in any theme using Hex (`#RRGGBB`) or RGB (`rgb(r, g, b)`):
+
+```toml
+[themes.tokyo_night]
+border = "#7aa2f7"
+text_muted = "#9aa5ce"
+today_bg = "#3d59a1"
+
+[themes.github_light]
+text_normal = "#1f2328"
+border = "#d0d7de"
+```
+
+#### 3. Custom User Themes
+You can also define your own custom theme and select it inside `rcal`:
+
+```toml
+[[custom_themes]]
+id = "my_custom"
+name = "My Custom Studio"
+is_light = false
+panel_bg = "#1e1e2e"
+border = "#45475a"
+border_focused = "#89b4fa"
+primary = "#89b4fa"
+secondary = "#a6e3a1"
+accent = "#f9e2af"
+danger = "#f38ba8"
+text_normal = "#cdd6f4"
+text_muted = "#a6adc8"
+text_dim = "#6c7086"
+text_highlight = "#ffffff"
+today_bg = "#313244"
+selected_bg = "#45475a"
+tab_active_bg = "#89b4fa"
+tab_inactive_bg = "#181825"
+button_bg = "#313244"
+button_fg = "#cdd6f4"
+```
 
 ### Week Start Preference
 Choose whether your week starts on **Sunday**, **Monday**, or **Saturday** based on your cultural or regional workflow.

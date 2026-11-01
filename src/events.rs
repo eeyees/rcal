@@ -522,8 +522,11 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char('3') | KeyCode::Char('t') => {
                     app.set_week_start_day(crate::model::WeekStartDay::Saturday);
                 }
-                KeyCode::Char('T') | KeyCode::Char('c') | KeyCode::Char('C') => {
+                KeyCode::Char('T') | KeyCode::Char('c') => {
                     app.cycle_theme();
+                }
+                KeyCode::Char('C') | KeyCode::Char('p') | KeyCode::Char('P') => {
+                    app.cycle_theme_prev();
                 }
                 KeyCode::Tab | KeyCode::Right | KeyCode::Down => {
                     let next = match app.week_start_day {

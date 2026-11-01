@@ -6,6 +6,7 @@ pub mod modals;
 pub mod month_view;
 pub mod sidebar;
 pub mod theme;
+pub mod theme_config;
 pub mod week_view;
 
 use ratatui::{
@@ -21,6 +22,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
     app.hit_map.clear();
 
     let size = f.area();
+
+    // Fill background if theme defines explicit color (e.g., light themes or opaque background mode)
+    if app.theme.bg != ratatui::style::Color::Reset {
+        f.render_widget(
+            ratatui::widgets::Block::default().style(ratatui::style::Style::default().bg(app.theme.bg)),
+            size,
+        );
+    }
 
     // Top Header (3), Main Body (Min), Footer (1)
     let chunks = Layout::default()

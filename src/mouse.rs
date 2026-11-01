@@ -53,6 +53,9 @@ pub enum HitTarget {
     ModalCalNew,
     ModalSettingWeekStart(WeekStartDay),
     ModalSettingTheme(crate::ui::theme::ThemeMode),
+    ModalSettingThemeCategory(crate::ui::theme::ThemeCategory),
+    ModalSettingThemePrev,
+    ModalSettingThemeNext,
     ModalSelectLanguage(crate::i18n::Language),
 }
 
@@ -80,6 +83,9 @@ impl HitTarget {
                 | HitTarget::ModalCalNew
                 | HitTarget::ModalSettingWeekStart(_)
                 | HitTarget::ModalSettingTheme(_)
+                | HitTarget::ModalSettingThemeCategory(_)
+                | HitTarget::ModalSettingThemePrev
+                | HitTarget::ModalSettingThemeNext
                 | HitTarget::ModalSelectLanguage(_)
         )
     }

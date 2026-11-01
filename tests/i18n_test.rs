@@ -9,38 +9,70 @@ mod tests {
 
     #[test]
     fn test_i18n_toggle_and_labels() {
-        let lang_ko = Language::Ko;
-        let lang_en = lang_ko.toggle();
-        let lang_ja = lang_en.toggle();
-        let back_to_ko = lang_ja.toggle();
+        let mut curr = Language::Ko;
+        for expected in Language::ALL {
+            assert_eq!(curr, *expected);
+            assert!(!curr.label().is_empty());
+            assert!(!curr.short_label().is_empty());
+            assert!(!curr.view_month().is_empty());
+            assert!(!curr.view_week().is_empty());
+            assert!(!curr.btn_new_event().is_empty());
+            assert!(!curr.btn_sync().is_empty());
+            curr = curr.toggle();
+        }
+        // After full cycle through all 21 languages, it wraps back to Ko
+        assert_eq!(curr, Language::Ko);
 
-        assert_eq!(lang_en, Language::En);
-        assert_eq!(lang_ja, Language::Ja);
-        assert_eq!(back_to_ko, Language::Ko);
+        let lang_ko = Language::Ko;
+        let lang_en = Language::En;
+        let lang_ja = Language::Ja;
+        let lang_zh_cn = Language::ZhCn;
+        let lang_zh_tw = Language::ZhTw;
+        let lang_mn = Language::Mn;
 
         assert_eq!(lang_ko.label(), "한국어");
         assert_eq!(lang_en.label(), "English");
         assert_eq!(lang_ja.label(), "日本語");
+        assert_eq!(lang_zh_cn.label(), "简体中文");
+        assert_eq!(lang_zh_tw.label(), "繁體中文");
+        assert_eq!(lang_mn.label(), "Монгол");
 
         assert_eq!(lang_ko.short_label(), "한");
         assert_eq!(lang_en.short_label(), "EN");
         assert_eq!(lang_ja.short_label(), "日");
+        assert_eq!(lang_zh_cn.short_label(), "简");
+        assert_eq!(lang_zh_tw.short_label(), "繁");
+        assert_eq!(lang_mn.short_label(), "MN");
 
         // View names
         assert_eq!(lang_ko.view_month(), "1:월간");
         assert_eq!(lang_en.view_month(), "1:Month");
         assert_eq!(lang_ja.view_month(), "1:月間");
+        assert_eq!(lang_zh_cn.view_month(), "1:月视图");
+        assert_eq!(lang_zh_tw.view_month(), "1:月檢視");
+        assert_eq!(lang_mn.view_month(), "1:Сар");
+
         assert_eq!(lang_ko.view_week(), "2:주간");
         assert_eq!(lang_en.view_week(), "2:Week");
         assert_eq!(lang_ja.view_week(), "2:週間");
+        assert_eq!(lang_zh_cn.view_week(), "2:周视图");
+        assert_eq!(lang_zh_tw.view_week(), "2:週檢視");
+        assert_eq!(lang_mn.view_week(), "2:Долоо хоног");
 
         // Action buttons
         assert_eq!(lang_ko.btn_new_event(), "+ 새 일정");
         assert_eq!(lang_en.btn_new_event(), "+ New");
         assert_eq!(lang_ja.btn_new_event(), "+ 新規予定");
+        assert_eq!(lang_zh_cn.btn_new_event(), "+ 新建");
+        assert_eq!(lang_zh_tw.btn_new_event(), "+ 新增");
+        assert_eq!(lang_mn.btn_new_event(), "+ Шинэ");
+
         assert_eq!(lang_ko.btn_sync(), "⟳ 동기화");
         assert_eq!(lang_en.btn_sync(), "⟳ Sync");
         assert_eq!(lang_ja.btn_sync(), "⟳ 同期");
+        assert_eq!(lang_zh_cn.btn_sync(), "⟳ 同步");
+        assert_eq!(lang_zh_tw.btn_sync(), "⟳ 同步");
+        assert_eq!(lang_mn.btn_sync(), "⟳ Синк");
     }
 
     #[test]
@@ -132,6 +164,29 @@ mod tests {
         assert_eq!(Language::from_code("JA-JP"), Some(Language::Ja));
         assert_eq!(Language::from_code("japanese"), Some(Language::Ja));
 
+        // Additional 18 languages
+        assert_eq!(Language::from_code("zh-cn"), Some(Language::ZhCn));
+        assert_eq!(Language::from_code("zh_cn"), Some(Language::ZhCn));
+        assert_eq!(Language::from_code("zh"), Some(Language::ZhCn));
+        assert_eq!(Language::from_code("zh-tw"), Some(Language::ZhTw));
+        assert_eq!(Language::from_code("zh_tw"), Some(Language::ZhTw));
+        assert_eq!(Language::from_code("mn"), Some(Language::Mn));
+        assert_eq!(Language::from_code("es"), Some(Language::Es));
+        assert_eq!(Language::from_code("fr"), Some(Language::Fr));
+        assert_eq!(Language::from_code("de"), Some(Language::De));
+        assert_eq!(Language::from_code("ru"), Some(Language::Ru));
+        assert_eq!(Language::from_code("pt"), Some(Language::Pt));
+        assert_eq!(Language::from_code("it"), Some(Language::It));
+        assert_eq!(Language::from_code("vi"), Some(Language::Vi));
+        assert_eq!(Language::from_code("id"), Some(Language::Id));
+        assert_eq!(Language::from_code("th"), Some(Language::Th));
+        assert_eq!(Language::from_code("ar"), Some(Language::Ar));
+        assert_eq!(Language::from_code("hi"), Some(Language::Hi));
+        assert_eq!(Language::from_code("tr"), Some(Language::Tr));
+        assert_eq!(Language::from_code("nl"), Some(Language::Nl));
+        assert_eq!(Language::from_code("pl"), Some(Language::Pl));
+        assert_eq!(Language::from_code("sv"), Some(Language::Sv));
+
         assert_eq!(Language::from_code("invalid_xyz"), None);
     }
 
@@ -144,39 +199,99 @@ mod tests {
         // Default language is Korean
         assert_eq!(app.lang, Language::Ko);
 
-        // Switch to Japanese
-        app.set_language(Language::Ja);
-        assert_eq!(app.lang, Language::Ja);
-        assert_eq!(app.db.get_setting("language")?, Some("ja".to_string()));
-        assert!(app.get_active_status().unwrap().contains("日本語"));
-
-        // Toggle language: Ja -> Ko
-        app.toggle_language();
-        assert_eq!(app.lang, Language::Ko);
-        assert_eq!(app.db.get_setting("language")?, Some("ko".to_string()));
-
-        // Toggle language again: Ko -> En
+        // Toggle language: Ko -> En
         app.toggle_language();
         assert_eq!(app.lang, Language::En);
         assert_eq!(app.db.get_setting("language")?, Some("en".to_string()));
 
-        // Simulate mouse click on Japanese option in settings modal
-        app.open_settings_modal();
-        assert_eq!(app.modal, ActiveModal::Settings);
-        app.hit_map.register(
-            ratatui::layout::Rect::new(40, 10, 18, 1),
-            HitTarget::ModalSelectLanguage(Language::Ja),
-        );
-        app.handle_mouse_click(45, 10)?;
+        // Toggle language: En -> Ja
+        app.toggle_language();
         assert_eq!(app.lang, Language::Ja);
         assert_eq!(app.db.get_setting("language")?, Some("ja".to_string()));
 
-        // Reopen app with same database: should restore Japanese
+        // Toggle language: Ja -> ZhCn
+        app.toggle_language();
+        assert_eq!(app.lang, Language::ZhCn);
+        assert_eq!(app.db.get_setting("language")?, Some("zh-cn".to_string()));
+        assert!(app.get_active_status().unwrap().contains("简体中文"));
+
+        // Simulate mouse click on Spanish option in settings modal
+        app.open_settings_modal();
+        assert_eq!(app.modal, ActiveModal::Settings);
+        app.hit_map.register(
+            ratatui::layout::Rect::new(40, 10, 20, 1),
+            HitTarget::ModalSelectLanguage(Language::Es),
+        );
+        app.handle_mouse_click(45, 10)?;
+        assert_eq!(app.lang, Language::Es);
+        assert_eq!(app.db.get_setting("language")?, Some("es".to_string()));
+
+        // Reopen app with same database: should restore Spanish
         let db2 = Database::new(Some(&db_path))?;
         let app2 = App::new(db2)?;
-        assert_eq!(app2.lang, Language::Ja);
+        assert_eq!(app2.lang, Language::Es);
 
         let _ = std::fs::remove_file(&db_path);
+        Ok(())
+    }
+
+    #[test]
+    fn test_language_keyboard_shortcuts() -> anyhow::Result<()> {
+        use crossterm::event::{Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
+        use rcal::events::handle_crossterm_event;
+
+        let db = Database::in_memory()?;
+        let mut app = App::new(db)?;
+        let initial_date = app.selected_date;
+
+        // In normal mode:
+        // 'l' (lowercase) is navigation right, not language toggle
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)),
+        )?;
+        assert_eq!(app.selected_date, initial_date + chrono::Duration::days(1));
+        assert_eq!(app.lang, Language::Ko);
+
+        // 'L' (Shift+l) toggles language: Ko -> En
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::SHIFT)),
+        )?;
+        assert_eq!(app.lang, Language::En);
+
+        // Shift + 'ㅣ' (Korean IME) also normalizes to 'L': En -> Ja
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('ㅣ'), KeyModifiers::SHIFT)),
+        )?;
+        assert_eq!(app.lang, Language::Ja);
+
+        // In Settings modal:
+        app.open_settings_modal();
+        assert_eq!(app.modal, ActiveModal::Settings);
+
+        // In Settings modal, 'l' (lowercase) toggles language: Ja -> ZhCn
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)),
+        )?;
+        assert_eq!(app.lang, Language::ZhCn);
+
+        // 'L' toggles language: ZhCn -> ZhTw
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::SHIFT)),
+        )?;
+        assert_eq!(app.lang, Language::ZhTw);
+
+        // 'ㅣ' (Korean IME without shift) in settings modal toggles language: ZhTw -> Mn
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('ㅣ'), KeyModifiers::NONE)),
+        )?;
+        assert_eq!(app.lang, Language::Mn);
+
         Ok(())
     }
 

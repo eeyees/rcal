@@ -6,23 +6,65 @@ pub mod translations;
 pub mod ko;
 pub mod en;
 pub mod ja;
+pub mod locales;
 
 pub use hangul::hangul_to_qwerty;
 pub use translations::Translations;
 pub use ko::KO;
 pub use en::EN;
 pub use ja::JA;
+pub use locales::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Language {
     Ko,
     En,
     Ja,
+    ZhCn,
+    ZhTw,
+    Mn,
+    Es,
+    Fr,
+    De,
+    Ru,
+    Pt,
+    It,
+    Vi,
+    Id,
+    Th,
+    Ar,
+    Hi,
+    Tr,
+    Nl,
+    Pl,
+    Sv,
 }
 
 impl Language {
     /// List of all supported languages in order of toggle cycling
-    pub const ALL: &'static [Language] = &[Language::Ko, Language::En, Language::Ja];
+    pub const ALL: &'static [Language] = &[
+        Language::Ko,
+        Language::En,
+        Language::Ja,
+        Language::ZhCn,
+        Language::ZhTw,
+        Language::Mn,
+        Language::Es,
+        Language::Fr,
+        Language::De,
+        Language::Ru,
+        Language::Pt,
+        Language::It,
+        Language::Vi,
+        Language::Id,
+        Language::Th,
+        Language::Ar,
+        Language::Hi,
+        Language::Tr,
+        Language::Nl,
+        Language::Pl,
+        Language::Sv,
+    ];
 
     pub fn detect() -> Self {
         if let Ok(val) = std::env::var("RCAL_LANG") {
@@ -39,6 +81,42 @@ impl Language {
             Language::Ko
         } else if env_str.contains("ja") {
             Language::Ja
+        } else if env_str.contains("zh_tw") || env_str.contains("zh-tw") || env_str.contains("zh_hk") || env_str.contains("zh-hk") {
+            Language::ZhTw
+        } else if env_str.contains("zh") {
+            Language::ZhCn
+        } else if env_str.contains("mn") {
+            Language::Mn
+        } else if env_str.contains("es") {
+            Language::Es
+        } else if env_str.contains("fr") {
+            Language::Fr
+        } else if env_str.contains("de") {
+            Language::De
+        } else if env_str.contains("ru") {
+            Language::Ru
+        } else if env_str.contains("pt") {
+            Language::Pt
+        } else if env_str.contains("it") {
+            Language::It
+        } else if env_str.contains("vi") {
+            Language::Vi
+        } else if env_str.contains("id") {
+            Language::Id
+        } else if env_str.contains("th") {
+            Language::Th
+        } else if env_str.contains("ar") {
+            Language::Ar
+        } else if env_str.contains("hi") {
+            Language::Hi
+        } else if env_str.contains("tr") {
+            Language::Tr
+        } else if env_str.contains("nl") {
+            Language::Nl
+        } else if env_str.contains("pl") {
+            Language::Pl
+        } else if env_str.contains("sv") {
+            Language::Sv
         } else {
             // Default to Korean (primary locale for rcal), toggleable via 'L' or Settings anytime
             Language::Ko
@@ -46,10 +124,30 @@ impl Language {
     }
 
     pub fn from_code(code: &str) -> Option<Self> {
-        match code.to_lowercase().as_str() {
+        let lower = code.to_lowercase();
+        let s = lower.trim();
+        match s {
             "ko" | "ko_kr" | "ko-kr" | "korean" => Some(Language::Ko),
             "en" | "en_us" | "en-us" | "english" => Some(Language::En),
             "ja" | "ja_jp" | "ja-jp" | "japanese" => Some(Language::Ja),
+            "zh-cn" | "zh_cn" | "zh" | "chinese" | "chinese-simplified" => Some(Language::ZhCn),
+            "zh-tw" | "zh_tw" | "zh-hk" | "zh_hk" | "chinese-traditional" => Some(Language::ZhTw),
+            "mn" | "mn_mn" | "mn-mn" | "mongolian" => Some(Language::Mn),
+            "es" | "es_es" | "es-es" | "spanish" => Some(Language::Es),
+            "fr" | "fr_fr" | "fr-fr" | "french" => Some(Language::Fr),
+            "de" | "de_de" | "de-de" | "german" => Some(Language::De),
+            "ru" | "ru_ru" | "ru-ru" | "russian" => Some(Language::Ru),
+            "pt" | "pt_br" | "pt-br" | "pt_pt" | "portuguese" => Some(Language::Pt),
+            "it" | "it_it" | "it-it" | "italian" => Some(Language::It),
+            "vi" | "vi_vn" | "vi-vn" | "vietnamese" => Some(Language::Vi),
+            "id" | "id_id" | "id-id" | "indonesian" => Some(Language::Id),
+            "th" | "th_th" | "th-th" | "thai" => Some(Language::Th),
+            "ar" | "ar_sa" | "ar-sa" | "arabic" => Some(Language::Ar),
+            "hi" | "hi_in" | "hi-in" | "hindi" => Some(Language::Hi),
+            "tr" | "tr_tr" | "tr-tr" | "turkish" => Some(Language::Tr),
+            "nl" | "nl_nl" | "nl-nl" | "dutch" => Some(Language::Nl),
+            "pl" | "pl_pl" | "pl-pl" | "polish" => Some(Language::Pl),
+            "sv" | "sv_se" | "sv-se" | "swedish" => Some(Language::Sv),
             _ => None,
         }
     }
@@ -66,6 +164,24 @@ impl Language {
             Language::Ko => &ko::KO,
             Language::En => &en::EN,
             Language::Ja => &ja::JA,
+            Language::ZhCn => &locales::ZH_CN,
+            Language::ZhTw => &locales::ZH_TW,
+            Language::Mn => &locales::MN,
+            Language::Es => &locales::ES,
+            Language::Fr => &locales::FR,
+            Language::De => &locales::DE,
+            Language::Ru => &locales::RU,
+            Language::Pt => &locales::PT,
+            Language::It => &locales::IT,
+            Language::Vi => &locales::VI,
+            Language::Id => &locales::ID,
+            Language::Th => &locales::TH,
+            Language::Ar => &locales::AR,
+            Language::Hi => &locales::HI,
+            Language::Tr => &locales::TR,
+            Language::Nl => &locales::NL,
+            Language::Pl => &locales::PL,
+            Language::Sv => &locales::SV,
         }
     }
 

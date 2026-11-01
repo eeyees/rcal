@@ -6,7 +6,8 @@ use crate::i18n::Language;
 use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus, WeekStartDay};
 use crate::mouse::{HitMap, HitTarget};
 use crate::storage::Database;
-use crate::ui::theme::{Theme, ThemeMode};
+use crate::ui::theme::{Theme, ThemeCategory, ThemeMode};
+use crate::ui::theme_config::ThemeConfigFile;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewMode {
@@ -200,6 +201,8 @@ pub struct App {
     pub lang: Language,
     pub week_start_day: WeekStartDay,
     pub theme: Theme,
+    pub theme_config: ThemeConfigFile,
+    pub theme_category: ThemeCategory,
     pub show_sidebar: bool,
 
     // Synchronization state
@@ -221,12 +224,16 @@ impl App {
             .flatten()
             .map(|s| WeekStartDay::from_str(&s))
             .unwrap_or(WeekStartDay::Sunday);
+        let (theme_config, _cfg_path) = ThemeConfigFile::load_or_create();
         let theme_mode = db.get_setting("theme")
             .ok()
             .flatten()
             .map(|s| ThemeMode::from_str(&s))
+            .or_else(|| theme_config.active_theme.as_ref().map(|s| ThemeMode::from_str(s)))
             .unwrap_or(ThemeMode::ModernDark);
-        let theme = Theme::from_mode(theme_mode);
+        let mut theme = Theme::from_mode(theme_mode);
+        theme_config.apply_to(&mut theme);
+        let theme_category = theme_mode.category();
 
         let mut app = Self {
             running: true,
@@ -243,6 +250,8 @@ impl App {
             lang,
             week_start_day,
             theme,
+            theme_config,
+            theme_category,
             show_sidebar: true,
             is_syncing: false,
             last_sync_status: None,
@@ -426,13 +435,18 @@ impl App {
     }
 
     pub fn set_theme(&mut self, mode: ThemeMode) {
-        self.theme = Theme::from_mode(mode);
+        let mut theme = Theme::from_mode(mode);
+        self.theme_config.apply_to(&mut theme);
+        self.theme = theme;
+        self.theme_category = mode.category();
         let _ = self.db.set_setting("theme", mode.as_str());
+        let all = ThemeMode::all();
+        let idx = all.iter().position(|m| *m == mode).unwrap_or(0) + 1;
         let label = mode.label(self.lang);
         let msg = match self.lang {
-            Language::Ko => format!("테마가 '{}'로 변경되었습니다.", label),
-            Language::Ja => format!("テーマが「{}」に変更されました。", label),
-            _ => format!("Theme changed to '{}'.", label),
+            Language::Ko => format!("🎨 테마가 '{}' [{}/{}] 로 변경되었습니다.", label, idx, all.len()),
+            Language::Ja => format!("🎨 テーマが「{}」[{}/{}] に変更されました。", label, idx, all.len()),
+            _ => format!("🎨 Theme changed to '{}' [{}/{}].", label, idx, all.len()),
         };
         self.set_status(msg);
     }
@@ -440,6 +454,19 @@ impl App {
     pub fn cycle_theme(&mut self) {
         let next_mode = self.theme.mode.next();
         self.set_theme(next_mode);
+    }
+
+    pub fn cycle_theme_prev(&mut self) {
+        let prev_mode = self.theme.mode.prev();
+        self.set_theme(prev_mode);
+    }
+
+    pub fn set_theme_category(&mut self, cat: ThemeCategory) {
+        self.theme_category = cat;
+        let themes = cat.themes();
+        if !themes.contains(&self.theme.mode) && !themes.is_empty() {
+            self.set_theme(themes[0]);
+        }
     }
 
     pub fn trigger_sync(&mut self) {
@@ -562,6 +589,18 @@ impl App {
 
                 HitTarget::ModalSettingTheme(mode) => {
                     self.set_theme(mode);
+                }
+
+                HitTarget::ModalSettingThemeCategory(cat) => {
+                    self.set_theme_category(cat);
+                }
+
+                HitTarget::ModalSettingThemePrev => {
+                    self.cycle_theme_prev();
+                }
+
+                HitTarget::ModalSettingThemeNext => {
+                    self.cycle_theme();
                 }
 
                 HitTarget::ModalSelectLanguage(l) => {
