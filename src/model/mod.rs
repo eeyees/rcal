@@ -192,15 +192,15 @@ impl CalDavAccount {
 impl Calendar {
     pub fn ratatui_color(&self) -> Color {
         match self.color_code.as_str() {
-            "blue" | "#4285F4" => Color::Rgb(66, 133, 244),      // Google Blue
+            "blue" | "#4285F4" => Color::Rgb(66, 133, 244), // Google Blue
             "green" | "#0F9D58" | "#03C75A" => Color::Rgb(15, 157, 88), // Naver Green
             "yellow" | "#F4B400" => Color::Rgb(244, 180, 0),
             "red" | "#DB4437" => Color::Rgb(219, 68, 55),
             "purple" | "#9C27B0" => Color::Rgb(156, 39, 176),
             "cyan" | "#00ACC1" => Color::Rgb(0, 172, 193),
             "orange" | "#FF9800" => Color::Rgb(255, 152, 0),
-            "#0078D4" => Color::Rgb(0, 120, 212),                // Microsoft Blue
-            "#034EA2" | "samsung" => Color::Rgb(3, 78, 162),    // Samsung Iconic Blue
+            "#0078D4" => Color::Rgb(0, 120, 212), // Microsoft Blue
+            "#034EA2" | "samsung" => Color::Rgb(3, 78, 162), // Samsung Iconic Blue
             _ => Color::Cyan,
         }
     }
@@ -280,7 +280,7 @@ impl Event {
     pub fn occurs_on(&self, date: NaiveDate) -> bool {
         let event_start_date = self.start_time.date_naive();
         let event_end_date = self.end_time.date_naive();
-        
+
         if self.all_day {
             date >= event_start_date && date <= event_end_date
         } else {

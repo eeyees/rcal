@@ -817,16 +817,16 @@ impl Theme {
                 panel_bg: Color::Rgb(46, 52, 64),
                 border: Color::Rgb(76, 86, 106),
                 border_focused: Color::Rgb(136, 192, 208),
-                primary: Color::Rgb(136, 192, 208),     // Frost cyan #88C0D0
-                secondary: Color::Rgb(163, 190, 140),   // Aurora green #A3BE8C
-                accent: Color::Rgb(235, 203, 139),      // Aurora yellow #EBCB8B
-                danger: Color::Rgb(191, 97, 106),       // Aurora red #BF616A
+                primary: Color::Rgb(136, 192, 208), // Frost cyan #88C0D0
+                secondary: Color::Rgb(163, 190, 140), // Aurora green #A3BE8C
+                accent: Color::Rgb(235, 203, 139),  // Aurora yellow #EBCB8B
+                danger: Color::Rgb(191, 97, 106),   // Aurora red #BF616A
                 text_normal: Color::Rgb(236, 239, 244), // Snow storm #ECEFF4
-                text_muted: Color::Rgb(216, 222, 233),  // #D8DEE9
+                text_muted: Color::Rgb(216, 222, 233), // #D8DEE9
                 text_dim: Color::Rgb(140, 150, 170),
                 text_highlight: Color::Rgb(255, 255, 255),
-                today_bg: Color::Rgb(94, 129, 172),     // Frost dark blue #5E81AC
-                selected_bg: Color::Rgb(67, 76, 94),    // Polar night light #434C5E
+                today_bg: Color::Rgb(94, 129, 172), // Frost dark blue #5E81AC
+                selected_bg: Color::Rgb(67, 76, 94), // Polar night light #434C5E
                 tab_active_bg: Color::Rgb(94, 129, 172),
                 tab_inactive_bg: Color::Rgb(46, 52, 64),
                 button_bg: Color::Rgb(67, 76, 94),
@@ -838,13 +838,13 @@ impl Theme {
                 panel_bg: Color::Rgb(40, 42, 54),
                 border: Color::Rgb(68, 71, 90),
                 border_focused: Color::Rgb(189, 147, 249),
-                primary: Color::Rgb(189, 147, 249),     // Dracula Purple #BD93F9
-                secondary: Color::Rgb(80, 250, 123),    // Dracula Green #50FA7B
-                accent: Color::Rgb(255, 121, 198),      // Dracula Pink #FF79C6
-                danger: Color::Rgb(255, 85, 85),        // Dracula Red #FF5555
+                primary: Color::Rgb(189, 147, 249), // Dracula Purple #BD93F9
+                secondary: Color::Rgb(80, 250, 123), // Dracula Green #50FA7B
+                accent: Color::Rgb(255, 121, 198),  // Dracula Pink #FF79C6
+                danger: Color::Rgb(255, 85, 85),    // Dracula Red #FF5555
                 text_normal: Color::Rgb(248, 248, 242), // Dracula Foreground #F8F8F2
                 text_muted: Color::Rgb(189, 195, 215),
-                text_dim: Color::Rgb(98, 114, 164),     // Dracula Comment #6272A4
+                text_dim: Color::Rgb(98, 114, 164), // Dracula Comment #6272A4
                 text_highlight: Color::Rgb(255, 255, 255),
                 today_bg: Color::Rgb(110, 60, 170),
                 selected_bg: Color::Rgb(68, 71, 90),
@@ -877,16 +877,16 @@ impl Theme {
             ThemeMode::CatppuccinMocha => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(30, 30, 46),       // #1E1E2E
-                border: Color::Rgb(69, 71, 90),         // #45475A
+                panel_bg: Color::Rgb(30, 30, 46),          // #1E1E2E
+                border: Color::Rgb(69, 71, 90),            // #45475A
                 border_focused: Color::Rgb(137, 180, 250), // #89B4FA
                 primary: Color::Rgb(137, 180, 250),
-                secondary: Color::Rgb(166, 227, 161),   // #A6E3A1
-                accent: Color::Rgb(249, 226, 175),      // #F9E2AF
-                danger: Color::Rgb(243, 139, 168),      // #F38BA8
+                secondary: Color::Rgb(166, 227, 161), // #A6E3A1
+                accent: Color::Rgb(249, 226, 175),    // #F9E2AF
+                danger: Color::Rgb(243, 139, 168),    // #F38BA8
                 text_normal: Color::Rgb(205, 214, 244), // #CDD6F4
-                text_muted: Color::Rgb(166, 173, 200),  // #A6ADC8
-                text_dim: Color::Rgb(108, 112, 134),    // #6C7086
+                text_muted: Color::Rgb(166, 173, 200), // #A6ADC8
+                text_dim: Color::Rgb(108, 112, 134),  // #6C7086
                 text_highlight: Color::Rgb(255, 255, 255),
                 today_bg: Color::Rgb(49, 50, 68),
                 selected_bg: Color::Rgb(69, 71, 90),
@@ -898,13 +898,13 @@ impl Theme {
             ThemeMode::CatppuccinMacchiato => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(36, 39, 58),       // #24273A
-                border: Color::Rgb(73, 77, 100),        // #494D64
+                panel_bg: Color::Rgb(36, 39, 58),          // #24273A
+                border: Color::Rgb(73, 77, 100),           // #494D64
                 border_focused: Color::Rgb(138, 173, 244), // #8AADF4
                 primary: Color::Rgb(138, 173, 244),
-                secondary: Color::Rgb(166, 218, 149),   // #A6DA95
-                accent: Color::Rgb(238, 212, 159),      // #EED49F
-                danger: Color::Rgb(237, 135, 150),      // #ED8796
+                secondary: Color::Rgb(166, 218, 149), // #A6DA95
+                accent: Color::Rgb(238, 212, 159),    // #EED49F
+                danger: Color::Rgb(237, 135, 150),    // #ED8796
                 text_normal: Color::Rgb(202, 211, 245), // #CAD3F5
                 text_muted: Color::Rgb(165, 173, 203),
                 text_dim: Color::Rgb(110, 115, 141),
@@ -919,16 +919,16 @@ impl Theme {
             ThemeMode::OneDark => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(40, 44, 52),       // #282C34
+                panel_bg: Color::Rgb(40, 44, 52), // #282C34
                 border: Color::Rgb(62, 68, 81),
                 border_focused: Color::Rgb(97, 175, 239), // #61AFEF
                 primary: Color::Rgb(97, 175, 239),
-                secondary: Color::Rgb(152, 195, 121),   // #98C379
-                accent: Color::Rgb(229, 192, 123),      // #E5C07B
-                danger: Color::Rgb(224, 108, 117),      // #E06C75
+                secondary: Color::Rgb(152, 195, 121), // #98C379
+                accent: Color::Rgb(229, 192, 123),    // #E5C07B
+                danger: Color::Rgb(224, 108, 117),    // #E06C75
                 text_normal: Color::Rgb(171, 178, 191), // #ABB2BF
                 text_muted: Color::Rgb(140, 148, 163),
-                text_dim: Color::Rgb(92, 99, 112),      // #5C6370
+                text_dim: Color::Rgb(92, 99, 112), // #5C6370
                 text_highlight: Color::Rgb(255, 255, 255),
                 today_bg: Color::Rgb(44, 75, 120),
                 selected_bg: Color::Rgb(59, 66, 82),
@@ -940,8 +940,8 @@ impl Theme {
             ThemeMode::GitHubDark => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(22, 27, 34),       // #161B22
-                border: Color::Rgb(48, 54, 61),         // #30363D
+                panel_bg: Color::Rgb(22, 27, 34),         // #161B22
+                border: Color::Rgb(48, 54, 61),           // #30363D
                 border_focused: Color::Rgb(88, 166, 255), // #58A6FF
                 primary: Color::Rgb(88, 166, 255),
                 secondary: Color::Rgb(63, 185, 80),     // #3FB950
@@ -961,7 +961,7 @@ impl Theme {
             ThemeMode::NightOwl => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(1, 22, 39),        // #011627
+                panel_bg: Color::Rgb(1, 22, 39), // #011627
                 border: Color::Rgb(28, 55, 80),
                 border_focused: Color::Rgb(130, 170, 255), // #82AAFF
                 primary: Color::Rgb(130, 170, 255),
@@ -970,7 +970,7 @@ impl Theme {
                 danger: Color::Rgb(239, 83, 80),        // #EF5350
                 text_normal: Color::Rgb(214, 222, 235), // #D6DEEB
                 text_muted: Color::Rgb(150, 170, 195),
-                text_dim: Color::Rgb(95, 126, 150),     // #5F7E97
+                text_dim: Color::Rgb(95, 126, 150), // #5F7E97
                 text_highlight: Color::Rgb(255, 255, 255),
                 today_bg: Color::Rgb(20, 60, 110),
                 selected_bg: Color::Rgb(15, 45, 75),
@@ -982,12 +982,12 @@ impl Theme {
             ThemeMode::Cobalt2 => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(25, 53, 78),       // #19354E
+                panel_bg: Color::Rgb(25, 53, 78), // #19354E
                 border: Color::Rgb(20, 85, 135),
                 border_focused: Color::Rgb(255, 197, 35), // #FFC523
                 primary: Color::Rgb(255, 197, 35),
-                secondary: Color::Rgb(59, 219, 139),    // #3BDB8B
-                accent: Color::Rgb(0, 168, 255),        // #00A8FF
+                secondary: Color::Rgb(59, 219, 139), // #3BDB8B
+                accent: Color::Rgb(0, 168, 255),     // #00A8FF
                 danger: Color::Rgb(255, 78, 66),
                 text_normal: Color::Rgb(255, 255, 255),
                 text_muted: Color::Rgb(170, 195, 220),
@@ -1028,13 +1028,13 @@ impl Theme {
             ThemeMode::EverforestDark => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(45, 53, 59),       // #2D353B
-                border: Color::Rgb(71, 82, 88),         // #475258
+                panel_bg: Color::Rgb(45, 53, 59),          // #2D353B
+                border: Color::Rgb(71, 82, 88),            // #475258
                 border_focused: Color::Rgb(167, 192, 128), // #A7C080
                 primary: Color::Rgb(167, 192, 128),
-                secondary: Color::Rgb(131, 192, 146),   // #83C092
-                accent: Color::Rgb(219, 188, 127),      // #DBBC7F
-                danger: Color::Rgb(230, 126, 128),      // #E67E80
+                secondary: Color::Rgb(131, 192, 146), // #83C092
+                accent: Color::Rgb(219, 188, 127),    // #DBBC7F
+                danger: Color::Rgb(230, 126, 128),    // #E67E80
                 text_normal: Color::Rgb(211, 198, 170), // #D3C6AA
                 text_muted: Color::Rgb(157, 169, 160),
                 text_dim: Color::Rgb(112, 122, 115),
@@ -1049,16 +1049,16 @@ impl Theme {
             ThemeMode::Kanagawa => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(31, 31, 40),       // #1F1F28
-                border: Color::Rgb(54, 54, 70),         // #363646
+                panel_bg: Color::Rgb(31, 31, 40),          // #1F1F28
+                border: Color::Rgb(54, 54, 70),            // #363646
                 border_focused: Color::Rgb(126, 156, 216), // #7E9CD8
                 primary: Color::Rgb(126, 156, 216),
-                secondary: Color::Rgb(152, 187, 108),   // #98BB6C
-                accent: Color::Rgb(230, 195, 132),      // #E6C384
-                danger: Color::Rgb(232, 131, 132),      // #E88384
+                secondary: Color::Rgb(152, 187, 108), // #98BB6C
+                accent: Color::Rgb(230, 195, 132),    // #E6C384
+                danger: Color::Rgb(232, 131, 132),    // #E88384
                 text_normal: Color::Rgb(220, 223, 228), // #DCD7BA
                 text_muted: Color::Rgb(155, 160, 175),
-                text_dim: Color::Rgb(114, 113, 105),    // #727169
+                text_dim: Color::Rgb(114, 113, 105), // #727169
                 text_highlight: Color::Rgb(255, 255, 255),
                 today_bg: Color::Rgb(45, 65, 95),
                 selected_bg: Color::Rgb(42, 42, 58),
@@ -1070,16 +1070,16 @@ impl Theme {
             ThemeMode::RosePine => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(25, 23, 36),       // #191724
-                border: Color::Rgb(38, 35, 58),         // #26233A
+                panel_bg: Color::Rgb(25, 23, 36),          // #191724
+                border: Color::Rgb(38, 35, 58),            // #26233A
                 border_focused: Color::Rgb(156, 207, 216), // #9CCFD8
-                primary: Color::Rgb(235, 188, 186),     // #EBBCBA
-                secondary: Color::Rgb(49, 116, 143),    // #31748F
-                accent: Color::Rgb(246, 193, 119),      // #F6C177
-                danger: Color::Rgb(235, 111, 146),      // #EB6F92
-                text_normal: Color::Rgb(224, 222, 244), // #E0DEF4
-                text_muted: Color::Rgb(144, 140, 170),  // #908CAA
-                text_dim: Color::Rgb(110, 106, 134),    // #6E6A86
+                primary: Color::Rgb(235, 188, 186),        // #EBBCBA
+                secondary: Color::Rgb(49, 116, 143),       // #31748F
+                accent: Color::Rgb(246, 193, 119),         // #F6C177
+                danger: Color::Rgb(235, 111, 146),         // #EB6F92
+                text_normal: Color::Rgb(224, 222, 244),    // #E0DEF4
+                text_muted: Color::Rgb(144, 140, 170),     // #908CAA
+                text_dim: Color::Rgb(110, 106, 134),       // #6E6A86
                 text_highlight: Color::Rgb(255, 255, 255),
                 today_bg: Color::Rgb(60, 45, 75),
                 selected_bg: Color::Rgb(42, 39, 63),
@@ -1091,11 +1091,11 @@ impl Theme {
             ThemeMode::RosePineMoon => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(35, 33, 54),       // #232136
-                border: Color::Rgb(57, 53, 82),         // #393552
+                panel_bg: Color::Rgb(35, 33, 54), // #232136
+                border: Color::Rgb(57, 53, 82),   // #393552
                 border_focused: Color::Rgb(156, 207, 216),
-                primary: Color::Rgb(234, 154, 151),     // #EA9A97
-                secondary: Color::Rgb(62, 143, 176),    // #3E8FB0
+                primary: Color::Rgb(234, 154, 151),  // #EA9A97
+                secondary: Color::Rgb(62, 143, 176), // #3E8FB0
                 accent: Color::Rgb(246, 193, 119),
                 danger: Color::Rgb(235, 111, 146),
                 text_normal: Color::Rgb(224, 222, 244),
@@ -1112,16 +1112,16 @@ impl Theme {
             ThemeMode::Palenight => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(41, 45, 62),       // #292D3E
+                panel_bg: Color::Rgb(41, 45, 62), // #292D3E
                 border: Color::Rgb(68, 75, 106),
                 border_focused: Color::Rgb(130, 170, 255), // #82AAFF
                 primary: Color::Rgb(130, 170, 255),
-                secondary: Color::Rgb(195, 232, 141),   // #C3E88D
-                accent: Color::Rgb(255, 203, 107),      // #FFCB6B
-                danger: Color::Rgb(255, 83, 112),       // #FF5370
+                secondary: Color::Rgb(195, 232, 141), // #C3E88D
+                accent: Color::Rgb(255, 203, 107),    // #FFCB6B
+                danger: Color::Rgb(255, 83, 112),     // #FF5370
                 text_normal: Color::Rgb(238, 245, 255),
                 text_muted: Color::Rgb(170, 175, 205),
-                text_dim: Color::Rgb(103, 110, 149),    // #676E95
+                text_dim: Color::Rgb(103, 110, 149), // #676E95
                 text_highlight: Color::Rgb(255, 255, 255),
                 today_bg: Color::Rgb(55, 65, 110),
                 selected_bg: Color::Rgb(55, 60, 85),
@@ -1133,8 +1133,8 @@ impl Theme {
             ThemeMode::GruvboxDark => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(40, 40, 40),       // #282828
-                border: Color::Rgb(80, 73, 69),         // #504945
+                panel_bg: Color::Rgb(40, 40, 40),         // #282828
+                border: Color::Rgb(80, 73, 69),           // #504945
                 border_focused: Color::Rgb(250, 189, 47), // #FABD2F
                 primary: Color::Rgb(250, 189, 47),
                 secondary: Color::Rgb(184, 187, 38),    // #B8BB26
@@ -1154,16 +1154,16 @@ impl Theme {
             ThemeMode::AyuDark => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(15, 20, 25),       // #0F1419
+                panel_bg: Color::Rgb(15, 20, 25), // #0F1419
                 border: Color::Rgb(40, 48, 58),
                 border_focused: Color::Rgb(255, 180, 84), // #FFB454
                 primary: Color::Rgb(255, 180, 84),
-                secondary: Color::Rgb(149, 230, 150),   // #95E696
-                accent: Color::Rgb(57, 186, 230),       // #39BAE6
+                secondary: Color::Rgb(149, 230, 150), // #95E696
+                accent: Color::Rgb(57, 186, 230),     // #39BAE6
                 danger: Color::Rgb(255, 51, 51),
                 text_normal: Color::Rgb(225, 230, 235), // #E6E1CF
                 text_muted: Color::Rgb(160, 165, 175),
-                text_dim: Color::Rgb(92, 103, 115),     // #5C6773
+                text_dim: Color::Rgb(92, 103, 115), // #5C6773
                 text_highlight: Color::Rgb(255, 255, 255),
                 today_bg: Color::Rgb(85, 60, 25),
                 selected_bg: Color::Rgb(30, 38, 48),
@@ -1175,13 +1175,13 @@ impl Theme {
             ThemeMode::CatppuccinFrappe => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(48, 52, 70),       // #303446
-                border: Color::Rgb(81, 87, 109),        // #51576D
+                panel_bg: Color::Rgb(48, 52, 70),          // #303446
+                border: Color::Rgb(81, 87, 109),           // #51576D
                 border_focused: Color::Rgb(140, 170, 238), // #8CAAEE
                 primary: Color::Rgb(140, 170, 238),
-                secondary: Color::Rgb(166, 209, 137),   // #A6D189
-                accent: Color::Rgb(229, 200, 144),      // #E5C890
-                danger: Color::Rgb(231, 130, 132),      // #E78284
+                secondary: Color::Rgb(166, 209, 137), // #A6D189
+                accent: Color::Rgb(229, 200, 144),    // #E5C890
+                danger: Color::Rgb(231, 130, 132),    // #E78284
                 text_normal: Color::Rgb(198, 208, 245), // #C6D0F5
                 text_muted: Color::Rgb(165, 173, 206),
                 text_dim: Color::Rgb(115, 121, 148),
@@ -1203,10 +1203,10 @@ impl Theme {
                 panel_bg: Color::Rgb(26, 18, 32),
                 border: Color::Rgb(70, 45, 85),
                 border_focused: Color::Rgb(255, 64, 129),
-                primary: Color::Rgb(255, 64, 129),      // Neon Magenta Pink
-                secondary: Color::Rgb(0, 229, 255),     // Electric Cyan
-                accent: Color::Rgb(255, 171, 0),        // Sunset Amber
-                danger: Color::Rgb(255, 23, 68),        // Crimson
+                primary: Color::Rgb(255, 64, 129), // Neon Magenta Pink
+                secondary: Color::Rgb(0, 229, 255), // Electric Cyan
+                accent: Color::Rgb(255, 171, 0),   // Sunset Amber
+                danger: Color::Rgb(255, 23, 68),   // Crimson
                 text_normal: Color::Rgb(240, 230, 250),
                 text_muted: Color::Rgb(180, 155, 195),
                 text_dim: Color::Rgb(115, 90, 130),
@@ -1224,10 +1224,10 @@ impl Theme {
                 panel_bg: Color::Rgb(34, 31, 34),
                 border: Color::Rgb(74, 70, 75),
                 border_focused: Color::Rgb(255, 216, 102),
-                primary: Color::Rgb(255, 216, 102),     // Monokai Yellow #FFD866
-                secondary: Color::Rgb(169, 220, 107),   // Monokai Green #A9DC6B
-                accent: Color::Rgb(252, 152, 103),      // Monokai Orange #FC9867
-                danger: Color::Rgb(255, 97, 136),       // Monokai Red #FF6188
+                primary: Color::Rgb(255, 216, 102), // Monokai Yellow #FFD866
+                secondary: Color::Rgb(169, 220, 107), // Monokai Green #A9DC6B
+                accent: Color::Rgb(252, 152, 103),  // Monokai Orange #FC9867
+                danger: Color::Rgb(255, 97, 136),   // Monokai Red #FF6188
                 text_normal: Color::Rgb(247, 241, 255),
                 text_muted: Color::Rgb(170, 165, 170),
                 text_dim: Color::Rgb(110, 105, 110),
@@ -1263,12 +1263,12 @@ impl Theme {
             ThemeMode::Synthwave84 => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(38, 35, 53),       // #262335
+                panel_bg: Color::Rgb(38, 35, 53), // #262335
                 border: Color::Rgb(70, 55, 90),
                 border_focused: Color::Rgb(254, 68, 142), // #FE448E
                 primary: Color::Rgb(254, 68, 142),
-                secondary: Color::Rgb(54, 249, 246),    // #36F9F6
-                accent: Color::Rgb(254, 222, 93),       // #FEDE5D
+                secondary: Color::Rgb(54, 249, 246), // #36F9F6
+                accent: Color::Rgb(254, 222, 93),    // #FEDE5D
                 danger: Color::Rgb(254, 68, 68),
                 text_normal: Color::Rgb(255, 245, 255),
                 text_muted: Color::Rgb(180, 160, 205),
@@ -1305,12 +1305,12 @@ impl Theme {
             ThemeMode::AyuMirage => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(31, 36, 48),       // #1F2430
+                panel_bg: Color::Rgb(31, 36, 48), // #1F2430
                 border: Color::Rgb(55, 62, 80),
                 border_focused: Color::Rgb(255, 204, 102), // #FFCC66
                 primary: Color::Rgb(255, 204, 102),
-                secondary: Color::Rgb(186, 230, 126),   // #BAE67E
-                accent: Color::Rgb(115, 208, 255),      // #73D0FF
+                secondary: Color::Rgb(186, 230, 126), // #BAE67E
+                accent: Color::Rgb(115, 208, 255),    // #73D0FF
                 danger: Color::Rgb(255, 102, 102),
                 text_normal: Color::Rgb(203, 210, 222), // #CBCCC6
                 text_muted: Color::Rgb(155, 165, 180),
@@ -1326,18 +1326,18 @@ impl Theme {
             ThemeMode::TokyoNightStorm => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(36, 40, 59),       // #24283B
+                panel_bg: Color::Rgb(36, 40, 59), // #24283B
                 border: Color::Rgb(74, 82, 118),
                 border_focused: Color::Rgb(122, 162, 247),
                 primary: Color::Rgb(122, 162, 247),
-                secondary: Color::Rgb(115, 218, 202),   // #73DACA
-                accent: Color::Rgb(255, 158, 100),      // #FF9E64
+                secondary: Color::Rgb(115, 218, 202), // #73DACA
+                accent: Color::Rgb(255, 158, 100),    // #FF9E64
                 danger: Color::Rgb(247, 118, 142),
                 text_normal: Color::Rgb(192, 202, 245),
                 text_muted: Color::Rgb(154, 165, 206),
                 text_dim: Color::Rgb(86, 95, 137),
                 text_highlight: Color::Rgb(255, 255, 255),
-                today_bg: Color::Rgb(61, 89, 161),      // #3D59A1
+                today_bg: Color::Rgb(61, 89, 161), // #3D59A1
                 selected_bg: Color::Rgb(52, 60, 88),
                 tab_active_bg: Color::Rgb(75, 105, 180),
                 tab_inactive_bg: Color::Rgb(28, 31, 46),
@@ -1347,8 +1347,8 @@ impl Theme {
             ThemeMode::SolarizedDark => Self {
                 mode,
                 bg: Color::Reset,
-                panel_bg: Color::Rgb(0, 43, 54),        // #002B36
-                border: Color::Rgb(7, 54, 66),          // #073642
+                panel_bg: Color::Rgb(0, 43, 54),          // #002B36
+                border: Color::Rgb(7, 54, 66),            // #073642
                 border_focused: Color::Rgb(38, 139, 210), // #268BD2
                 primary: Color::Rgb(38, 139, 210),
                 secondary: Color::Rgb(42, 161, 152),    // #2AA198
@@ -1371,8 +1371,8 @@ impl Theme {
             // ==========================================
             ThemeMode::SolarizedLight => Self {
                 mode,
-                bg: Color::Rgb(253, 246, 227),          // #FDF6E3
-                panel_bg: Color::Rgb(238, 232, 213),    // #EEE8D5
+                bg: Color::Rgb(253, 246, 227),       // #FDF6E3
+                panel_bg: Color::Rgb(238, 232, 213), // #EEE8D5
                 border: Color::Rgb(203, 194, 169),
                 border_focused: Color::Rgb(38, 139, 210),
                 primary: Color::Rgb(38, 139, 210),
@@ -1392,16 +1392,16 @@ impl Theme {
             },
             ThemeMode::CatppuccinLatte => Self {
                 mode,
-                bg: Color::Rgb(239, 241, 245),          // #EFF1F5
-                panel_bg: Color::Rgb(230, 233, 239),    // #E6E9EF
-                border: Color::Rgb(188, 192, 204),      // #BCC0CC
+                bg: Color::Rgb(239, 241, 245),            // #EFF1F5
+                panel_bg: Color::Rgb(230, 233, 239),      // #E6E9EF
+                border: Color::Rgb(188, 192, 204),        // #BCC0CC
                 border_focused: Color::Rgb(30, 102, 245), // #1E66F5
                 primary: Color::Rgb(30, 102, 245),
-                secondary: Color::Rgb(64, 160, 43),     // #40A02B
-                accent: Color::Rgb(223, 142, 29),       // #DF8E1D
-                danger: Color::Rgb(210, 15, 57),        // #D20F39
-                text_normal: Color::Rgb(76, 79, 105),   // #4C4F69
-                text_muted: Color::Rgb(108, 111, 133),  // #6C6F85
+                secondary: Color::Rgb(64, 160, 43),    // #40A02B
+                accent: Color::Rgb(223, 142, 29),      // #DF8E1D
+                danger: Color::Rgb(210, 15, 57),       // #D20F39
+                text_normal: Color::Rgb(76, 79, 105),  // #4C4F69
+                text_muted: Color::Rgb(108, 111, 133), // #6C6F85
                 text_dim: Color::Rgb(140, 143, 161),
                 text_highlight: Color::Rgb(32, 34, 45),
                 today_bg: Color::Rgb(180, 205, 255),
@@ -1434,16 +1434,16 @@ impl Theme {
             },
             ThemeMode::GruvboxLight => Self {
                 mode,
-                bg: Color::Rgb(251, 241, 199),          // #FBF1C7
-                panel_bg: Color::Rgb(242, 229, 188),    // #F2E5BC
-                border: Color::Rgb(213, 196, 161),      // #D5C4A1
+                bg: Color::Rgb(251, 241, 199),            // #FBF1C7
+                panel_bg: Color::Rgb(242, 229, 188),      // #F2E5BC
+                border: Color::Rgb(213, 196, 161),        // #D5C4A1
                 border_focused: Color::Rgb(181, 118, 20), // #B57614
                 primary: Color::Rgb(181, 118, 20),
-                secondary: Color::Rgb(152, 151, 26),    // #98971A
-                accent: Color::Rgb(175, 58, 3),         // #AF3A03
-                danger: Color::Rgb(204, 36, 29),        // #CC241D
-                text_normal: Color::Rgb(60, 56, 54),    // #3C3836
-                text_muted: Color::Rgb(124, 111, 100),  // #7C6F64
+                secondary: Color::Rgb(152, 151, 26),   // #98971A
+                accent: Color::Rgb(175, 58, 3),        // #AF3A03
+                danger: Color::Rgb(204, 36, 29),       // #CC241D
+                text_normal: Color::Rgb(60, 56, 54),   // #3C3836
+                text_muted: Color::Rgb(124, 111, 100), // #7C6F64
                 text_dim: Color::Rgb(168, 153, 132),
                 text_highlight: Color::Rgb(29, 32, 33),
                 today_bg: Color::Rgb(225, 200, 150),
@@ -1455,15 +1455,15 @@ impl Theme {
             },
             ThemeMode::OneLight => Self {
                 mode,
-                bg: Color::Rgb(250, 250, 250),          // #FAFAFA
+                bg: Color::Rgb(250, 250, 250), // #FAFAFA
                 panel_bg: Color::Rgb(234, 234, 234),
                 border: Color::Rgb(190, 192, 198),
                 border_focused: Color::Rgb(64, 120, 242), // #4078F2
                 primary: Color::Rgb(64, 120, 242),
-                secondary: Color::Rgb(80, 161, 79),     // #50A14F
-                accent: Color::Rgb(193, 132, 1),        // #C18401
-                danger: Color::Rgb(228, 86, 73),        // #E45649
-                text_normal: Color::Rgb(56, 58, 66),    // #383A42
+                secondary: Color::Rgb(80, 161, 79),  // #50A14F
+                accent: Color::Rgb(193, 132, 1),     // #C18401
+                danger: Color::Rgb(228, 86, 73),     // #E45649
+                text_normal: Color::Rgb(56, 58, 66), // #383A42
                 text_muted: Color::Rgb(105, 108, 120),
                 text_dim: Color::Rgb(160, 161, 167),
                 text_highlight: Color::Rgb(20, 20, 24),
@@ -1476,16 +1476,16 @@ impl Theme {
             },
             ThemeMode::GitHubLight => Self {
                 mode,
-                bg: Color::Rgb(255, 255, 255),          // #FFFFFF
-                panel_bg: Color::Rgb(246, 248, 250),    // #F6F8FA
-                border: Color::Rgb(208, 215, 222),      // #D0D7DE
+                bg: Color::Rgb(255, 255, 255),           // #FFFFFF
+                panel_bg: Color::Rgb(246, 248, 250),     // #F6F8FA
+                border: Color::Rgb(208, 215, 222),       // #D0D7DE
                 border_focused: Color::Rgb(9, 105, 218), // #0969DA
                 primary: Color::Rgb(9, 105, 218),
-                secondary: Color::Rgb(26, 127, 55),     // #1A7F37
-                accent: Color::Rgb(154, 103, 0),        // #9A6700
-                danger: Color::Rgb(207, 34, 46),        // #CF222E
-                text_normal: Color::Rgb(31, 35, 40),    // #1F2328
-                text_muted: Color::Rgb(101, 109, 118),  // #656D76
+                secondary: Color::Rgb(26, 127, 55),    // #1A7F37
+                accent: Color::Rgb(154, 103, 0),       // #9A6700
+                danger: Color::Rgb(207, 34, 46),       // #CF222E
+                text_normal: Color::Rgb(31, 35, 40),   // #1F2328
+                text_muted: Color::Rgb(101, 109, 118), // #656D76
                 text_dim: Color::Rgb(140, 149, 159),
                 text_highlight: Color::Rgb(10, 12, 14),
                 today_bg: Color::Rgb(190, 220, 255),
@@ -1497,16 +1497,16 @@ impl Theme {
             },
             ThemeMode::RosePineDawn => Self {
                 mode,
-                bg: Color::Rgb(250, 244, 237),          // #FAF4ED
-                panel_bg: Color::Rgb(242, 233, 222),    // #F2E9DE
+                bg: Color::Rgb(250, 244, 237),       // #FAF4ED
+                panel_bg: Color::Rgb(242, 233, 222), // #F2E9DE
                 border: Color::Rgb(215, 202, 190),
                 border_focused: Color::Rgb(40, 105, 131), // #286983
-                primary: Color::Rgb(215, 130, 126),     // #D7827E
+                primary: Color::Rgb(215, 130, 126),       // #D7827E
                 secondary: Color::Rgb(40, 105, 131),
-                accent: Color::Rgb(234, 157, 52),       // #EA9D34
-                danger: Color::Rgb(180, 99, 122),       // #B4637A
-                text_normal: Color::Rgb(87, 82, 121),   // #575279
-                text_muted: Color::Rgb(121, 117, 147),  // #797593
+                accent: Color::Rgb(234, 157, 52),      // #EA9D34
+                danger: Color::Rgb(180, 99, 122),      // #B4637A
+                text_normal: Color::Rgb(87, 82, 121),  // #575279
+                text_muted: Color::Rgb(121, 117, 147), // #797593
                 text_dim: Color::Rgb(152, 147, 165),
                 text_highlight: Color::Rgb(40, 36, 60),
                 today_bg: Color::Rgb(235, 210, 210),
@@ -1518,15 +1518,15 @@ impl Theme {
             },
             ThemeMode::EverforestLight => Self {
                 mode,
-                bg: Color::Rgb(253, 246, 227),          // #FDF6E3
-                panel_bg: Color::Rgb(239, 235, 214),    // #EFEBD6
+                bg: Color::Rgb(253, 246, 227),       // #FDF6E3
+                panel_bg: Color::Rgb(239, 235, 214), // #EFEBD6
                 border: Color::Rgb(205, 197, 175),
                 border_focused: Color::Rgb(141, 161, 1), // #8DA101
                 primary: Color::Rgb(141, 161, 1),
-                secondary: Color::Rgb(58, 148, 107),    // #3A946B
-                accent: Color::Rgb(183, 111, 23),       // #B76F17
-                danger: Color::Rgb(248, 85, 82),        // #F85552
-                text_normal: Color::Rgb(92, 106, 114),  // #5C6A72
+                secondary: Color::Rgb(58, 148, 107),   // #3A946B
+                accent: Color::Rgb(183, 111, 23),      // #B76F17
+                danger: Color::Rgb(248, 85, 82),       // #F85552
+                text_normal: Color::Rgb(92, 106, 114), // #5C6A72
                 text_muted: Color::Rgb(130, 142, 148),
                 text_dim: Color::Rgb(160, 168, 165),
                 text_highlight: Color::Rgb(40, 48, 52),
@@ -1539,7 +1539,7 @@ impl Theme {
             },
             ThemeMode::LightOwl => Self {
                 mode,
-                bg: Color::Rgb(240, 240, 240),          // #F0F0F0
+                bg: Color::Rgb(240, 240, 240), // #F0F0F0
                 panel_bg: Color::Rgb(255, 255, 255),
                 border: Color::Rgb(200, 205, 215),
                 border_focused: Color::Rgb(64, 63, 198), // #403FC6
@@ -1547,7 +1547,7 @@ impl Theme {
                 secondary: Color::Rgb(42, 160, 75),
                 accent: Color::Rgb(195, 115, 0),
                 danger: Color::Rgb(222, 62, 59),
-                text_normal: Color::Rgb(64, 63, 76),    // #403F4C
+                text_normal: Color::Rgb(64, 63, 76), // #403F4C
                 text_muted: Color::Rgb(115, 120, 135),
                 text_dim: Color::Rgb(150, 155, 170),
                 text_highlight: Color::Rgb(20, 20, 28),
@@ -1560,17 +1560,17 @@ impl Theme {
             },
             ThemeMode::AyuLight => Self {
                 mode,
-                bg: Color::Rgb(250, 250, 250),          // #FAFAFA
+                bg: Color::Rgb(250, 250, 250), // #FAFAFA
                 panel_bg: Color::Rgb(240, 240, 240),
                 border: Color::Rgb(210, 212, 216),
                 border_focused: Color::Rgb(242, 153, 58), // #F2993A
                 primary: Color::Rgb(242, 153, 58),
-                secondary: Color::Rgb(134, 179, 0),     // #86B300
-                accent: Color::Rgb(57, 158, 230),       // #399EE6
-                danger: Color::Rgb(240, 113, 120),      // #F07178
-                text_normal: Color::Rgb(92, 97, 102),   // #5C6166
+                secondary: Color::Rgb(134, 179, 0),   // #86B300
+                accent: Color::Rgb(57, 158, 230),     // #399EE6
+                danger: Color::Rgb(240, 113, 120),    // #F07178
+                text_normal: Color::Rgb(92, 97, 102), // #5C6166
                 text_muted: Color::Rgb(125, 130, 135),
-                text_dim: Color::Rgb(170, 175, 180),    // #ABB0B6
+                text_dim: Color::Rgb(170, 175, 180), // #ABB0B6
                 text_highlight: Color::Rgb(30, 32, 35),
                 today_bg: Color::Rgb(250, 225, 190),
                 selected_bg: Color::Rgb(225, 230, 235),
@@ -1585,21 +1585,33 @@ impl Theme {
     // Dynamic instance methods
     pub fn today_style(&self) -> Style {
         Style::default()
-            .fg(if self.mode.is_light() { Color::Black } else { self.text_highlight })
+            .fg(if self.mode.is_light() {
+                Color::Black
+            } else {
+                self.text_highlight
+            })
             .bg(self.today_bg)
             .add_modifier(Modifier::BOLD)
     }
 
     pub fn selected_day_style(&self) -> Style {
         Style::default()
-            .fg(if self.mode.is_light() { Color::Black } else { self.text_highlight })
+            .fg(if self.mode.is_light() {
+                Color::Black
+            } else {
+                self.text_highlight
+            })
             .bg(self.selected_bg)
             .add_modifier(Modifier::BOLD)
     }
 
     pub fn header_tab_active(&self) -> Style {
         Style::default()
-            .fg(if self.mode.is_light() { Color::White } else { self.text_highlight })
+            .fg(if self.mode.is_light() {
+                Color::White
+            } else {
+                self.text_highlight
+            })
             .bg(self.tab_active_bg)
             .add_modifier(Modifier::BOLD)
     }
@@ -1619,7 +1631,11 @@ impl Theme {
 
     pub fn active_input_style(&self) -> Style {
         Style::default()
-            .fg(if self.mode.is_light() { Color::Black } else { self.text_highlight })
+            .fg(if self.mode.is_light() {
+                Color::Black
+            } else {
+                self.text_highlight
+            })
             .bg(self.selected_bg)
             .add_modifier(Modifier::BOLD)
     }

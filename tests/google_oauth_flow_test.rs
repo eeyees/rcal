@@ -160,7 +160,10 @@ async fn test_loopback_oauth_listener_state_mismatch_rejection() -> Result<()> {
     client.write_all(http_request.as_bytes()).await?;
 
     let res = server_handle.await?;
-    assert!(res.is_err(), "Listener must reject mismatched OAuth state (CSRF)");
+    assert!(
+        res.is_err(),
+        "Listener must reject mismatched OAuth state (CSRF)"
+    );
     Ok(())
 }
 
@@ -180,12 +183,18 @@ fn test_google_preset_account_modal_interaction() -> Result<()> {
     app.modal = ActiveModal::Accounts(acc_state);
 
     // Register hit area and trigger OAuth login via handle_mouse_click
-    app.hit_map.register(ratatui::layout::Rect::new(10, 10, 20, 2), HitTarget::ModalAccountOAuthLogin);
+    app.hit_map.register(
+        ratatui::layout::Rect::new(10, 10, 20, 2),
+        HitTarget::ModalAccountOAuthLogin,
+    );
     let hit_res = app.handle_mouse_click(15, 11);
     assert!(hit_res.is_ok());
 
     if let ActiveModal::Accounts(ref state) = app.modal {
-        assert!(state.is_oauth_waiting, "OAuth waiting state should be true after triggering login");
+        assert!(
+            state.is_oauth_waiting,
+            "OAuth waiting state should be true after triggering login"
+        );
     } else {
         panic!("Modal should be Accounts");
     }
@@ -209,12 +218,18 @@ fn test_microsoft_preset_account_modal_interaction() -> Result<()> {
     app.modal = ActiveModal::Accounts(acc_state);
 
     // Register hit area and trigger OAuth login via handle_mouse_click
-    app.hit_map.register(ratatui::layout::Rect::new(10, 10, 20, 2), HitTarget::ModalAccountOAuthLogin);
+    app.hit_map.register(
+        ratatui::layout::Rect::new(10, 10, 20, 2),
+        HitTarget::ModalAccountOAuthLogin,
+    );
     let hit_res = app.handle_mouse_click(15, 11);
     assert!(hit_res.is_ok());
 
     if let ActiveModal::Accounts(ref state) = app.modal {
-        assert!(state.is_oauth_waiting, "OAuth waiting state should be true after triggering MS login");
+        assert!(
+            state.is_oauth_waiting,
+            "OAuth waiting state should be true after triggering MS login"
+        );
     } else {
         panic!("Modal should be Accounts");
     }
@@ -238,8 +253,12 @@ async fn test_google_one_click_placeholder_rejection() {
 fn test_google_placeholder_detection() {
     assert!(OAuth2Config::is_placeholder_google_client(""));
     assert!(OAuth2Config::is_placeholder_google_client("   "));
-    assert!(OAuth2Config::is_placeholder_google_client(OAuth2Config::GOOGLE_PLACEHOLDER_CLIENT_ID));
-    assert!(!OAuth2Config::is_placeholder_google_client("1234567890-custom.apps.googleusercontent.com"));
+    assert!(OAuth2Config::is_placeholder_google_client(
+        OAuth2Config::GOOGLE_PLACEHOLDER_CLIENT_ID
+    ));
+    assert!(!OAuth2Config::is_placeholder_google_client(
+        "1234567890-custom.apps.googleusercontent.com"
+    ));
 }
 
 #[test]
@@ -250,6 +269,7 @@ fn test_google_oauth_modal_error_box_rendering_and_wrapping() -> Result<()> {
 
     let db = Database::in_memory()?;
     let mut app = App::new(db)?;
+    app.lang = rcal::i18n::Language::Ko;
 
     let mut acc_state = AccountModalState::new();
     acc_state.is_adding = true;
@@ -272,17 +292,32 @@ fn test_google_oauth_modal_error_box_rendering_and_wrapping() -> Result<()> {
     let clean_str: String = content_str.chars().filter(|c| !c.is_whitespace()).collect();
 
     // Verify error title and key error messages are present
-    assert!(clean_str.contains("인증오류안내"), "Error title should be rendered inside modal");
-    assert!(clean_str.contains("GoogleClientID가필요합니다"), "First line of error should be rendered");
-    assert!(clean_str.contains("RCAL_GOOGLE_CLIENT_ID"), "Helpful env var guide should be rendered and wrapped");
+    assert!(
+        clean_str.contains("인증오류안내"),
+        "Error title should be rendered inside modal"
+    );
+    assert!(
+        clean_str.contains("GoogleClientID가필요합니다"),
+        "First line of error should be rendered"
+    );
+    assert!(
+        clean_str.contains("RCAL_GOOGLE_CLIENT_ID"),
+        "Helpful env var guide should be rendered and wrapped"
+    );
 
     // Modal popup is centered in 100x30 with width 84 (popup_rect x = (100 - 84)/2 = 8, right border at x = 91)
     // Verify that columns x >= 93 outside the modal boundary do NOT contain error box content
     for y in 0..30 {
         for x in 92..100 {
             let symbol = buffer[(x, y)].symbol();
-            assert!(!symbol.contains("Google") && !symbol.contains("Client") && !symbol.contains("RCAL"),
-                "Text should not spill outside modal boundary at ({}, {})", x, y);
+            assert!(
+                !symbol.contains("Google")
+                    && !symbol.contains("Client")
+                    && !symbol.contains("RCAL"),
+                "Text should not spill outside modal boundary at ({}, {})",
+                x,
+                y
+            );
         }
     }
 

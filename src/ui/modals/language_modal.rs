@@ -38,7 +38,12 @@ pub fn render(f: &mut Frame, app: &mut App, state: &LanguageModalState, area: Re
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))
-        .title(Span::styled(title, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            title,
+            Style::default()
+                .fg(theme.text_highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -62,8 +67,11 @@ pub fn render(f: &mut Frame, app: &mut App, state: &LanguageModalState, area: Re
         _ => "↑↓←→ / hjkl / Tab navigate, [Enter/Click] select, [Esc/q] close",
     };
     f.render_widget(
-        Paragraph::new(Span::styled(hint_desc, Style::default().fg(theme.text_muted)))
-            .alignment(Alignment::Center),
+        Paragraph::new(Span::styled(
+            hint_desc,
+            Style::default().fg(theme.text_muted),
+        ))
+        .alignment(Alignment::Center),
         chunks[0],
     );
 
@@ -93,18 +101,24 @@ pub fn render(f: &mut Frame, app: &mut App, state: &LanguageModalState, area: Re
 
             let style = if is_focused {
                 Style::default()
-                    .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                    .fg(if theme.mode.is_light() {
+                        Color::White
+                    } else {
+                        Color::Black
+                    })
                     .bg(theme.accent)
                     .add_modifier(Modifier::BOLD)
             } else if is_current {
                 Style::default()
-                    .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                    .fg(if theme.mode.is_light() {
+                        Color::White
+                    } else {
+                        Color::Black
+                    })
                     .bg(theme.primary)
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default()
-                    .fg(theme.text_normal)
-                    .bg(theme.button_bg)
+                Style::default().fg(theme.text_normal).bg(theme.button_bg)
             };
 
             let x = grid_area.x + (c as u16) * (col_w + 1);
@@ -123,7 +137,8 @@ pub fn render(f: &mut Frame, app: &mut App, state: &LanguageModalState, area: Re
 
             let p = Paragraph::new(Line::from(vec![Span::raw(text)])).style(style);
             f.render_widget(p, rect);
-            app.hit_map.register(rect, HitTarget::ModalSelectLanguage(lang_opt));
+            app.hit_map
+                .register(rect, HitTarget::ModalSelectLanguage(lang_opt));
 
             if is_focused {
                 f.set_cursor_position((x + 1, y));

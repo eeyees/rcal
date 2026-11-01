@@ -1,13 +1,13 @@
-use std::cmp::{max, min};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::cmp::{max, min};
 
+use super::types::{Tool, ToolCallResult};
 use crate::model::{Event, SyncStatus};
 use crate::storage::Database;
 use crate::sync::SyncEngine;
-use super::types::{Tool, ToolCallResult};
 
 /// Returns all MCP tool definitions supported by rcal.
 pub fn get_tools() -> Vec<Tool> {
@@ -286,7 +286,9 @@ struct ListEventsArgs {
 fn handle_list_events(args: serde_json::Value, db: &Database) -> ToolCallResult {
     let args: ListEventsArgs = match serde_json::from_value(args) {
         Ok(a) => a,
-        Err(e) => return ToolCallResult::error(format!("Invalid arguments for list_events: {}", e)),
+        Err(e) => {
+            return ToolCallResult::error(format!("Invalid arguments for list_events: {}", e))
+        }
     };
 
     let start_time = match &args.start_date {
@@ -407,7 +409,9 @@ struct CreateEventArgs {
 fn handle_create_event(args: serde_json::Value, db: &Database) -> ToolCallResult {
     let args: CreateEventArgs = match serde_json::from_value(args) {
         Ok(a) => a,
-        Err(e) => return ToolCallResult::error(format!("Invalid arguments for create_event: {}", e)),
+        Err(e) => {
+            return ToolCallResult::error(format!("Invalid arguments for create_event: {}", e))
+        }
     };
 
     let title = args.title.trim().to_string();
@@ -445,21 +449,23 @@ fn handle_create_event(args: serde_json::Value, db: &Database) -> ToolCallResult
 
     // Resolve calendar_id
     let calendar_id = match args.calendar_id {
-        Some(id) => {
-            match db.get_calendars() {
-                Ok(cals) => {
-                    if !cals.iter().any(|c| c.id == id) {
-                        return ToolCallResult::error(format!("Calendar with ID '{}' not found", id));
-                    }
-                    id
+        Some(id) => match db.get_calendars() {
+            Ok(cals) => {
+                if !cals.iter().any(|c| c.id == id) {
+                    return ToolCallResult::error(format!("Calendar with ID '{}' not found", id));
                 }
-                Err(e) => return ToolCallResult::error(format!("Failed to verify calendar: {}", e)),
+                id
             }
-        }
+            Err(e) => return ToolCallResult::error(format!("Failed to verify calendar: {}", e)),
+        },
         None => match db.get_default_calendar() {
             Ok(Some(cal)) => cal.id,
-            Ok(None) => return ToolCallResult::error("No calendar available in database to add event to"),
-            Err(e) => return ToolCallResult::error(format!("Failed to get default calendar: {}", e)),
+            Ok(None) => {
+                return ToolCallResult::error("No calendar available in database to add event to")
+            }
+            Err(e) => {
+                return ToolCallResult::error(format!("Failed to get default calendar: {}", e))
+            }
         },
     };
 
@@ -508,7 +514,9 @@ struct UpdateEventArgs {
 fn handle_update_event(args: serde_json::Value, db: &Database) -> ToolCallResult {
     let args: UpdateEventArgs = match serde_json::from_value(args) {
         Ok(a) => a,
-        Err(e) => return ToolCallResult::error(format!("Invalid arguments for update_event: {}", e)),
+        Err(e) => {
+            return ToolCallResult::error(format!("Invalid arguments for update_event: {}", e))
+        }
     };
 
     let mut event = match db.get_event_by_id(&args.id) {
@@ -551,7 +559,10 @@ fn handle_update_event(args: serde_json::Value, db: &Database) -> ToolCallResult
         match db.get_calendars() {
             Ok(cals) => {
                 if !cals.iter().any(|c| c.id == cal_id) {
-                    return ToolCallResult::error(format!("Calendar with ID '{}' not found", cal_id));
+                    return ToolCallResult::error(format!(
+                        "Calendar with ID '{}' not found",
+                        cal_id
+                    ));
                 }
                 event.calendar_id = cal_id;
             }
@@ -606,7 +617,9 @@ struct DeleteEventArgs {
 fn handle_delete_event(args: serde_json::Value, db: &Database) -> ToolCallResult {
     let args: DeleteEventArgs = match serde_json::from_value(args) {
         Ok(a) => a,
-        Err(e) => return ToolCallResult::error(format!("Invalid arguments for delete_event: {}", e)),
+        Err(e) => {
+            return ToolCallResult::error(format!("Invalid arguments for delete_event: {}", e))
+        }
     };
 
     match db.get_event_by_id(&args.id) {
@@ -638,7 +651,9 @@ struct SearchEventsArgs {
 fn handle_search_events(args: serde_json::Value, db: &Database) -> ToolCallResult {
     let args: SearchEventsArgs = match serde_json::from_value(args) {
         Ok(a) => a,
-        Err(e) => return ToolCallResult::error(format!("Invalid arguments for search_events: {}", e)),
+        Err(e) => {
+            return ToolCallResult::error(format!("Invalid arguments for search_events: {}", e))
+        }
     };
 
     let query = args.query.trim();
@@ -691,7 +706,9 @@ struct FindFreeSlotsArgs {
 fn handle_find_free_slots(args: serde_json::Value, db: &Database) -> ToolCallResult {
     let args: FindFreeSlotsArgs = match serde_json::from_value(args) {
         Ok(a) => a,
-        Err(e) => return ToolCallResult::error(format!("Invalid arguments for find_free_slots: {}", e)),
+        Err(e) => {
+            return ToolCallResult::error(format!("Invalid arguments for find_free_slots: {}", e))
+        }
     };
 
     let target_date = match &args.date {
@@ -706,10 +723,11 @@ fn handle_find_free_slots(args: serde_json::Value, db: &Database) -> ToolCallRes
     let start_hour = args.start_hour.unwrap_or(9).clamp(0, 23);
     let end_hour = args.end_hour.unwrap_or(18).clamp(start_hour + 1, 24);
 
-    let window_start = match Local.from_local_datetime(&target_date.and_hms_opt(start_hour, 0, 0).unwrap()) {
-        chrono::LocalResult::Single(dt) => dt,
-        _ => return ToolCallResult::error("Failed to construct local window start time"),
-    };
+    let window_start =
+        match Local.from_local_datetime(&target_date.and_hms_opt(start_hour, 0, 0).unwrap()) {
+            chrono::LocalResult::Single(dt) => dt,
+            _ => return ToolCallResult::error("Failed to construct local window start time"),
+        };
 
     let window_end = if end_hour == 24 {
         match Local.from_local_datetime(&target_date.and_hms_opt(23, 59, 59).unwrap()) {
@@ -723,10 +741,11 @@ fn handle_find_free_slots(args: serde_json::Value, db: &Database) -> ToolCallRes
         }
     };
 
-    let events = match db.get_events_filtered(Some(window_start), Some(window_end), None, None, None) {
-        Ok(evs) => evs,
-        Err(e) => return ToolCallResult::error(format!("Failed to retrieve events: {}", e)),
-    };
+    let events =
+        match db.get_events_filtered(Some(window_start), Some(window_end), None, None, None) {
+            Ok(evs) => evs,
+            Err(e) => return ToolCallResult::error(format!("Failed to retrieve events: {}", e)),
+        };
 
     // Filter to timed events that intersect with [window_start, window_end]
     let mut busy_intervals: Vec<(DateTime<Local>, DateTime<Local>)> = Vec::new();

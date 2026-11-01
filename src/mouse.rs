@@ -1,6 +1,6 @@
+use crate::model::WeekStartDay;
 use chrono::NaiveDate;
 use ratatui::layout::Rect;
-use crate::model::WeekStartDay;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HitTarget {

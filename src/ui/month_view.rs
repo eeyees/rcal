@@ -50,9 +50,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let weekday = col_date.weekday();
         let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
         let style = if is_weekend {
-            Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(theme.text_muted).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(theme.text_muted)
+                .add_modifier(Modifier::BOLD)
         };
         let p = Paragraph::new(Line::from(vec![Span::raw(*dow)]))
             .style(style)
@@ -88,12 +92,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             let block = Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border_color));
-            
+
             let inner = block.inner(cell_area);
             f.render_widget(block, cell_area);
 
             // Register mouse hit for this entire cell
-            app.hit_map.register(cell_area, HitTarget::MonthDay(current_cell_date));
+            app.hit_map
+                .register(cell_area, HitTarget::MonthDay(current_cell_date));
 
             // Content inside cell: Day number header + events
             let mut cell_lines = Vec::new();
@@ -102,33 +107,38 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             let day_num_str = format!("{}", current_cell_date.day());
             let day_text = format!(" {} ", day_num_str);
             let day_span = if is_today {
-                Span::styled(
-                    day_text,
-                    theme.today_style(),
-                )
+                Span::styled(day_text, theme.today_style())
             } else if is_selected {
-                Span::styled(
-                    day_text,
-                    theme.selected_day_style(),
-                )
+                Span::styled(day_text, theme.selected_day_style())
             } else if is_current_month {
                 let weekday = current_cell_date.weekday();
                 let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
-                let color = if is_weekend { theme.accent } else { theme.text_normal };
-                Span::styled(day_text, Style::default().fg(color).add_modifier(Modifier::BOLD))
+                let color = if is_weekend {
+                    theme.accent
+                } else {
+                    theme.text_normal
+                };
+                Span::styled(
+                    day_text,
+                    Style::default().fg(color).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::styled(day_text, Style::default().fg(theme.text_dim))
             };
             cell_lines.push(Line::from(vec![day_span]));
 
             // Filter events for this cell
-            let events_for_day: Vec<&_> = app.events_cache.iter()
+            let events_for_day: Vec<&_> = app
+                .events_cache
+                .iter()
                 .filter(|ev| ev.occurs_on(current_cell_date))
                 .collect();
 
             let max_displayable = inner.height.saturating_sub(1) as usize;
             for (ev_idx, ev) in events_for_day.iter().take(max_displayable).enumerate() {
-                let cal_color = app.calendars.iter()
+                let cal_color = app
+                    .calendars
+                    .iter()
                     .find(|c| c.id == ev.calendar_id)
                     .map(|c| c.ratatui_color())
                     .unwrap_or(Color::Cyan);
@@ -139,7 +149,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     width: inner.width,
                     height: 1,
                 };
-                app.hit_map.register(ev_line_rect, HitTarget::EventItem(ev.id.clone()));
+                app.hit_map
+                    .register(ev_line_rect, HitTarget::EventItem(ev.id.clone()));
 
                 let prefix = if ev.all_day { "■ " } else { "• " };
                 let time_or_title = if ev.all_day {
@@ -150,22 +161,19 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
                 cell_lines.push(Line::from(vec![
                     Span::styled(prefix, Style::default().fg(cal_color)),
-                    Span::styled(
-                        time_or_title,
-                        Style::default().fg(theme.text_normal),
-                    ),
+                    Span::styled(time_or_title, Style::default().fg(theme.text_normal)),
                 ]));
             }
 
             if events_for_day.len() > max_displayable {
                 let more_count = events_for_day.len() - max_displayable;
                 let more_label = app.lang.more_events(more_count);
-                cell_lines.push(Line::from(vec![
-                    Span::styled(
-                        more_label,
-                        Style::default().fg(theme.text_muted).add_modifier(Modifier::ITALIC),
-                    ),
-                ]));
+                cell_lines.push(Line::from(vec![Span::styled(
+                    more_label,
+                    Style::default()
+                        .fg(theme.text_muted)
+                        .add_modifier(Modifier::ITALIC),
+                )]));
             }
 
             f.render_widget(Paragraph::new(cell_lines), inner);

@@ -35,7 +35,12 @@ pub fn render(f: &mut Frame, app: &mut App, state: &CalendarModalState, area: Re
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))
-        .title(Span::styled(title, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            title,
+            Style::default()
+                .fg(theme.text_highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -65,7 +70,10 @@ fn render_create_form(f: &mut Frame, app: &mut App, state: &CalendarModalState, 
 
     let is_name_active = state.active_field == 0;
     let name_style = if is_name_active {
-        Style::default().fg(theme.text_highlight).bg(theme.selected_bg).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.text_highlight)
+            .bg(theme.selected_bg)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(theme.text_normal)
     };
@@ -73,7 +81,11 @@ fn render_create_form(f: &mut Frame, app: &mut App, state: &CalendarModalState, 
     let name_line = Line::from(vec![
         Span::styled(name_label, Style::default().fg(theme.text_muted)),
         Span::styled(
-            if state.name.is_empty() { placeholder } else { &state.name },
+            if state.name.is_empty() {
+                placeholder
+            } else {
+                &state.name
+            },
             name_style,
         ),
     ]);
@@ -115,19 +127,26 @@ fn render_create_form(f: &mut Frame, app: &mut App, state: &CalendarModalState, 
             is_default: false,
             remote_url: None,
             ctag: None,
-        }.ratatui_color();
+        }
+        .ratatui_color();
 
         let prefix = if is_selected { "▶● " } else { " ● " };
         let style = if is_selected {
-            Style::default().fg(Color::Black).bg(rat_color).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Black)
+                .bg(rat_color)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(rat_color).bg(Color::Rgb(30, 35, 45))
         };
 
         let rect = color_chunks[i * 2];
-        let p = Paragraph::new(Line::from(vec![Span::raw(format!("{}{}", prefix, color_names[i]))]))
-            .style(style)
-            .alignment(Alignment::Center);
+        let p = Paragraph::new(Line::from(vec![Span::raw(format!(
+            "{}{}",
+            prefix, color_names[i]
+        ))]))
+        .style(style)
+        .alignment(Alignment::Center);
         f.render_widget(p, rect);
         app.hit_map.register(rect, HitTarget::ModalCalColor(i));
     }
@@ -151,9 +170,15 @@ fn render_create_form(f: &mut Frame, app: &mut App, state: &CalendarModalState, 
         format!(" {} ", lang.btn_save())
     };
     let save_style = if is_save_focused {
-        Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Black)
+            .bg(theme.text_highlight)
+            .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(Color::Black).bg(theme.secondary).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Black)
+            .bg(theme.secondary)
+            .add_modifier(Modifier::BOLD)
     };
     let btn_save = Paragraph::new(Line::from(vec![Span::raw(save_text)]))
         .style(save_style)
@@ -168,7 +193,10 @@ fn render_create_form(f: &mut Frame, app: &mut App, state: &CalendarModalState, 
         format!(" {} ", lang.btn_cancel())
     };
     let cancel_style = if is_cancel_focused {
-        Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Black)
+            .bg(theme.text_highlight)
+            .add_modifier(Modifier::BOLD)
     } else {
         theme.button_style()
     };
@@ -216,7 +244,12 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
 
     let header_text = lang.t().cal_list_header;
     f.render_widget(
-        Paragraph::new(Span::styled(header_text, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD))),
+        Paragraph::new(Span::styled(
+            header_text,
+            Style::default()
+                .fg(theme.text_highlight)
+                .add_modifier(Modifier::BOLD),
+        )),
         chunks[0],
     );
 
@@ -254,9 +287,28 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
 
         let info_line = Line::from(vec![
             Span::styled(bullet, Style::default().fg(bullet_color)),
-            Span::styled(&cal.name, Style::default().fg(if is_selected { theme.text_highlight } else { theme.text_normal }).add_modifier(Modifier::BOLD)),
-            Span::styled(format!(" ({}) ", cal.provider.as_str()), Style::default().fg(theme.text_dim)),
-            Span::styled(status_text, Style::default().fg(if cal.enabled { theme.secondary } else { theme.text_dim })),
+            Span::styled(
+                &cal.name,
+                Style::default()
+                    .fg(if is_selected {
+                        theme.text_highlight
+                    } else {
+                        theme.text_normal
+                    })
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" ({}) ", cal.provider.as_str()),
+                Style::default().fg(theme.text_dim),
+            ),
+            Span::styled(
+                status_text,
+                Style::default().fg(if cal.enabled {
+                    theme.secondary
+                } else {
+                    theme.text_dim
+                }),
+            ),
         ]);
         let row_style = if is_selected {
             Style::default().bg(theme.selected_bg)
@@ -268,10 +320,15 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
         if !cal.is_default {
             let del_label = lang.btn_delete();
             let del_btn = Paragraph::new(Line::from(vec![Span::raw(del_label)]))
-                .style(Style::default().fg(theme.danger).add_modifier(Modifier::BOLD))
+                .style(
+                    Style::default()
+                        .fg(theme.danger)
+                        .add_modifier(Modifier::BOLD),
+                )
                 .alignment(Alignment::Center);
             f.render_widget(del_btn, row_parts[1]);
-            app.hit_map.register(row_parts[1], HitTarget::ModalCalDelete(cal.id.clone()));
+            app.hit_map
+                .register(row_parts[1], HitTarget::ModalCalDelete(cal.id.clone()));
         } else {
             let def_label = lang.t().cal_default_badge;
             let def_text = Paragraph::new(Line::from(vec![Span::raw(def_label)]))
@@ -293,7 +350,12 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
 
     let add_label = lang.t().cal_btn_create;
     let btn_add = Paragraph::new(Line::from(vec![Span::raw(add_label)]))
-        .style(Style::default().fg(Color::Black).bg(theme.primary).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center);
     f.render_widget(btn_add, btn_chunks[0]);
     app.hit_map.register(btn_chunks[0], HitTarget::ModalCalNew);
@@ -307,7 +369,9 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
     if calendars.is_empty() {
         f.set_cursor_position((btn_chunks[0].x + btn_chunks[0].width / 2, btn_chunks[0].y));
     } else {
-        let sel_idx = state.selected_calendar_idx.min(calendars.len().saturating_sub(1));
+        let sel_idx = state
+            .selected_calendar_idx
+            .min(calendars.len().saturating_sub(1));
         let cursor_y = chunks[2].y + sel_idx as u16;
         f.set_cursor_position((chunks[2].x + 1, cursor_y));
     }

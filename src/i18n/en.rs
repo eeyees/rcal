@@ -22,7 +22,11 @@ fn msg_lang_changed_en(name: &str) -> String {
 }
 
 fn msg_sidebar_toggle_en(shown: bool) -> &'static str {
-    if shown { "Sidebar shown" } else { "Sidebar hidden" }
+    if shown {
+        "Sidebar shown"
+    } else {
+        "Sidebar hidden"
+    }
 }
 
 fn msg_week_start_changed_en(label: &str) -> String {

@@ -7,7 +7,11 @@ fn test_calver_version_format() {
 
     // Human-readable format: YYYY.MM.DD.N
     let parts: Vec<&str> = ver.split('.').collect();
-    assert_eq!(parts.len(), 4, "Version must have 4 segments: Year.Month.Day.Number");
+    assert_eq!(
+        parts.len(),
+        4,
+        "Version must have 4 segments: Year.Month.Day.Number"
+    );
 
     let year: u32 = parts[0].parse().expect("Year must be numeric");
     let month: u32 = parts[1].parse().expect("Month must be numeric");

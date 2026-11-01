@@ -34,7 +34,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))
         .style(Style::default().bg(theme.panel_bg))
-        .title(Span::styled(title, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            title,
+            Style::default()
+                .fg(theme.text_highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -53,12 +58,19 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     // Header info line inside modal (consume click, no button hit target)
     let header_desc = match lang {
-        crate::i18n::Language::Ko => " ⚙  환경설정 메뉴 | 상단 탭을 선택하여 각 항목별 상세 설정을 구성하세요.",
-        crate::i18n::Language::Ja => " ⚙  環境設定メニュー | 上部のタブを選択して各項目の詳細設定を行ってください。",
+        crate::i18n::Language::Ko => {
+            " ⚙  환경설정 메뉴 | 상단 탭을 선택하여 각 항목별 상세 설정을 구성하세요."
+        }
+        crate::i18n::Language::Ja => {
+            " ⚙  環境設定メニュー | 上部のタブを選択して各項目の詳細設定を行ってください。"
+        }
         _ => " ⚙  Settings Menu | Select tabs above to customize options and preferences.",
     };
     f.render_widget(
-        Paragraph::new(Span::styled(header_desc, Style::default().fg(theme.text_dim))),
+        Paragraph::new(Span::styled(
+            header_desc,
+            Style::default().fg(theme.text_dim),
+        )),
         main_chunks[0],
     );
 
@@ -77,7 +89,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // 2. Divider line under tabs
     let divider_style = Style::default().fg(theme.border);
     let divider_char = "─".repeat(main_chunks[2].width as usize);
-    f.render_widget(Paragraph::new(divider_char).style(divider_style), main_chunks[2]);
+    f.render_widget(
+        Paragraph::new(divider_char).style(divider_style),
+        main_chunks[2],
+    );
 
     // =========================================================================
     // 3. Tab Content Area
@@ -109,39 +124,69 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // 4. Footer & Close Button
     // =========================================================================
     let hint_line = Line::from(vec![
-        Span::styled(t.settings_hint_shortcuts, Style::default().fg(theme.text_muted)),
-        Span::styled("[Tab/S-Tab]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            t.settings_hint_shortcuts,
+            Style::default().fg(theme.text_muted),
+        ),
+        Span::styled(
+            "[Tab/S-Tab]",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(match lang {
             crate::i18n::Language::Ko => " 탭이동  ",
             crate::i18n::Language::Ja => " タブ移動  ",
             _ => " Tab Nav  ",
         }),
-        Span::styled("[1~4]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[1~4]",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(match lang {
             crate::i18n::Language::Ko => " 바로가기  ",
             crate::i18n::Language::Ja => " ショートカット  ",
             _ => " Shortcut  ",
         }),
-        Span::styled("[←/→/↑/↓]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[←/→/↑/↓]",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(match lang {
             crate::i18n::Language::Ko => " 항목변경  ",
             crate::i18n::Language::Ja => " 項目変更  ",
             _ => " Change  ",
         }),
-        Span::styled("[Esc/q]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Esc/q]",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(match lang {
             crate::i18n::Language::Ko => " 닫기",
             crate::i18n::Language::Ja => " 閉じる",
             _ => " Close",
         }),
     ]);
-    f.render_widget(Paragraph::new(hint_line).alignment(Alignment::Center), main_chunks[5]);
+    f.render_widget(
+        Paragraph::new(hint_line).alignment(Alignment::Center),
+        main_chunks[5],
+    );
 
     // Close button
     let is_close_focused = app.settings_section == SettingsSection::Close;
     let close_style = if is_close_focused {
         Style::default()
-            .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+            .fg(if theme.mode.is_light() {
+                Color::White
+            } else {
+                Color::Black
+            })
             .bg(theme.primary)
             .add_modifier(Modifier::BOLD)
     } else {
@@ -163,16 +208,28 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // =========================================================================
     match app.settings_section {
         SettingsSection::WeekStart => {
-            f.set_cursor_position((week_cursor_rect.x + week_cursor_rect.width / 2, week_cursor_rect.y));
+            f.set_cursor_position((
+                week_cursor_rect.x + week_cursor_rect.width / 2,
+                week_cursor_rect.y,
+            ));
         }
         SettingsSection::Notifications => {
-            f.set_cursor_position((notif_cursor_rect.x + notif_cursor_rect.width / 2, notif_cursor_rect.y));
+            f.set_cursor_position((
+                notif_cursor_rect.x + notif_cursor_rect.width / 2,
+                notif_cursor_rect.y,
+            ));
         }
         SettingsSection::Theme => {
-            f.set_cursor_position((theme_cursor_rect.x + theme_cursor_rect.width / 2, theme_cursor_rect.y));
+            f.set_cursor_position((
+                theme_cursor_rect.x + theme_cursor_rect.width / 2,
+                theme_cursor_rect.y,
+            ));
         }
         SettingsSection::Language => {
-            f.set_cursor_position((lang_cursor_rect.x + lang_cursor_rect.width / 2, lang_cursor_rect.y));
+            f.set_cursor_position((
+                lang_cursor_rect.x + lang_cursor_rect.width / 2,
+                lang_cursor_rect.y,
+            ));
         }
         SettingsSection::Close => {
             let rect = main_chunks[6];
@@ -207,7 +264,11 @@ fn render_tabs_bar(f: &mut Frame, app: &mut App, area: Rect, active_tab: Setting
 
         let style = if is_selected {
             Style::default()
-                .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                .fg(if theme.mode.is_light() {
+                    Color::White
+                } else {
+                    Color::Black
+                })
                 .bg(theme.primary)
                 .add_modifier(Modifier::BOLD)
         } else {
@@ -249,16 +310,26 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     // Title & Subtitle
     let is_focused = app.settings_section == SettingsSection::WeekStart;
     let title_style = if is_focused {
-        Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.text_highlight)
+            .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.secondary)
+            .add_modifier(Modifier::BOLD)
     };
     f.render_widget(
-        Paragraph::new(Span::styled(format!("▶ {}", t.settings_week_start_title), title_style)),
+        Paragraph::new(Span::styled(
+            format!("▶ {}", t.settings_week_start_title),
+            title_style,
+        )),
         chunks[0],
     );
     f.render_widget(
-        Paragraph::new(Span::styled(t.settings_week_start_desc, Style::default().fg(theme.text_muted))),
+        Paragraph::new(Span::styled(
+            t.settings_week_start_desc,
+            Style::default().fg(theme.text_muted),
+        )),
         chunks[1],
     );
 
@@ -301,7 +372,11 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
         let style = if is_selected {
             Style::default()
-                .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                .fg(if theme.mode.is_light() {
+                    Color::White
+                } else {
+                    Color::Black
+                })
                 .bg(theme.primary)
                 .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
         } else {
@@ -316,7 +391,8 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
             .style(style)
             .alignment(Alignment::Center);
         f.render_widget(p, rect);
-        app.hit_map.register(rect, HitTarget::ModalSettingWeekStart(*day));
+        app.hit_map
+            .register(rect, HitTarget::ModalSettingWeekStart(*day));
     }
 
     // Calendar Preview Box
@@ -328,16 +404,31 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let preview_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
-        .title(Span::styled(preview_title, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            preview_title,
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ));
     let p_inner = preview_block.inner(chunks[5]);
     f.render_widget(preview_block, chunks[5]);
 
     let (headers, dates) = match app.week_start_day {
         WeekStartDay::Sunday => (
             vec![
-                Span::styled(" [일 Sun] ", Style::default().fg(Color::LightRed).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " [일 Sun] ",
+                    Style::default()
+                        .fg(Color::LightRed)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("    월 Mon      화 Tue      수 Wed      목 Thu      금 Fri    "),
-                Span::styled(" [토 Sat] ", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " [토 Sat] ",
+                    Style::default()
+                        .fg(Color::LightCyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
             ],
             vec![
                 Span::styled("   (주말)  ", Style::default().fg(Color::LightRed)),
@@ -348,8 +439,18 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         WeekStartDay::Monday => (
             vec![
                 Span::raw("   월 Mon      화 Tue      수 Wed      목 Thu      금 Fri    "),
-                Span::styled(" [토 Sat] ", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
-                Span::styled(" [일 Sun] ", Style::default().fg(Color::LightRed).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " [토 Sat] ",
+                    Style::default()
+                        .fg(Color::LightCyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " [일 Sun] ",
+                    Style::default()
+                        .fg(Color::LightRed)
+                        .add_modifier(Modifier::BOLD),
+                ),
             ],
             vec![
                 Span::raw("                                                          "),
@@ -359,8 +460,18 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         ),
         WeekStartDay::Saturday => (
             vec![
-                Span::styled(" [토 Sat] ", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
-                Span::styled(" [일 Sun] ", Style::default().fg(Color::LightRed).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " [토 Sat] ",
+                    Style::default()
+                        .fg(Color::LightCyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " [일 Sun] ",
+                    Style::default()
+                        .fg(Color::LightRed)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("    월 Mon      화 Tue      수 Wed      목 Thu      금 Fri    "),
             ],
             vec![
@@ -376,11 +487,15 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         Line::from(headers),
         Line::from(dates),
         Line::from(vec![Span::raw("")]),
-        Line::from(vec![
-            Span::styled("  Day 1        Day 2       Day 3       Day 4       Day 5       Day 6       Day 7  ", Style::default().fg(theme.text_dim)),
-        ]),
+        Line::from(vec![Span::styled(
+            "  Day 1        Day 2       Day 3       Day 4       Day 5       Day 6       Day 7  ",
+            Style::default().fg(theme.text_dim),
+        )]),
     ];
-    f.render_widget(Paragraph::new(p_lines).alignment(Alignment::Center), p_inner);
+    f.render_widget(
+        Paragraph::new(p_lines).alignment(Alignment::Center),
+        p_inner,
+    );
 
     // Tips Box
     let guide_title = match lang {
@@ -391,7 +506,10 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let guide_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
-        .title(Span::styled(guide_title, Style::default().fg(theme.text_highlight)));
+        .title(Span::styled(
+            guide_title,
+            Style::default().fg(theme.text_highlight),
+        ));
     let g_inner = guide_block.inner(chunks[7]);
     f.render_widget(guide_block, chunks[7]);
 
@@ -459,9 +577,13 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     // Title & Test button
     let is_focused = app.settings_section == SettingsSection::Notifications;
     let title_style = if is_focused {
-        Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.text_highlight)
+            .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.secondary)
+            .add_modifier(Modifier::BOLD)
     };
 
     let header_chunks = Layout::default()
@@ -474,7 +596,10 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         crate::i18n::Language::Ja => "▶ 🔔  デスクトップ通知 (Desktop Notifications)",
         _ => "▶ 🔔  Desktop Notifications",
     };
-    f.render_widget(Paragraph::new(Span::styled(notif_title, title_style)), header_chunks[0]);
+    f.render_widget(
+        Paragraph::new(Span::styled(notif_title, title_style)),
+        header_chunks[0],
+    );
 
     let test_btn_label = match lang {
         crate::i18n::Language::Ko => "[ 🔔  테스트 발송 (d) ]",
@@ -485,15 +610,24 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         .style(theme.button_style())
         .alignment(Alignment::Right);
     f.render_widget(btn_test, header_chunks[1]);
-    app.hit_map.register(header_chunks[1], HitTarget::ModalSettingNotificationTest);
+    app.hit_map
+        .register(header_chunks[1], HitTarget::ModalSettingNotificationTest);
 
     // Subtitle
     let desc_str = match lang {
-        crate::i18n::Language::Ko => "일정 시작 전 시스템 팝업 알림과 효과음으로 일정을 놓치지 않도록 알려줍니다.",
+        crate::i18n::Language::Ko => {
+            "일정 시작 전 시스템 팝업 알림과 효과음으로 일정을 놓치지 않도록 알려줍니다."
+        }
         crate::i18n::Language::Ja => "予定開始前にシステム通知と効果音でリマインドします。",
         _ => "Receive desktop system alerts and sounds before scheduled events start.",
     };
-    f.render_widget(Paragraph::new(Span::styled(desc_str, Style::default().fg(theme.text_muted))), chunks[1]);
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            desc_str,
+            Style::default().fg(theme.text_muted),
+        )),
+        chunks[1],
+    );
 
     // Section 1 Label
     let label_sec1 = match lang {
@@ -501,7 +635,15 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         crate::i18n::Language::Ja => "1. 通知の有効化とサウンド設定:",
         _ => "1. Notification & Sound Controls:",
     };
-    f.render_widget(Paragraph::new(Span::styled(label_sec1, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))), chunks[3]);
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            label_sec1,
+            Style::default()
+                .fg(theme.secondary)
+                .add_modifier(Modifier::BOLD),
+        )),
+        chunks[3],
+    );
 
     // Toggle & Sound Controls (chunks[4])
     let ctrl_chunks = Layout::default()
@@ -517,13 +659,35 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     // 1. Toggle Button
     let notif_enabled = app.notification_config.enabled;
     let toggle_label = match lang {
-        crate::i18n::Language::Ko => if notif_enabled { "● 알림 켬 [n]" } else { "○ 알림 끔 [n]" },
-        crate::i18n::Language::Ja => if notif_enabled { "● 通知オン [n]" } else { "○ 通知オフ [n]" },
-        _ => if notif_enabled { "● Alerts ON [n]" } else { "○ Alerts OFF [n]" },
+        crate::i18n::Language::Ko => {
+            if notif_enabled {
+                "● 알림 켬 [n]"
+            } else {
+                "○ 알림 끔 [n]"
+            }
+        }
+        crate::i18n::Language::Ja => {
+            if notif_enabled {
+                "● 通知オン [n]"
+            } else {
+                "○ 通知オフ [n]"
+            }
+        }
+        _ => {
+            if notif_enabled {
+                "● Alerts ON [n]"
+            } else {
+                "○ Alerts OFF [n]"
+            }
+        }
     };
     let toggle_style = if notif_enabled {
         Style::default()
-            .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+            .fg(if theme.mode.is_light() {
+                Color::White
+            } else {
+                Color::Black
+            })
             .bg(theme.primary)
             .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
     } else {
@@ -533,14 +697,33 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         .style(toggle_style)
         .alignment(Alignment::Center);
     f.render_widget(toggle_p, ctrl_chunks[0]);
-    app.hit_map.register(ctrl_chunks[0], HitTarget::ModalSettingNotificationToggle);
+    app.hit_map
+        .register(ctrl_chunks[0], HitTarget::ModalSettingNotificationToggle);
 
     // 2. Sound Button
     let sound_enabled = app.notification_config.sound;
     let sound_label = match lang {
-        crate::i18n::Language::Ko => if sound_enabled { "● 🔊  소리 켬 [o]" } else { "○ 🔇  무음 [o]" },
-        crate::i18n::Language::Ja => if sound_enabled { "● 🔊  音オン [o]" } else { "○ 🔇  消音 [o]" },
-        _ => if sound_enabled { "● 🔊  Sound ON [o]" } else { "○ 🔇  Mute [o]" },
+        crate::i18n::Language::Ko => {
+            if sound_enabled {
+                "● 🔊  소리 켬 [o]"
+            } else {
+                "○ 🔇  무음 [o]"
+            }
+        }
+        crate::i18n::Language::Ja => {
+            if sound_enabled {
+                "● 🔊  音オン [o]"
+            } else {
+                "○ 🔇  消音 [o]"
+            }
+        }
+        _ => {
+            if sound_enabled {
+                "● 🔊  Sound ON [o]"
+            } else {
+                "○ 🔇  Mute [o]"
+            }
+        }
     };
     let sound_style = if sound_enabled {
         Style::default()
@@ -554,7 +737,8 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         .style(sound_style)
         .alignment(Alignment::Center);
     f.render_widget(sound_p, ctrl_chunks[2]);
-    app.hit_map.register(ctrl_chunks[2], HitTarget::ModalSettingNotificationSound);
+    app.hit_map
+        .register(ctrl_chunks[2], HitTarget::ModalSettingNotificationSound);
 
     // Section 2 Label: Lead Times
     let label_sec2 = match lang {
@@ -562,7 +746,15 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         crate::i18n::Language::Ja => "2. 事前通知タイミング (←/→ キーで変更):",
         _ => "2. Advance Alert Lead Time (navigate with ←/→):",
     };
-    f.render_widget(Paragraph::new(Span::styled(label_sec2, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))), chunks[6]);
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            label_sec2,
+            Style::default()
+                .fg(theme.secondary)
+                .add_modifier(Modifier::BOLD),
+        )),
+        chunks[6],
+    );
 
     // Lead times buttons (chunks[7])
     let lead_chunks = Layout::default()
@@ -582,11 +774,46 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         .split(chunks[7]);
 
     let lead_opts = [
-        (0u32, match lang { crate::i18n::Language::Ko => "정시 (0m)", crate::i18n::Language::Ja => "定時 (0m)", _ => "0m (At start)" }),
-        (5u32, match lang { crate::i18n::Language::Ko => "5분 전", crate::i18n::Language::Ja => "5分前", _ => "5m before" }),
-        (10u32, match lang { crate::i18n::Language::Ko => "10분 전", crate::i18n::Language::Ja => "10分前", _ => "10m before" }),
-        (15u32, match lang { crate::i18n::Language::Ko => "15분 전", crate::i18n::Language::Ja => "15分前", _ => "15m before" }),
-        (30u32, match lang { crate::i18n::Language::Ko => "30분 전", crate::i18n::Language::Ja => "30分前", _ => "30m before" }),
+        (
+            0u32,
+            match lang {
+                crate::i18n::Language::Ko => "정시 (0m)",
+                crate::i18n::Language::Ja => "定時 (0m)",
+                _ => "0m (At start)",
+            },
+        ),
+        (
+            5u32,
+            match lang {
+                crate::i18n::Language::Ko => "5분 전",
+                crate::i18n::Language::Ja => "5分前",
+                _ => "5m before",
+            },
+        ),
+        (
+            10u32,
+            match lang {
+                crate::i18n::Language::Ko => "10분 전",
+                crate::i18n::Language::Ja => "10分前",
+                _ => "10m before",
+            },
+        ),
+        (
+            15u32,
+            match lang {
+                crate::i18n::Language::Ko => "15분 전",
+                crate::i18n::Language::Ja => "15分前",
+                _ => "15m before",
+            },
+        ),
+        (
+            30u32,
+            match lang {
+                crate::i18n::Language::Ko => "30분 전",
+                crate::i18n::Language::Ja => "30分前",
+                _ => "30m before",
+            },
+        ),
     ];
 
     for (idx, (mins, label)) in lead_opts.iter().enumerate() {
@@ -595,7 +822,11 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         let text = format!("{}{}", prefix, label);
         let style = if is_selected {
             Style::default()
-                .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                .fg(if theme.mode.is_light() {
+                    Color::White
+                } else {
+                    Color::Black
+                })
                 .bg(theme.accent)
                 .add_modifier(Modifier::BOLD)
         } else {
@@ -606,7 +837,8 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
             .style(style)
             .alignment(Alignment::Center);
         f.render_widget(p, rect);
-        app.hit_map.register(rect, HitTarget::ModalSettingNotificationLead(*mins));
+        app.hit_map
+            .register(rect, HitTarget::ModalSettingNotificationLead(*mins));
     }
 
     // Status Summary Box (chunks[9])
@@ -618,29 +850,55 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let sum_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
-        .title(Span::styled(box_title, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            box_title,
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ));
     let s_inner = sum_block.inner(chunks[9]);
     f.render_widget(sum_block, chunks[9]);
 
     let status_line1 = if notif_enabled {
-        Span::styled("  ● 알림 상태: 활성화됨 (시스템 트레이 알림 동작 중)", Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD))
+        Span::styled(
+            "  ● 알림 상태: 활성화됨 (시스템 트레이 알림 동작 중)",
+            Style::default()
+                .fg(Color::LightGreen)
+                .add_modifier(Modifier::BOLD),
+        )
     } else {
-        Span::styled("  ○ 알림 상태: 꺼짐 (알림이 발생하지 않습니다)", Style::default().fg(Color::LightRed))
+        Span::styled(
+            "  ○ 알림 상태: 꺼짐 (알림이 발생하지 않습니다)",
+            Style::default().fg(Color::LightRed),
+        )
     };
 
-    let status_line2 = format!("  ⏱️ 발송 타이밍: 이벤트 시작 {}분 전에 팝업 발생", app.notification_config.lead_minutes);
+    let status_line2 = format!(
+        "  ⏱️ 발송 타이밍: 이벤트 시작 {}분 전에 팝업 발생",
+        app.notification_config.lead_minutes
+    );
     let status_line3 = if sound_enabled {
         "  🔊 사운드: 알림음 재생 켜짐 (효과음 포함)"
     } else {
         "  🔇 사운드: 무음 (팝업 배너만 표시)"
     };
-    let status_line4 = "  💡 단축키: [n] 알림 토글   [o] 소리 토글   [←/→] 사전시간 변경   [d] 테스트 발송";
+    let status_line4 =
+        "  💡 단축키: [n] 알림 토글   [o] 소리 토글   [←/→] 사전시간 변경   [d] 테스트 발송";
 
     let s_lines = vec![
         Line::from(vec![status_line1]),
-        Line::from(vec![Span::styled(status_line2, Style::default().fg(theme.text_normal))]),
-        Line::from(vec![Span::styled(status_line3, Style::default().fg(theme.text_normal))]),
-        Line::from(vec![Span::styled(status_line4, Style::default().fg(theme.text_dim))]),
+        Line::from(vec![Span::styled(
+            status_line2,
+            Style::default().fg(theme.text_normal),
+        )]),
+        Line::from(vec![Span::styled(
+            status_line3,
+            Style::default().fg(theme.text_normal),
+        )]),
+        Line::from(vec![Span::styled(
+            status_line4,
+            Style::default().fg(theme.text_dim),
+        )]),
     ];
     f.render_widget(Paragraph::new(s_lines), s_inner);
 
@@ -676,20 +934,33 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     // Title & Modal Button
     let is_focused = app.settings_section == SettingsSection::Theme;
     let title_style = if is_focused {
-        Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.text_highlight)
+            .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.secondary)
+            .add_modifier(Modifier::BOLD)
     };
 
     let all_themes = ThemeMode::all();
-    let current_idx = all_themes.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+    let current_idx = all_themes
+        .iter()
+        .position(|m| *m == app.theme.mode)
+        .unwrap_or(0);
 
     let header_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Min(20), Constraint::Length(26)])
         .split(chunks[0]);
 
-    f.render_widget(Paragraph::new(Span::styled(format!("▶ {}", t.settings_theme_title), title_style)), header_chunks[0]);
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            format!("▶ {}", t.settings_theme_title),
+            title_style,
+        )),
+        header_chunks[0],
+    );
 
     let open_modal_label = match lang {
         crate::i18n::Language::Ko => "[ 🎨  전체 테마 모달 (T) ]",
@@ -703,10 +974,20 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     app.hit_map.register(header_chunks[1], HitTarget::BtnTheme);
 
     // Current theme badge
-    let current_theme_badge = format!("  [ {}/{} ] {}", current_idx + 1, all_themes.len(), app.theme.mode.label(lang));
+    let current_theme_badge = format!(
+        "  [ {}/{} ] {}",
+        current_idx + 1,
+        all_themes.len(),
+        app.theme.mode.label(lang)
+    );
     let theme_desc_line = Line::from(vec![
         Span::styled(t.settings_theme_desc, Style::default().fg(theme.text_muted)),
-        Span::styled(current_theme_badge, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            current_theme_badge,
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ),
     ]);
     f.render_widget(Paragraph::new(theme_desc_line), chunks[1]);
 
@@ -733,7 +1014,8 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(prev_btn, cat_chunks[0]);
-    app.hit_map.register(cat_chunks[0], HitTarget::ModalSettingThemePrev);
+    app.hit_map
+        .register(cat_chunks[0], HitTarget::ModalSettingThemePrev);
 
     let categories = [
         (ThemeCategory::Dark, "다크 (10)"),
@@ -748,7 +1030,11 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         let text = format!("{}{}", prefix, name);
         let style = if is_active_cat {
             Style::default()
-                .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                .fg(if theme.mode.is_light() {
+                    Color::White
+                } else {
+                    Color::Black
+                })
                 .bg(theme.primary)
                 .add_modifier(Modifier::BOLD)
         } else {
@@ -760,14 +1046,16 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
             .style(style)
             .alignment(Alignment::Center);
         f.render_widget(p, rect);
-        app.hit_map.register(rect, HitTarget::ModalSettingThemeCategory(*cat));
+        app.hit_map
+            .register(rect, HitTarget::ModalSettingThemeCategory(*cat));
     }
 
     let next_btn = Paragraph::new(Line::from(vec![Span::raw("다음 (C) ▶")]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(next_btn, cat_chunks[10]);
-    app.hit_map.register(cat_chunks[10], HitTarget::ModalSettingThemeNext);
+    app.hit_map
+        .register(cat_chunks[10], HitTarget::ModalSettingThemeNext);
 
     // Active Category Themes Grid (Row 1 & Row 2)
     let cat_themes = app.theme_category.themes();
@@ -799,7 +1087,11 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
         let style = if is_selected {
             Style::default()
-                .fg(if mode.is_light() { Color::White } else { Color::Black })
+                .fg(if mode.is_light() {
+                    Color::White
+                } else {
+                    Color::Black
+                })
                 .bg(theme.primary)
                 .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
         } else {
@@ -814,7 +1106,8 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
             .style(style)
             .alignment(Alignment::Center);
         f.render_widget(p, rect);
-        app.hit_map.register(rect, HitTarget::ModalSettingTheme(*mode));
+        app.hit_map
+            .register(rect, HitTarget::ModalSettingTheme(*mode));
     }
 
     // Row 2 themes (y = inner.y + 9)
@@ -840,7 +1133,11 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
             let style = if is_selected {
                 Style::default()
-                    .fg(if mode.is_light() { Color::White } else { Color::Black })
+                    .fg(if mode.is_light() {
+                        Color::White
+                    } else {
+                        Color::Black
+                    })
                     .bg(theme.primary)
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
             } else {
@@ -855,7 +1152,8 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
                 .style(style)
                 .alignment(Alignment::Center);
             f.render_widget(p, rect);
-            app.hit_map.register(rect, HitTarget::ModalSettingTheme(*mode));
+            app.hit_map
+                .register(rect, HitTarget::ModalSettingTheme(*mode));
         }
     }
 
@@ -868,7 +1166,12 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let pal_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
-        .title(Span::styled(preview_title, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            preview_title,
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ));
     let pal_inner = pal_block.inner(chunks[8]);
     f.render_widget(pal_block, chunks[8]);
 
@@ -892,11 +1195,18 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
     // Config file hint (chunks[10])
     let cfg_hint = match lang {
-        crate::i18n::Language::Ko => "📁  설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 대비 조절 가능)",
-        crate::i18n::Language::Ja => "📁  設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)",
+        crate::i18n::Language::Ko => {
+            "📁  설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 대비 조절 가능)"
+        }
+        crate::i18n::Language::Ja => {
+            "📁  設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)"
+        }
         _ => "📁  Config file: ~/.config/rcal/theme.toml (Color overrides & contrast options)",
     };
-    f.render_widget(Paragraph::new(Span::styled(cfg_hint, Style::default().fg(theme.text_dim))), chunks[10]);
+    f.render_widget(
+        Paragraph::new(Span::styled(cfg_hint, Style::default().fg(theme.text_dim))),
+        chunks[10],
+    );
 
     selected_theme_rect.unwrap_or(row1_chunks[0])
 }
@@ -926,28 +1236,50 @@ fn render_language_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
     let is_focused = app.settings_section == SettingsSection::Language;
     let title_style = if is_focused {
-        Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.text_highlight)
+            .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(theme.secondary)
+            .add_modifier(Modifier::BOLD)
     };
 
     f.render_widget(
-        Paragraph::new(Span::styled(format!("▶ {}", t.settings_lang_title), title_style)),
+        Paragraph::new(Span::styled(
+            format!("▶ {}", t.settings_lang_title),
+            title_style,
+        )),
         chunks[0],
     );
 
     let desc_str = match lang {
-        crate::i18n::Language::Ko => "방향키(↑↓←→ / hjkl)로 이동 후 [Enter/스페이스] 또는 클릭하여 언어를 즉시 변경합니다.",
-        crate::i18n::Language::Ja => "矢印キー(↑↓←→ / hjkl)で選択し、[Enter/スペース] またはクリックで言語を変更します。",
+        crate::i18n::Language::Ko => {
+            "방향키(↑↓←→ / hjkl)로 이동 후 [Enter/스페이스] 또는 클릭하여 언어를 즉시 변경합니다."
+        }
+        crate::i18n::Language::Ja => {
+            "矢印キー(↑↓←→ / hjkl)で選択し、[Enter/スペース] またはクリックで言語を変更します。"
+        }
         _ => "Navigate with arrow keys (↑↓←→ / hjkl) and press [Enter/Space] or click to select.",
     };
-    f.render_widget(Paragraph::new(Span::styled(desc_str, Style::default().fg(theme.text_muted))), chunks[1]);
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            desc_str,
+            Style::default().fg(theme.text_muted),
+        )),
+        chunks[1],
+    );
 
     // Info Banner Box (chunks[3])
     let banner_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
-        .title(Span::styled(" 🌐 다국어 지원 (21 Languages) ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            " 🌐 다국어 지원 (21 Languages) ",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ));
     let b_inner = banner_block.inner(chunks[3]);
     f.render_widget(banner_block, chunks[3]);
 
@@ -956,7 +1288,10 @@ fn render_language_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         crate::i18n::Language::Ja => "世界21言語を完全サポート。言語を変更するとメニューやカレンダー表記がリアルタイムに更新されます。",
         _ => "Fully supports 21 languages worldwide. Changing language updates all UI labels, dates, and alerts in real-time.",
     };
-    f.render_widget(Paragraph::new(Span::styled(b_text, Style::default().fg(theme.text_dim))), b_inner);
+    f.render_widget(
+        Paragraph::new(Span::styled(b_text, Style::default().fg(theme.text_dim))),
+        b_inner,
+    );
 
     // 4 cols x 6 rows grid (chunks[5]) (y = inner.y + 10..15)
     let all_langs = crate::i18n::Language::ALL;
@@ -984,12 +1319,20 @@ fn render_language_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
             let style = if is_selected && is_cell_focused {
                 Style::default()
-                    .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                    .fg(if theme.mode.is_light() {
+                        Color::White
+                    } else {
+                        Color::Black
+                    })
                     .bg(theme.primary)
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
             } else if is_selected {
                 Style::default()
-                    .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                    .fg(if theme.mode.is_light() {
+                        Color::White
+                    } else {
+                        Color::Black
+                    })
                     .bg(theme.primary)
                     .add_modifier(Modifier::BOLD)
             } else if is_cell_focused {
@@ -1021,13 +1364,26 @@ fn render_language_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
             let p = Paragraph::new(Line::from(vec![Span::raw(text)])).style(style);
             f.render_widget(p, rect);
-            app.hit_map.register(rect, HitTarget::ModalSelectLanguage(lang_opt));
+            app.hit_map
+                .register(rect, HitTarget::ModalSelectLanguage(lang_opt));
         }
     }
 
     // Summary line (chunks[7])
-    let summary_text = format!("  현재 선택된 언어: {} ({})", app.lang.label(), app.lang.code());
-    f.render_widget(Paragraph::new(Span::styled(summary_text, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))), chunks[7]);
+    let summary_text = format!(
+        "  현재 선택된 언어: {} ({})",
+        app.lang.label(),
+        app.lang.code()
+    );
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            summary_text,
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        )),
+        chunks[7],
+    );
 
     focused_rect
 }

@@ -1,6 +1,6 @@
+use serde_json::{json, Value};
 use std::io::Cursor;
 use std::sync::Arc;
-use serde_json::{json, Value};
 use tokio::io::BufReader;
 
 use rcal::mcp::run_mcp_server;
@@ -96,10 +96,7 @@ async fn test_mcp_tools_list() {
         .as_array()
         .expect("tools should be an array");
 
-    let tool_names: Vec<&str> = tools
-        .iter()
-        .filter_map(|t| t["name"].as_str())
-        .collect();
+    let tool_names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
 
     assert!(tool_names.contains(&"list_calendars"));
     assert!(tool_names.contains(&"list_events"));

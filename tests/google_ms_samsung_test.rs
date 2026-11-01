@@ -19,7 +19,9 @@ mod tests {
         db.save_account(&acc_samsung).unwrap();
         let accounts = db.get_accounts().unwrap();
 
-        let found = accounts.iter().find(|a| a.provider == ProviderType::Samsung);
+        let found = accounts
+            .iter()
+            .find(|a| a.provider == ProviderType::Samsung);
         assert!(found.is_some());
         assert_eq!(found.unwrap().name, "Galaxy S25 Calendar");
     }
@@ -52,13 +54,25 @@ mod tests {
         let accounts = db.get_accounts().unwrap();
         assert_eq!(accounts.len(), 2);
 
-        let google = accounts.iter().find(|a| a.provider == ProviderType::Google).unwrap();
+        let google = accounts
+            .iter()
+            .find(|a| a.provider == ProviderType::Google)
+            .unwrap();
         assert_eq!(google.auth_type, AuthType::OAuth2);
-        assert_eq!(google.access_token.as_deref(), Some("ya29.access-token-mock"));
+        assert_eq!(
+            google.access_token.as_deref(),
+            Some("ya29.access-token-mock")
+        );
 
-        let ms = accounts.iter().find(|a| a.provider == ProviderType::Microsoft).unwrap();
+        let ms = accounts
+            .iter()
+            .find(|a| a.provider == ProviderType::Microsoft)
+            .unwrap();
         assert_eq!(ms.auth_type, AuthType::OAuth2);
-        assert_eq!(ms.refresh_token.as_deref(), Some("M.R3...refresh-token-mock"));
+        assert_eq!(
+            ms.refresh_token.as_deref(),
+            Some("M.R3...refresh-token-mock")
+        );
     }
 
     #[test]
@@ -79,7 +93,10 @@ mod tests {
 
     #[test]
     fn test_ms_credentials_resolution() {
-        let (cid, csec) = OAuth2Config::resolve_microsoft_credentials(Some("user-custom-id"), Some("user-custom-sec"));
+        let (cid, csec) = OAuth2Config::resolve_microsoft_credentials(
+            Some("user-custom-id"),
+            Some("user-custom-sec"),
+        );
         assert_eq!(cid, "user-custom-id");
         assert_eq!(csec, "user-custom-sec");
 
@@ -95,12 +112,22 @@ mod tests {
         use rcal::sync::oauth::parse_query_param;
 
         let req = "GET /oauth/callback?code=M.R3_mock_12345&state=xyz_state HTTP/1.1";
-        assert_eq!(parse_query_param(req, "code").as_deref(), Some("M.R3_mock_12345"));
-        assert_eq!(parse_query_param(req, "state").as_deref(), Some("xyz_state"));
+        assert_eq!(
+            parse_query_param(req, "code").as_deref(),
+            Some("M.R3_mock_12345")
+        );
+        assert_eq!(
+            parse_query_param(req, "state").as_deref(),
+            Some("xyz_state")
+        );
         assert_eq!(parse_query_param(req, "error"), None);
 
-        let err_req = "GET /oauth/callback?error=access_denied&error_description=User+cancelled HTTP/1.1";
-        assert_eq!(parse_query_param(err_req, "error").as_deref(), Some("access_denied"));
+        let err_req =
+            "GET /oauth/callback?error=access_denied&error_description=User+cancelled HTTP/1.1";
+        assert_eq!(
+            parse_query_param(err_req, "error").as_deref(),
+            Some("access_denied")
+        );
     }
 
     use std::sync::atomic::{AtomicU16, Ordering};
@@ -130,12 +157,19 @@ mod tests {
             test_port, test_state
         );
         let client = reqwest::Client::new();
-        let resp = client.get(&callback_url).send().await.expect("Request failed");
+        let resp = client
+            .get(&callback_url)
+            .send()
+            .await
+            .expect("Request failed");
         assert!(resp.status().is_success());
         let html_body = resp.text().await.expect("Failed to read text");
         assert!(html_body.contains("Microsoft 365 Connected"));
 
-        let received_code = server_handle.await.expect("Task failed").expect("Loopback error");
+        let received_code = server_handle
+            .await
+            .expect("Task failed")
+            .expect("Loopback error");
         assert_eq!(received_code, "mock-ms-code-999");
     }
 
@@ -163,6 +197,9 @@ mod tests {
         let res = server_handle.await.expect("Task failed");
         assert!(res.is_err(), "Expected CSRF error due to state mismatch");
         let err_msg = res.unwrap_err().to_string();
-        assert!(err_msg.contains("state mismatch"), "Error should mention state mismatch");
+        assert!(
+            err_msg.contains("state mismatch"),
+            "Error should mention state mismatch"
+        );
     }
 }

@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use chrono::Local;
     use crossterm::event::{Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
@@ -8,7 +9,6 @@ mod tests {
     use rcal::model::{CalDavAccount, Event, ProviderType, WeekStartDay};
     use rcal::storage::Database;
     use rcal::ui;
-    use chrono::Local;
 
     fn make_key(code: KeyCode) -> CrosstermEvent {
         CrosstermEvent::Key(KeyEvent::new(code, KeyModifiers::NONE))
@@ -137,7 +137,10 @@ mod tests {
 
         // Verify event in database
         let events = app.db.get_all_events().unwrap();
-        let team_sync = events.iter().find(|e| e.title == "Team Sync").expect("Team Sync event must exist");
+        let team_sync = events
+            .iter()
+            .find(|e| e.title == "Team Sync")
+            .expect("Team Sync event must exist");
         assert_eq!(team_sync.location.as_deref(), Some("Room 402"));
         assert_eq!(team_sync.description.as_deref(), Some("Discuss roadmap"));
     }
@@ -158,7 +161,13 @@ mod tests {
         }
         handle_crossterm_event(&mut app, make_key(KeyCode::Enter)).unwrap();
         assert_eq!(app.modal, ActiveModal::None);
-        let event_titles: Vec<String> = app.db.get_all_events().unwrap().into_iter().map(|e| e.title).collect();
+        let event_titles: Vec<String> = app
+            .db
+            .get_all_events()
+            .unwrap()
+            .into_iter()
+            .map(|e| e.title)
+            .collect();
         assert!(!event_titles.contains(&"Cancelled Event".to_string()));
 
         // Cancel via Esc
@@ -271,8 +280,20 @@ mod tests {
         let db = Database::in_memory().unwrap();
         let mut app = App::new(db).unwrap();
 
-        let acc1 = CalDavAccount::new("Acc 1".into(), ProviderType::Naver, "url1".into(), "u1".into(), "p1".into());
-        let acc2 = CalDavAccount::new("Acc 2".into(), ProviderType::Apple, "url2".into(), "u2".into(), "p2".into());
+        let acc1 = CalDavAccount::new(
+            "Acc 1".into(),
+            ProviderType::Naver,
+            "url1".into(),
+            "u1".into(),
+            "p1".into(),
+        );
+        let acc2 = CalDavAccount::new(
+            "Acc 2".into(),
+            ProviderType::Apple,
+            "url2".into(),
+            "u2".into(),
+            "p2".into(),
+        );
         app.db.save_account(&acc1).unwrap();
         app.db.save_account(&acc2).unwrap();
 
@@ -391,7 +412,10 @@ mod tests {
         // Tab cycles across major tabs in big steps:
         // WeekStart(1) -> Notifications(2) -> Theme(3) -> Language(4) -> WeekStart(1)
         handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
-        assert_eq!(app.settings_section, rcal::app::SettingsSection::Notifications);
+        assert_eq!(
+            app.settings_section,
+            rcal::app::SettingsSection::Notifications
+        );
 
         handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
         assert_eq!(app.settings_section, rcal::app::SettingsSection::Theme);
@@ -410,7 +434,10 @@ mod tests {
         assert_eq!(app.settings_section, rcal::app::SettingsSection::Theme);
 
         handle_crossterm_event(&mut app, make_key(KeyCode::BackTab)).unwrap();
-        assert_eq!(app.settings_section, rcal::app::SettingsSection::Notifications);
+        assert_eq!(
+            app.settings_section,
+            rcal::app::SettingsSection::Notifications
+        );
 
         handle_crossterm_event(&mut app, make_key(KeyCode::BackTab)).unwrap();
         assert_eq!(app.settings_section, rcal::app::SettingsSection::WeekStart);
@@ -431,7 +458,13 @@ mod tests {
 
         let cal_id = app.calendars[0].id.clone();
         let now = Local::now();
-        let ev = Event::new(cal_id, "Special Event".into(), now, now + chrono::Duration::hours(1), false);
+        let ev = Event::new(
+            cal_id,
+            "Special Event".into(),
+            now,
+            now + chrono::Duration::hours(1),
+            false,
+        );
         app.db.save_event(&ev).unwrap();
         app.reload_events().unwrap();
 
@@ -488,32 +521,47 @@ mod tests {
         app.open_new_event_modal(None);
         terminal.draw(|f| ui::render(f, &mut app)).unwrap();
         let pos1 = terminal.get_cursor_position().unwrap();
-        assert!(pos1.x > 0 && pos1.y > 0, "Cursor must be set inside EventForm modal");
+        assert!(
+            pos1.x > 0 && pos1.y > 0,
+            "Cursor must be set inside EventForm modal"
+        );
 
         // 2. Account modal (Add mode) cursor
         app.open_accounts_modal();
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('a'))).unwrap();
         terminal.draw(|f| ui::render(f, &mut app)).unwrap();
         let pos2 = terminal.get_cursor_position().unwrap();
-        assert!(pos2.x > 0 && pos2.y > 0, "Cursor must be set inside AccountModal");
+        assert!(
+            pos2.x > 0 && pos2.y > 0,
+            "Cursor must be set inside AccountModal"
+        );
 
         // 3. Calendar modal (Create mode) cursor
         app.open_calendar_modal();
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('n'))).unwrap();
         terminal.draw(|f| ui::render(f, &mut app)).unwrap();
         let pos3 = terminal.get_cursor_position().unwrap();
-        assert!(pos3.x > 0 && pos3.y > 0, "Cursor must be set inside CalendarModal");
+        assert!(
+            pos3.x > 0 && pos3.y > 0,
+            "Cursor must be set inside CalendarModal"
+        );
 
         // 4. Settings modal cursor
         app.open_settings_modal();
         terminal.draw(|f| ui::render(f, &mut app)).unwrap();
         let pos4 = terminal.get_cursor_position().unwrap();
-        assert!(pos4.x > 0 && pos4.y > 0, "Cursor must be set inside SettingsModal");
+        assert!(
+            pos4.x > 0 && pos4.y > 0,
+            "Cursor must be set inside SettingsModal"
+        );
 
         // 5. Help modal cursor
         app.open_help_modal();
         terminal.draw(|f| ui::render(f, &mut app)).unwrap();
         let pos5 = terminal.get_cursor_position().unwrap();
-        assert!(pos5.x > 0 && pos5.y > 0, "Cursor must be set inside HelpModal");
+        assert!(
+            pos5.x > 0 && pos5.y > 0,
+            "Cursor must be set inside HelpModal"
+        );
     }
 }

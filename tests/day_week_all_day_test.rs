@@ -26,8 +26,12 @@ mod tests {
             title: "전사 창립기념일 (종일)".to_string(),
             description: Some("Company Anniversary".to_string()),
             location: Some("본사 대강당".to_string()),
-            start_time: Local.from_local_datetime(&today.and_hms_opt(0, 0, 0).unwrap()).unwrap(),
-            end_time: Local.from_local_datetime(&today.and_hms_opt(23, 59, 59).unwrap()).unwrap(),
+            start_time: Local
+                .from_local_datetime(&today.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap(),
+            end_time: Local
+                .from_local_datetime(&today.and_hms_opt(23, 59, 59).unwrap())
+                .unwrap(),
             all_day: true,
             rrule: None,
             sync_status: SyncStatus::Synced,
@@ -52,7 +56,10 @@ mod tests {
                 false
             }
         });
-        assert!(found_event_hit, "All-day event must have a hit target registered in Day View");
+        assert!(
+            found_event_hit,
+            "All-day event must have a hit target registered in Day View"
+        );
 
         // Verify that all-day slot is registered in hit_map
         let found_all_day_slot = app.hit_map.targets().iter().any(|(_, target)| {
@@ -62,7 +69,10 @@ mod tests {
                 false
             }
         });
-        assert!(found_all_day_slot, "DayAllDaySlot must be registered in Day View");
+        assert!(
+            found_all_day_slot,
+            "DayAllDaySlot must be registered in Day View"
+        );
     }
 
     #[test]
@@ -75,13 +85,17 @@ mod tests {
         app.current_view = ViewMode::Day;
 
         // Register DayAllDaySlot target and simulate mouse click
-        app.hit_map.register(Rect::new(10, 3, 40, 2), HitTarget::DayAllDaySlot(date));
+        app.hit_map
+            .register(Rect::new(10, 3, 40, 2), HitTarget::DayAllDaySlot(date));
         app.handle_mouse_click(15, 4).unwrap();
 
         // Verify EventForm modal is opened with all_day = true
         match app.modal {
             ActiveModal::EventForm(ref form) => {
-                assert!(form.all_day, "New event modal must have all_day = true when triggered from all-day slot");
+                assert!(
+                    form.all_day,
+                    "New event modal must have all_day = true when triggered from all-day slot"
+                );
                 assert_eq!(form.date_str, "2026-11-02");
             }
             _ => panic!("Expected EventForm modal to be opened"),
@@ -103,8 +117,12 @@ mod tests {
             title: "가족 여행 (종일)".to_string(),
             description: None,
             location: None,
-            start_time: Local.from_local_datetime(&test_date.and_hms_opt(0, 0, 0).unwrap()).unwrap(),
-            end_time: Local.from_local_datetime(&test_date.and_hms_opt(23, 59, 59).unwrap()).unwrap(),
+            start_time: Local
+                .from_local_datetime(&test_date.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap(),
+            end_time: Local
+                .from_local_datetime(&test_date.and_hms_opt(23, 59, 59).unwrap())
+                .unwrap(),
             all_day: true,
             rrule: None,
             sync_status: SyncStatus::Synced,
@@ -127,6 +145,9 @@ mod tests {
                 false
             }
         });
-        assert!(found_event_hit, "All-day event must have a hit target registered in Week View");
+        assert!(
+            found_event_hit,
+            "All-day event must have a hit target registered in Week View"
+        );
     }
 }

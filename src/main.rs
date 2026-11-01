@@ -1,5 +1,3 @@
-use std::io::{self, stdout};
-use std::time::Duration;
 use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture},
@@ -7,6 +5,8 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
+use std::io::{self, stdout};
+use std::time::Duration;
 use tokio::sync::mpsc;
 
 use rcal::app::App;
@@ -29,17 +29,23 @@ async fn main() -> Result<()> {
                 }
                 "--help" | "-h" => {
                     println!("rcal {}", rcal::version());
-                    println!("Fast, mouse-interactive TUI Calendar in Rust with multi-cloud sync\n");
+                    println!(
+                        "Fast, mouse-interactive TUI Calendar in Rust with multi-cloud sync\n"
+                    );
                     println!("Usage: rcal [OPTIONS] [COMMAND]\n");
                     println!("Commands:");
                     println!("  notify                 Check upcoming events and trigger notifications once");
-                    println!("  notify --daemon        Run notification checker daemon in background");
+                    println!(
+                        "  notify --daemon        Run notification checker daemon in background"
+                    );
                     println!("  notify --test          Send a test desktop notification");
                     println!("  mcp, --mcp             Run Model Context Protocol (MCP) server over stdio");
                     println!();
                     println!("Options:");
                     println!("  --db <PATH>            Path to SQLite database file");
-                    println!("  -v, --version          Print version information (CalVer: YYYY.MM.DD.N)");
+                    println!(
+                        "  -v, --version          Print version information (CalVer: YYYY.MM.DD.N)"
+                    );
                     println!("  -h, --help             Print help information");
                     return Ok(());
                 }
@@ -51,7 +57,10 @@ async fn main() -> Result<()> {
     let custom_db = parse_db_flag(&args);
 
     // MCP server mode for AI agents
-    if args.iter().any(|a| a == "mcp" || a == "--mcp" || a == "mcp-server") {
+    if args
+        .iter()
+        .any(|a| a == "mcp" || a == "--mcp" || a == "mcp-server")
+    {
         let db = Database::new(custom_db.as_deref())?;
         rcal::mcp::run_stdio(db).await?;
         return Ok(());
@@ -85,7 +94,9 @@ async fn main() -> Result<()> {
                 interval.tick().await;
                 let cfg = NotificationConfig::load_from_db(&db);
                 if cfg.enabled {
-                    if let Ok(notified) = check_and_notify_upcoming(&db, &cfg, chrono::Local::now(), lang) {
+                    if let Ok(notified) =
+                        check_and_notify_upcoming(&db, &cfg, chrono::Local::now(), lang)
+                    {
                         for (ev, cal) in notified {
                             println!(
                                 "[{}] Notified: '{}' [{}]",
@@ -171,7 +182,8 @@ async fn main() -> Result<()> {
             }
         };
 
-        let _ = worker_db.cleanup_old_notifications(chrono::Local::now() - chrono::Duration::days(7));
+        let _ =
+            worker_db.cleanup_old_notifications(chrono::Local::now() - chrono::Duration::days(7));
 
         loop {
             interval.tick().await;
@@ -188,7 +200,9 @@ async fn main() -> Result<()> {
                 .and_then(|s| rcal::i18n::Language::from_code(&s))
                 .unwrap_or_else(rcal::i18n::Language::detect);
 
-            if let Ok(notified) = check_and_notify_upcoming(&worker_db, &config, chrono::Local::now(), lang) {
+            if let Ok(notified) =
+                check_and_notify_upcoming(&worker_db, &config, chrono::Local::now(), lang)
+            {
                 for (ev, _) in notified {
                     let _ = notif_tx.send(ev.title).await;
                 }
@@ -197,15 +211,27 @@ async fn main() -> Result<()> {
     });
 
     // 6. OAuth Result Channel Setup
-    let (oauth_result_tx, mut oauth_result_rx) = mpsc::channel::<Result<rcal::model::CalDavAccount, String>>(2);
+    let (oauth_result_tx, mut oauth_result_rx) =
+        mpsc::channel::<Result<rcal::model::CalDavAccount, String>>(2);
     app.oauth_result_tx = Some(oauth_result_tx);
 
     // 7. Main Event Loop
-    let res = run_app(&mut terminal, &mut app, &mut sync_result_rx, &mut notif_rx, &mut oauth_result_rx).await;
+    let res = run_app(
+        &mut terminal,
+        &mut app,
+        &mut sync_result_rx,
+        &mut notif_rx,
+        &mut oauth_result_rx,
+    )
+    .await;
 
     // 8. Restore terminal
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -231,12 +257,18 @@ async fn run_app<B: ratatui::backend::Backend>(
 
             if res.errors.is_empty() {
                 if res.events_pulled > 0 || res.events_pushed > 0 {
-                    app.set_status(format!("✓  Synced: +{} pushed, +{} pulled", res.events_pushed, res.events_pulled));
+                    app.set_status(format!(
+                        "✓  Synced: +{} pushed, +{} pulled",
+                        res.events_pushed, res.events_pulled
+                    ));
                 } else if res.accounts_synced > 0 {
                     app.set_status("✓  All calendars up to date");
                 }
             } else {
-                app.set_status(format!("⚠  Sync note: {}", res.errors.first().unwrap_or(&"Error".to_string())));
+                app.set_status(format!(
+                    "⚠  Sync note: {}",
+                    res.errors.first().unwrap_or(&"Error".to_string())
+                ));
             }
         }
 
@@ -248,8 +280,12 @@ async fn run_app<B: ratatui::backend::Backend>(
                     let _ = app.reload_calendars();
                     let _ = app.reload_events();
                     let msg = match app.lang {
-                        rcal::i18n::Language::Ko => format!("✓  {} 계정 연동 성공! 동기화 중...", new_acc.name),
-                        rcal::i18n::Language::Ja => format!("✓  {} 連携完了! 同期中...", new_acc.name),
+                        rcal::i18n::Language::Ko => {
+                            format!("✓  {} 계정 연동 성공! 동기화 중...", new_acc.name)
+                        }
+                        rcal::i18n::Language::Ja => {
+                            format!("✓  {} 連携完了! 同期中...", new_acc.name)
+                        }
                         _ => format!("✓  {} connected! Syncing...", new_acc.name),
                     };
                     app.set_status(msg);

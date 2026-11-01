@@ -35,9 +35,12 @@ mod tests {
         assert_eq!(app.current_view, ViewMode::Month);
 
         // Register targets into app.hit_map as if rendered
-        app.hit_map.register(Rect::new(10, 0, 10, 1), HitTarget::TabWeek);
-        app.hit_map.register(Rect::new(20, 0, 10, 1), HitTarget::TabDay);
-        app.hit_map.register(Rect::new(30, 0, 10, 1), HitTarget::TabAgenda);
+        app.hit_map
+            .register(Rect::new(10, 0, 10, 1), HitTarget::TabWeek);
+        app.hit_map
+            .register(Rect::new(20, 0, 10, 1), HitTarget::TabDay);
+        app.hit_map
+            .register(Rect::new(30, 0, 10, 1), HitTarget::TabAgenda);
 
         // Click TabWeek
         app.handle_mouse_click(15, 0).unwrap();
@@ -58,7 +61,8 @@ mod tests {
         let mut app = App::new(db).unwrap();
 
         let target_date = NaiveDate::from_ymd_opt(2026, 11, 15).unwrap();
-        app.hit_map.register(Rect::new(5, 5, 10, 4), HitTarget::MonthDay(target_date));
+        app.hit_map
+            .register(Rect::new(5, 5, 10, 4), HitTarget::MonthDay(target_date));
 
         // Click on date cell
         app.handle_mouse_click(7, 6).unwrap();
@@ -75,7 +79,10 @@ mod tests {
         let mut app = App::new(db).unwrap();
 
         let target_date = NaiveDate::from_ymd_opt(2026, 10, 31).unwrap();
-        app.hit_map.register(Rect::new(10, 8, 12, 2), HitTarget::WeekSlot(target_date, 14));
+        app.hit_map.register(
+            Rect::new(10, 8, 12, 2),
+            HitTarget::WeekSlot(target_date, 14),
+        );
 
         // Click on week time slot at 14:00
         app.handle_mouse_click(12, 9).unwrap();

@@ -30,7 +30,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))
-        .title(Span::styled(t.modal_help_title, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            t.modal_help_title,
+            Style::default()
+                .fg(theme.text_highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -42,18 +47,22 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         ])
         .split(inner);
 
-    let mut help_text = vec![
-        Line::from(vec![
-            Span::styled(t.help_mouse_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)),
-        ]),
-    ];
+    let mut help_text = vec![Line::from(vec![Span::styled(
+        t.help_mouse_title,
+        Style::default()
+            .fg(theme.secondary)
+            .add_modifier(Modifier::BOLD),
+    )])];
     for line in t.help_mouse_lines {
         help_text.push(Line::from(*line));
     }
     help_text.push(Line::from(""));
-    help_text.push(Line::from(vec![
-        Span::styled(t.help_keyboard_title, Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
-    ]));
+    help_text.push(Line::from(vec![Span::styled(
+        t.help_keyboard_title,
+        Style::default()
+            .fg(theme.primary)
+            .add_modifier(Modifier::BOLD),
+    )]));
     for line in t.help_keyboard_lines {
         help_text.push(Line::from(*line));
     }

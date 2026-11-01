@@ -1,8 +1,8 @@
+use ratatui::style::Color;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use ratatui::style::Color;
-use serde::{Deserialize, Serialize};
 
 use crate::ui::theme::Theme;
 
@@ -240,7 +240,8 @@ boost_muted_text = false
 # tab_inactive_bg = "#1f1d2e"
 # button_bg = "#2a283e"
 # button_fg = "#e0def4"
-"##.to_string()
+"##
+        .to_string()
     }
 
     /// Applies configuration overrides, high-contrast, and visibility tweaks to a `Theme`.
@@ -296,24 +297,96 @@ boost_muted_text = false
 }
 
 fn apply_overrides(theme: &mut Theme, ov: &ThemeColorOverrides) {
-    if let Some(ref s) = ov.bg { if let Some(c) = parse_color(s) { theme.bg = c; } }
-    if let Some(ref s) = ov.panel_bg { if let Some(c) = parse_color(s) { theme.panel_bg = c; } }
-    if let Some(ref s) = ov.border { if let Some(c) = parse_color(s) { theme.border = c; } }
-    if let Some(ref s) = ov.border_focused { if let Some(c) = parse_color(s) { theme.border_focused = c; } }
-    if let Some(ref s) = ov.primary { if let Some(c) = parse_color(s) { theme.primary = c; } }
-    if let Some(ref s) = ov.secondary { if let Some(c) = parse_color(s) { theme.secondary = c; } }
-    if let Some(ref s) = ov.accent { if let Some(c) = parse_color(s) { theme.accent = c; } }
-    if let Some(ref s) = ov.danger { if let Some(c) = parse_color(s) { theme.danger = c; } }
-    if let Some(ref s) = ov.text_normal { if let Some(c) = parse_color(s) { theme.text_normal = c; } }
-    if let Some(ref s) = ov.text_muted { if let Some(c) = parse_color(s) { theme.text_muted = c; } }
-    if let Some(ref s) = ov.text_dim { if let Some(c) = parse_color(s) { theme.text_dim = c; } }
-    if let Some(ref s) = ov.text_highlight { if let Some(c) = parse_color(s) { theme.text_highlight = c; } }
-    if let Some(ref s) = ov.today_bg { if let Some(c) = parse_color(s) { theme.today_bg = c; } }
-    if let Some(ref s) = ov.selected_bg { if let Some(c) = parse_color(s) { theme.selected_bg = c; } }
-    if let Some(ref s) = ov.tab_active_bg { if let Some(c) = parse_color(s) { theme.tab_active_bg = c; } }
-    if let Some(ref s) = ov.tab_inactive_bg { if let Some(c) = parse_color(s) { theme.tab_inactive_bg = c; } }
-    if let Some(ref s) = ov.button_bg { if let Some(c) = parse_color(s) { theme.button_bg = c; } }
-    if let Some(ref s) = ov.button_fg { if let Some(c) = parse_color(s) { theme.button_fg = c; } }
+    if let Some(ref s) = ov.bg {
+        if let Some(c) = parse_color(s) {
+            theme.bg = c;
+        }
+    }
+    if let Some(ref s) = ov.panel_bg {
+        if let Some(c) = parse_color(s) {
+            theme.panel_bg = c;
+        }
+    }
+    if let Some(ref s) = ov.border {
+        if let Some(c) = parse_color(s) {
+            theme.border = c;
+        }
+    }
+    if let Some(ref s) = ov.border_focused {
+        if let Some(c) = parse_color(s) {
+            theme.border_focused = c;
+        }
+    }
+    if let Some(ref s) = ov.primary {
+        if let Some(c) = parse_color(s) {
+            theme.primary = c;
+        }
+    }
+    if let Some(ref s) = ov.secondary {
+        if let Some(c) = parse_color(s) {
+            theme.secondary = c;
+        }
+    }
+    if let Some(ref s) = ov.accent {
+        if let Some(c) = parse_color(s) {
+            theme.accent = c;
+        }
+    }
+    if let Some(ref s) = ov.danger {
+        if let Some(c) = parse_color(s) {
+            theme.danger = c;
+        }
+    }
+    if let Some(ref s) = ov.text_normal {
+        if let Some(c) = parse_color(s) {
+            theme.text_normal = c;
+        }
+    }
+    if let Some(ref s) = ov.text_muted {
+        if let Some(c) = parse_color(s) {
+            theme.text_muted = c;
+        }
+    }
+    if let Some(ref s) = ov.text_dim {
+        if let Some(c) = parse_color(s) {
+            theme.text_dim = c;
+        }
+    }
+    if let Some(ref s) = ov.text_highlight {
+        if let Some(c) = parse_color(s) {
+            theme.text_highlight = c;
+        }
+    }
+    if let Some(ref s) = ov.today_bg {
+        if let Some(c) = parse_color(s) {
+            theme.today_bg = c;
+        }
+    }
+    if let Some(ref s) = ov.selected_bg {
+        if let Some(c) = parse_color(s) {
+            theme.selected_bg = c;
+        }
+    }
+    if let Some(ref s) = ov.tab_active_bg {
+        if let Some(c) = parse_color(s) {
+            theme.tab_active_bg = c;
+        }
+    }
+    if let Some(ref s) = ov.tab_inactive_bg {
+        if let Some(c) = parse_color(s) {
+            theme.tab_inactive_bg = c;
+        }
+    }
+    if let Some(ref s) = ov.button_bg {
+        if let Some(c) = parse_color(s) {
+            theme.button_bg = c;
+        }
+    }
+    if let Some(ref s) = ov.button_fg {
+        if let Some(c) = parse_color(s) {
+            theme.button_fg = c;
+        }
+    }
 }
 
 /// Parses a color string into Ratatui `Color`.

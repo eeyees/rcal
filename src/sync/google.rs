@@ -76,7 +76,11 @@ impl GoogleCalendarClient {
 
     pub async fn list_calendars(&self) -> Result<Vec<RemoteCalendarInfo>> {
         let url = "https://www.googleapis.com/calendar/v3/users/me/calendarList";
-        let res = self.client.get(url).send().await
+        let res = self
+            .client
+            .get(url)
+            .send()
+            .await
             .with_context(|| "Failed to query Google Calendar list")?;
 
         if !res.status().is_success() {
@@ -92,7 +96,9 @@ impl GoogleCalendarClient {
                 list.push(RemoteCalendarInfo {
                     name: item.summary,
                     href: item.id,
-                    color_code: item.background_color.or_else(|| Some("#4285F4".to_string())),
+                    color_code: item
+                        .background_color
+                        .or_else(|| Some("#4285F4".to_string())),
                     ctag: None,
                 });
             }
@@ -101,15 +107,20 @@ impl GoogleCalendarClient {
         Ok(list)
     }
 
-    pub async fn list_events(&self, calendar_id: &str, local_calendar_id: &str) -> Result<Vec<Event>> {
+    pub async fn list_events(
+        &self,
+        calendar_id: &str,
+        local_calendar_id: &str,
+    ) -> Result<Vec<Event>> {
         let encoded_cal_id = urlencoding::encode(calendar_id);
         let url = format!(
             "https://www.googleapis.com/calendar/v3/calendars/{}/events?singleEvents=true&maxResults=250",
             encoded_cal_id
         );
 
-        let res = self.client.get(&url).send().await
-            .with_context(|| format!("Failed to query events for Google calendar {}", calendar_id))?;
+        let res = self.client.get(&url).send().await.with_context(|| {
+            format!("Failed to query events for Google calendar {}", calendar_id)
+        })?;
 
         if !res.status().is_success() {
             let err = res.text().await.unwrap_or_default();
@@ -121,7 +132,9 @@ impl GoogleCalendarClient {
 
         if let Some(items) = data.items {
             for item in items {
-                if let (Some(start_time), Some(end_time), all_day) = parse_google_time(&item.start, &item.end) {
+                if let (Some(start_time), Some(end_time), all_day) =
+                    parse_google_time(&item.start, &item.end)
+                {
                     let ev = Event {
                         id: uuid::Uuid::new_v4().to_string(),
                         calendar_id: local_calendar_id.to_string(),
@@ -145,7 +158,11 @@ impl GoogleCalendarClient {
         Ok(events)
     }
 
-    pub async fn insert_event(&self, calendar_id: &str, event: &Event) -> Result<(String, Option<String>)> {
+    pub async fn insert_event(
+        &self,
+        calendar_id: &str,
+        event: &Event,
+    ) -> Result<(String, Option<String>)> {
         let encoded_cal_id = urlencoding::encode(calendar_id);
         let url = format!(
             "https://www.googleapis.com/calendar/v3/calendars/{}/events",
@@ -153,7 +170,9 @@ impl GoogleCalendarClient {
         );
 
         let payload = event_to_google_payload(event);
-        let res = self.client.post(&url)
+        let res = self
+            .client
+            .post(&url)
             .header(CONTENT_TYPE, "application/json")
             .json(&payload)
             .send()
@@ -165,12 +184,19 @@ impl GoogleCalendarClient {
         }
 
         let created: GoogleEventItem = res.json().await?;
-        let remote_id = created.id.ok_or_else(|| anyhow!("Missing created event ID"))?;
+        let remote_id = created
+            .id
+            .ok_or_else(|| anyhow!("Missing created event ID"))?;
         let etag = created.etag.map(|s| s.trim_matches('"').to_string());
         Ok((remote_id, etag))
     }
 
-    pub async fn update_event(&self, calendar_id: &str, remote_id: &str, event: &Event) -> Result<Option<String>> {
+    pub async fn update_event(
+        &self,
+        calendar_id: &str,
+        remote_id: &str,
+        event: &Event,
+    ) -> Result<Option<String>> {
         let encoded_cal_id = urlencoding::encode(calendar_id);
         let encoded_ev_id = urlencoding::encode(remote_id);
         let url = format!(
@@ -179,7 +205,9 @@ impl GoogleCalendarClient {
         );
 
         let payload = event_to_google_payload(event);
-        let res = self.client.put(&url)
+        let res = self
+            .client
+            .put(&url)
             .header(CONTENT_TYPE, "application/json")
             .json(&payload)
             .send()
@@ -217,8 +245,12 @@ fn parse_google_time(
 ) -> (Option<DateTime<Local>>, Option<DateTime<Local>>, bool) {
     if let (Some(s), Some(e)) = (start_opt, end_opt) {
         if let (Some(s_dt), Some(e_dt)) = (&s.date_time, &e.date_time) {
-            let start = DateTime::parse_from_rfc3339(s_dt).ok().map(|dt| dt.with_timezone(&Local));
-            let end = DateTime::parse_from_rfc3339(e_dt).ok().map(|dt| dt.with_timezone(&Local));
+            let start = DateTime::parse_from_rfc3339(s_dt)
+                .ok()
+                .map(|dt| dt.with_timezone(&Local));
+            let end = DateTime::parse_from_rfc3339(e_dt)
+                .ok()
+                .map(|dt| dt.with_timezone(&Local));
             return (start, end, false);
         }
 
@@ -227,8 +259,12 @@ fn parse_google_time(
                 NaiveDate::parse_from_str(s_d, "%Y-%m-%d"),
                 NaiveDate::parse_from_str(e_d, "%Y-%m-%d"),
             ) {
-                let start = Local.from_local_datetime(&s_naive.and_hms_opt(0, 0, 0).unwrap()).single();
-                let end = Local.from_local_datetime(&e_naive.and_hms_opt(23, 59, 59).unwrap()).single();
+                let start = Local
+                    .from_local_datetime(&s_naive.and_hms_opt(0, 0, 0).unwrap())
+                    .single();
+                let end = Local
+                    .from_local_datetime(&e_naive.and_hms_opt(23, 59, 59).unwrap())
+                    .single();
                 return (start, end, true);
             }
         }

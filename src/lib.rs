@@ -26,4 +26,3 @@ pub fn version() -> String {
         pkg_ver.to_string()
     }
 }
-

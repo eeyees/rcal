@@ -26,7 +26,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
     // Fill background if theme defines explicit color (e.g., light themes or opaque background mode)
     if app.theme.bg != ratatui::style::Color::Reset {
         f.render_widget(
-            ratatui::widgets::Block::default().style(ratatui::style::Style::default().bg(app.theme.bg)),
+            ratatui::widgets::Block::default()
+                .style(ratatui::style::Style::default().bg(app.theme.bg)),
             size,
         );
     }

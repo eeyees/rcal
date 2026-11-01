@@ -1,8 +1,8 @@
-use anyhow::Result;
-use chrono::{DateTime, Local, Timelike};
 use crate::i18n::Language;
 use crate::model::Event;
 use crate::storage::Database;
+use anyhow::Result;
+use chrono::{DateTime, Local, Timelike};
 
 /// Configuration for desktop notifications
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,9 +45,15 @@ impl NotificationConfig {
     }
 
     pub fn save_to_db(&self, db: &Database) -> Result<()> {
-        db.set_setting("notification_enabled", if self.enabled { "true" } else { "false" })?;
+        db.set_setting(
+            "notification_enabled",
+            if self.enabled { "true" } else { "false" },
+        )?;
         db.set_setting("notification_lead_minutes", &self.lead_minutes.to_string())?;
-        db.set_setting("notification_sound", if self.sound { "true" } else { "false" })?;
+        db.set_setting(
+            "notification_sound",
+            if self.sound { "true" } else { "false" },
+        )?;
         Ok(())
     }
 }
@@ -65,10 +71,7 @@ impl Default for NotificationConfig {
 /// Send a native desktop notification using notify-rust.
 pub fn send_desktop_notification(summary: &str, body: &str, sound: bool) -> Result<()> {
     let mut notification = notify_rust::Notification::new();
-    notification
-        .appname("rcal")
-        .summary(summary)
-        .body(body);
+    notification.appname("rcal").summary(summary).body(body);
 
     if sound {
         #[cfg(target_os = "macos")]
@@ -86,7 +89,10 @@ pub fn send_desktop_notification_safe(summary: &str, body: &str, sound: bool) ->
     match send_desktop_notification(summary, body, sound) {
         Ok(_) => true,
         Err(e) => {
-            eprintln!("[rcal notification warning] Failed to display notification: {:?}", e);
+            eprintln!(
+                "[rcal notification warning] Failed to display notification: {:?}",
+                e
+            );
             false
         }
     }
@@ -135,7 +141,10 @@ pub fn format_event_notification(
     } else {
         match lang {
             Language::Ko => format!("🔔  [곧 시작] {} ({}분 전)", event.title, minutes_remaining),
-            Language::Ja => format!("🔔  [まもなく開始] {} ({}分前)", event.title, minutes_remaining),
+            Language::Ja => format!(
+                "🔔  [まもなく開始] {} ({}分前)",
+                event.title, minutes_remaining
+            ),
             _ => format!("🔔  [Upcoming] {} (in {}m)", event.title, minutes_remaining),
         }
     };

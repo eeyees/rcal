@@ -8,9 +8,15 @@ use url::Url;
 #[test]
 fn test_naver_username_and_url_helpers() {
     // 1. clean_username strips @naver.com
-    assert_eq!(CalDavClient::clean_username("testuser@naver.com"), "testuser");
+    assert_eq!(
+        CalDavClient::clean_username("testuser@naver.com"),
+        "testuser"
+    );
     assert_eq!(CalDavClient::clean_username("testuser"), "testuser");
-    assert_eq!(CalDavClient::clean_username("  user.name@naver.com  "), "user.name");
+    assert_eq!(
+        CalDavClient::clean_username("  user.name@naver.com  "),
+        "user.name"
+    );
 
     // 2. get_principal_url_for_naver
     assert_eq!(
@@ -129,7 +135,11 @@ fn test_xml_calendar_parsing_both_empty_and_start_tags() {
 </d:multistatus>"#;
 
     let cals = CalDavClient::parse_multistatus_calendars_raw(multistatus_xml).unwrap();
-    assert_eq!(cals.len(), 2, "Must discover exactly 2 calendars (ignoring non-calendar collection)");
+    assert_eq!(
+        cals.len(),
+        2,
+        "Must discover exactly 2 calendars (ignoring non-calendar collection)"
+    );
 
     assert_eq!(
         cals[0],
@@ -186,10 +196,23 @@ fn test_ics_resources_parsing_from_propfind() {
   </d:response>
 </d:multistatus>"#;
 
-    let resources = CalDavClient::parse_multistatus_ics_resources(propfind_multistatus, "/caldav/user/cal/");
+    let resources =
+        CalDavClient::parse_multistatus_ics_resources(propfind_multistatus, "/caldav/user/cal/");
     assert_eq!(resources.len(), 2);
-    assert_eq!(resources[0], ("/caldav/user/cal/event101.ics".to_string(), Some("etag-abc-123".to_string())));
-    assert_eq!(resources[1], ("/caldav/user/cal/event102.ics".to_string(), Some("etag-def-456".to_string())));
+    assert_eq!(
+        resources[0],
+        (
+            "/caldav/user/cal/event101.ics".to_string(),
+            Some("etag-abc-123".to_string())
+        )
+    );
+    assert_eq!(
+        resources[1],
+        (
+            "/caldav/user/cal/event102.ics".to_string(),
+            Some("etag-def-456".to_string())
+        )
+    );
 }
 
 #[test]
@@ -203,7 +226,8 @@ fn test_timezone_dtstart_parsing() {
 
     // 2. DTSTART with Asia/Seoul: 2026-10-31 09:00:00 KST
     // 09:00:00 in Asia/Seoul (+09:00) is exactly 00:00:00 UTC!
-    let (dt, is_all_day) = parse_ics_datetime("DTSTART;TZID=Asia/Seoul", "20261031T090000").unwrap();
+    let (dt, is_all_day) =
+        parse_ics_datetime("DTSTART;TZID=Asia/Seoul", "20261031T090000").unwrap();
     assert!(!is_all_day);
     let dt_utc: DateTime<Utc> = dt.with_timezone(&Utc);
     assert_eq!(dt_utc, Utc.with_ymd_and_hms(2026, 10, 31, 0, 0, 0).unwrap());
@@ -211,22 +235,36 @@ fn test_timezone_dtstart_parsing() {
     // 3. DTEND with Asia/Seoul: 2026-10-31 10:00:00 KST = 01:00:00 UTC
     let (dt_end, _) = parse_ics_datetime("DTEND;TZID=Asia/Seoul", "20261031T100000").unwrap();
     let dt_end_utc: DateTime<Utc> = dt_end.with_timezone(&Utc);
-    assert_eq!(dt_end_utc, Utc.with_ymd_and_hms(2026, 10, 31, 1, 0, 0).unwrap());
+    assert_eq!(
+        dt_end_utc,
+        Utc.with_ymd_and_hms(2026, 10, 31, 1, 0, 0).unwrap()
+    );
 
     // 4. UTC time ending with Z
     let (utc_parsed, is_all_day_utc) = parse_ics_datetime("DTSTART", "20261031T090000Z").unwrap();
     assert!(!is_all_day_utc);
-    assert_eq!(utc_parsed.with_timezone(&Utc), Utc.with_ymd_and_hms(2026, 10, 31, 9, 0, 0).unwrap());
+    assert_eq!(
+        utc_parsed.with_timezone(&Utc),
+        Utc.with_ymd_and_hms(2026, 10, 31, 9, 0, 0).unwrap()
+    );
 
     // 5. All-day date (YYYYMMDD)
-    let (date_parsed, is_all_day_date) = parse_ics_datetime("DTSTART;VALUE=DATE", "20261031").unwrap();
+    let (date_parsed, is_all_day_date) =
+        parse_ics_datetime("DTSTART;VALUE=DATE", "20261031").unwrap();
     assert!(is_all_day_date);
-    assert_eq!(date_parsed.date_naive(), chrono::NaiveDate::from_ymd_opt(2026, 10, 31).unwrap());
+    assert_eq!(
+        date_parsed.date_naive(),
+        chrono::NaiveDate::from_ymd_opt(2026, 10, 31).unwrap()
+    );
 
     // 6. Floating local time (no Z, no TZID)
-    let (float_parsed, is_all_day_float) = parse_ics_datetime("DTSTART", "20261031T143000").unwrap();
+    let (float_parsed, is_all_day_float) =
+        parse_ics_datetime("DTSTART", "20261031T143000").unwrap();
     assert!(!is_all_day_float);
-    assert_eq!(float_parsed.time(), chrono::NaiveTime::from_hms_opt(14, 30, 0).unwrap());
+    assert_eq!(
+        float_parsed.time(),
+        chrono::NaiveTime::from_hms_opt(14, 30, 0).unwrap()
+    );
 
     // 7. Full iCalendar event with Asia/Seoul timezone
     let ics = "BEGIN:VCALENDAR\r\n\
@@ -242,20 +280,34 @@ DESCRIPTION:네이버 CalDAV 동기화 이슈 점검\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
-    let events = ics_to_events(ics, "cal_naver_1", "/caldav/user/cal/9988.ics", Some("\"etag-555\""));
+    let events = ics_to_events(
+        ics,
+        "cal_naver_1",
+        "/caldav/user/cal/9988.ics",
+        Some("\"etag-555\""),
+    );
     assert_eq!(events.len(), 1);
     let ev = &events[0];
     assert_eq!(ev.title, "네이버 캘린더 정기 미팅");
     assert_eq!(ev.location.as_deref(), Some("1784 사옥 12층 회의실"));
-    assert_eq!(ev.description.as_deref(), Some("네이버 CalDAV 동기화 이슈 점검"));
+    assert_eq!(
+        ev.description.as_deref(),
+        Some("네이버 CalDAV 동기화 이슈 점검")
+    );
     assert_eq!(ev.remote_id.as_deref(), Some("naver-cal-event-9988"));
     assert_eq!(ev.etag.as_deref(), Some("etag-555"));
     assert!(!ev.all_day);
 
     // 14:00:00 KST = 05:00:00 UTC
-    assert_eq!(ev.start_time.with_timezone(&Utc), Utc.with_ymd_and_hms(2026, 10, 31, 5, 0, 0).unwrap());
+    assert_eq!(
+        ev.start_time.with_timezone(&Utc),
+        Utc.with_ymd_and_hms(2026, 10, 31, 5, 0, 0).unwrap()
+    );
     // 15:30:00 KST = 06:30:00 UTC
-    assert_eq!(ev.end_time.with_timezone(&Utc), Utc.with_ymd_and_hms(2026, 10, 31, 6, 30, 0).unwrap());
+    assert_eq!(
+        ev.end_time.with_timezone(&Utc),
+        Utc.with_ymd_and_hms(2026, 10, 31, 6, 30, 0).unwrap()
+    );
 }
 
 #[test]
@@ -303,8 +355,15 @@ fn test_account_deduplication_on_save_account() {
 
     // Verify: exactly 1 account exists, original ID preserved, credentials updated!
     let accounts_after = db.get_accounts().unwrap();
-    assert_eq!(accounts_after.len(), 1, "Duplicate account row must NOT be created!");
-    assert_eq!(accounts_after[0].id, "acc_uuid_1111", "Existing account ID must be preserved!");
+    assert_eq!(
+        accounts_after.len(),
+        1,
+        "Duplicate account row must NOT be created!"
+    );
+    assert_eq!(
+        accounts_after[0].id, "acc_uuid_1111",
+        "Existing account ID must be preserved!"
+    );
     assert_eq!(accounts_after[0].name, "My Naver Updated");
     assert_eq!(accounts_after[0].password, "updated_password");
 
@@ -326,20 +385,30 @@ fn test_account_deduplication_on_save_account() {
     db.save_account(&acc3).unwrap();
 
     let accounts_third = db.get_accounts().unwrap();
-    assert_eq!(accounts_third.len(), 1, "Must recognize developer_kim@naver.com as same account!");
+    assert_eq!(
+        accounts_third.len(),
+        1,
+        "Must recognize developer_kim@naver.com as same account!"
+    );
     assert_eq!(accounts_third[0].id, "acc_uuid_1111");
     assert_eq!(accounts_third[0].password, "new_app_password");
 
     // 4. Test find_account_by_provider_and_username
-    let found1 = db.find_account_by_provider_and_username(&ProviderType::Naver, "developer_kim").unwrap();
+    let found1 = db
+        .find_account_by_provider_and_username(&ProviderType::Naver, "developer_kim")
+        .unwrap();
     assert!(found1.is_some());
     assert_eq!(found1.unwrap().id, "acc_uuid_1111");
 
-    let found2 = db.find_account_by_provider_and_username(&ProviderType::Naver, "developer_kim@naver.com").unwrap();
+    let found2 = db
+        .find_account_by_provider_and_username(&ProviderType::Naver, "developer_kim@naver.com")
+        .unwrap();
     assert!(found2.is_some());
     assert_eq!(found2.unwrap().id, "acc_uuid_1111");
 
-    let not_found = db.find_account_by_provider_and_username(&ProviderType::Naver, "unknown_user").unwrap();
+    let not_found = db
+        .find_account_by_provider_and_username(&ProviderType::Naver, "unknown_user")
+        .unwrap();
     assert!(not_found.is_none());
 
     // 5. Test matching by url and username for Generic/Apple
@@ -375,7 +444,10 @@ fn test_account_deduplication_on_save_account() {
     };
     db.save_account(&apple_update).unwrap();
 
-    let apple_found = db.find_account_by_provider_and_username(&ProviderType::Apple, "steve@icloud.com").unwrap().unwrap();
+    let apple_found = db
+        .find_account_by_provider_and_username(&ProviderType::Apple, "steve@icloud.com")
+        .unwrap()
+        .unwrap();
     assert_eq!(apple_found.id, "apple_uuid_1");
     assert_eq!(apple_found.password, "secret_pass_updated");
 }
@@ -416,7 +488,9 @@ fn test_database_init_schema_cleans_up_existing_duplicate_accounts() {
             "#,
         ).unwrap();
 
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0)).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(count, 3);
 
         // Run the deduplication query that init_schema runs:
@@ -425,15 +499,18 @@ fn test_database_init_schema_cleans_up_existing_duplicate_accounts() {
             [],
         ).unwrap();
 
-        let count_after: i64 = conn.query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0)).unwrap();
+        let count_after: i64 = conn
+            .query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(count_after, 2, "Duplicate row should have been removed");
 
-        let remaining_id: String = conn.query_row(
-            "SELECT id FROM accounts WHERE provider = 'Naver' AND username = 'my_user'",
-            [],
-            |r| r.get(0),
-        ).unwrap();
+        let remaining_id: String = conn
+            .query_row(
+                "SELECT id FROM accounts WHERE provider = 'Naver' AND username = 'my_user'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert_eq!(remaining_id, "acc_dup_1", "First row should be preserved");
     }
 }
-

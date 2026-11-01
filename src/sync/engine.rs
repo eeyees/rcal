@@ -26,7 +26,9 @@ impl SyncEngine {
         let accounts = match db.get_accounts() {
             Ok(accs) => accs,
             Err(e) => {
-                result.errors.push(format!("Failed to read accounts: {}", e));
+                result
+                    .errors
+                    .push(format!("Failed to read accounts: {}", e));
                 return result;
             }
         };
@@ -77,7 +79,9 @@ impl SyncEngine {
         let token = account.access_token.as_deref().unwrap_or(&account.password);
         let client = GoogleCalendarClient::new(token.to_string());
 
-        let remote_cals = client.list_calendars().await
+        let remote_cals = client
+            .list_calendars()
+            .await
             .with_context(|| "Google calendar list failed")?;
 
         let local_cals = db.get_calendars()?;
@@ -119,7 +123,9 @@ impl SyncEngine {
             for mut ev in pending_events {
                 match ev.sync_status {
                     SyncStatus::CreatedLocally => {
-                        if let Ok((remote_id, etag)) = client.insert_event(&google_cal_id, &ev).await {
+                        if let Ok((remote_id, etag)) =
+                            client.insert_event(&google_cal_id, &ev).await
+                        {
                             ev.remote_id = Some(remote_id);
                             ev.etag = etag;
                             ev.sync_status = SyncStatus::Synced;
@@ -149,13 +155,20 @@ impl SyncEngine {
             }
 
             // Pull events from Google
-            let events = client.list_events(&google_cal_id, &local_cal_id).await
-                .with_context(|| format!("Failed to list events for Google calendar {}", google_cal_id))?;
+            let events = client
+                .list_events(&google_cal_id, &local_cal_id)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to list events for Google calendar {}",
+                        google_cal_id
+                    )
+                })?;
             for g_ev in events {
                 let all_events = db.get_all_events()?;
-                let existing = all_events.iter().find(|e| {
-                    e.calendar_id == local_cal_id && e.remote_id == g_ev.remote_id
-                });
+                let existing = all_events
+                    .iter()
+                    .find(|e| e.calendar_id == local_cal_id && e.remote_id == g_ev.remote_id);
 
                 if let Some(existing_ev) = existing {
                     if existing_ev.etag != g_ev.etag {
@@ -179,7 +192,9 @@ impl SyncEngine {
         let token = account.access_token.as_deref().unwrap_or(&account.password);
         let client = MicrosoftCalendarClient::new(token.to_string());
 
-        let remote_cals = client.list_calendars().await
+        let remote_cals = client
+            .list_calendars()
+            .await
             .with_context(|| "Microsoft calendar list failed")?;
 
         let local_cals = db.get_calendars()?;
@@ -199,12 +214,18 @@ impl SyncEngine {
                 } else {
                     "#0078D4"
                 };
-                let suffix = if account.provider == ProviderType::Samsung { "Samsung" } else { "MS 365" };
+                let suffix = if account.provider == ProviderType::Samsung {
+                    "Samsung"
+                } else {
+                    "MS 365"
+                };
                 let new_cal = Calendar {
                     id: format!("cal_ms_{}", uuid::Uuid::new_v4()),
                     account_id: Some(account.id.clone()),
                     name: format!("{} ({})", r_cal.name, suffix),
-                    color_code: r_cal.color_code.unwrap_or_else(|| default_color.to_string()),
+                    color_code: r_cal
+                        .color_code
+                        .unwrap_or_else(|| default_color.to_string()),
                     provider: account.provider,
                     enabled: true,
                     is_default: false,
@@ -227,7 +248,9 @@ impl SyncEngine {
             for mut ev in pending_events {
                 match ev.sync_status {
                     SyncStatus::CreatedLocally => {
-                        if let Ok((remote_id, change_key)) = client.insert_event(&ms_cal_id, &ev).await {
+                        if let Ok((remote_id, change_key)) =
+                            client.insert_event(&ms_cal_id, &ev).await
+                        {
                             ev.remote_id = Some(remote_id);
                             ev.etag = change_key;
                             ev.sync_status = SyncStatus::Synced;
@@ -237,7 +260,8 @@ impl SyncEngine {
                     }
                     SyncStatus::UpdatedLocally => {
                         if let Some(ref r_id) = ev.remote_id {
-                            if let Ok(change_key) = client.update_event(&ms_cal_id, r_id, &ev).await {
+                            if let Ok(change_key) = client.update_event(&ms_cal_id, r_id, &ev).await
+                            {
                                 ev.etag = change_key;
                                 ev.sync_status = SyncStatus::Synced;
                                 db.save_event(&ev)?;
@@ -257,13 +281,17 @@ impl SyncEngine {
             }
 
             // Pull events from Microsoft
-            let events = client.list_events(&ms_cal_id, &local_cal_id).await
-                .with_context(|| format!("Failed to list events for Microsoft calendar {}", ms_cal_id))?;
+            let events = client
+                .list_events(&ms_cal_id, &local_cal_id)
+                .await
+                .with_context(|| {
+                    format!("Failed to list events for Microsoft calendar {}", ms_cal_id)
+                })?;
             for ms_ev in events {
                 let all_events = db.get_all_events()?;
-                let existing = all_events.iter().find(|e| {
-                    e.calendar_id == local_cal_id && e.remote_id == ms_ev.remote_id
-                });
+                let existing = all_events
+                    .iter()
+                    .find(|e| e.calendar_id == local_cal_id && e.remote_id == ms_ev.remote_id);
 
                 if let Some(existing_ev) = existing {
                     if existing_ev.etag != ms_ev.etag {
@@ -284,10 +312,16 @@ impl SyncEngine {
 
     // CalDAV Sync (Apple iCloud, Naver, Samsung CalDAV, Generic)
     async fn sync_caldav(db: &Database, account: &CalDavAccount) -> Result<(usize, usize)> {
-        let client = CalDavClient::new(&account.url, account.username.clone(), account.password.clone())
-            .with_context(|| format!("Failed to create client for {}", account.name))?;
+        let client = CalDavClient::new(
+            &account.url,
+            account.username.clone(),
+            account.password.clone(),
+        )
+        .with_context(|| format!("Failed to create client for {}", account.name))?;
 
-        let remote_cals = client.discover_calendars().await
+        let remote_cals = client
+            .discover_calendars()
+            .await
             .with_context(|| "Calendar discovery failed")?;
 
         let local_cals = db.get_calendars()?;
@@ -312,7 +346,9 @@ impl SyncEngine {
                     id: format!("cal_remote_{}", uuid::Uuid::new_v4()),
                     account_id: Some(account.id.clone()),
                     name: format!("{} ({})", r_cal.name, account.name),
-                    color_code: r_cal.color_code.unwrap_or_else(|| default_color.to_string()),
+                    color_code: r_cal
+                        .color_code
+                        .unwrap_or_else(|| default_color.to_string()),
                     provider: account.provider,
                     enabled: true,
                     is_default: false,
@@ -337,7 +373,9 @@ impl SyncEngine {
                     SyncStatus::CreatedLocally => {
                         let uid = ev.remote_id.clone().unwrap_or_else(|| ev.id.clone());
                         let ics = ical::event_to_ics(&ev);
-                        if let Ok(new_etag) = client.upload_event(&remote_href, &uid, &ics, None).await {
+                        if let Ok(new_etag) =
+                            client.upload_event(&remote_href, &uid, &ics, None).await
+                        {
                             ev.remote_id = Some(uid);
                             ev.etag = new_etag;
                             ev.sync_status = SyncStatus::Synced;
@@ -348,7 +386,10 @@ impl SyncEngine {
                     SyncStatus::UpdatedLocally => {
                         let uid = ev.remote_id.clone().unwrap_or_else(|| ev.id.clone());
                         let ics = ical::event_to_ics(&ev);
-                        if let Ok(new_etag) = client.upload_event(&remote_href, &uid, &ics, ev.etag.as_deref()).await {
+                        if let Ok(new_etag) = client
+                            .upload_event(&remote_href, &uid, &ics, ev.etag.as_deref())
+                            .await
+                        {
                             ev.etag = new_etag;
                             ev.sync_status = SyncStatus::Synced;
                             db.save_event(&ev)?;
@@ -372,16 +413,23 @@ impl SyncEngine {
             }
 
             // Pull Remote Changes from Server
-            let remote_events = client.fetch_events(&remote_href).await
+            let remote_events = client
+                .fetch_events(&remote_href)
+                .await
                 .with_context(|| format!("Failed to fetch events from {}", remote_href))?;
 
             for r_ev in remote_events {
-                let parsed_events = ical::ics_to_events(&r_ev.ics_content, &local_cal_id, &r_ev.href, r_ev.etag.as_deref());
+                let parsed_events = ical::ics_to_events(
+                    &r_ev.ics_content,
+                    &local_cal_id,
+                    &r_ev.href,
+                    r_ev.etag.as_deref(),
+                );
                 for p_ev in parsed_events {
                     let all_events = db.get_all_events()?;
-                    let existing = all_events.iter().find(|e| {
-                        e.calendar_id == local_cal_id && e.remote_id == p_ev.remote_id
-                    });
+                    let existing = all_events
+                        .iter()
+                        .find(|e| e.calendar_id == local_cal_id && e.remote_id == p_ev.remote_id);
 
                     if let Some(existing_ev) = existing {
                         if existing_ev.etag != p_ev.etag {

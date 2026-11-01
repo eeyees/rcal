@@ -12,9 +12,18 @@ fn test_week_start_day_offsets_and_dates() {
     assert_eq!(WeekStartDay::Monday.days_offset(sat_date), 5);
     assert_eq!(WeekStartDay::Saturday.days_offset(sat_date), 0);
 
-    assert_eq!(WeekStartDay::Sunday.week_start_date(sat_date), NaiveDate::from_ymd_opt(2026, 10, 25).unwrap());
-    assert_eq!(WeekStartDay::Monday.week_start_date(sat_date), NaiveDate::from_ymd_opt(2026, 10, 26).unwrap());
-    assert_eq!(WeekStartDay::Saturday.week_start_date(sat_date), NaiveDate::from_ymd_opt(2026, 10, 31).unwrap());
+    assert_eq!(
+        WeekStartDay::Sunday.week_start_date(sat_date),
+        NaiveDate::from_ymd_opt(2026, 10, 25).unwrap()
+    );
+    assert_eq!(
+        WeekStartDay::Monday.week_start_date(sat_date),
+        NaiveDate::from_ymd_opt(2026, 10, 26).unwrap()
+    );
+    assert_eq!(
+        WeekStartDay::Saturday.week_start_date(sat_date),
+        NaiveDate::from_ymd_opt(2026, 10, 31).unwrap()
+    );
 
     // 2026-10-25 is a Sunday
     let sun_date = NaiveDate::from_ymd_opt(2026, 10, 25).unwrap();
@@ -22,9 +31,18 @@ fn test_week_start_day_offsets_and_dates() {
     assert_eq!(WeekStartDay::Monday.days_offset(sun_date), 6);
     assert_eq!(WeekStartDay::Saturday.days_offset(sun_date), 1);
 
-    assert_eq!(WeekStartDay::Sunday.week_start_date(sun_date), NaiveDate::from_ymd_opt(2026, 10, 25).unwrap());
-    assert_eq!(WeekStartDay::Monday.week_start_date(sun_date), NaiveDate::from_ymd_opt(2026, 10, 19).unwrap());
-    assert_eq!(WeekStartDay::Saturday.week_start_date(sun_date), NaiveDate::from_ymd_opt(2026, 10, 24).unwrap());
+    assert_eq!(
+        WeekStartDay::Sunday.week_start_date(sun_date),
+        NaiveDate::from_ymd_opt(2026, 10, 25).unwrap()
+    );
+    assert_eq!(
+        WeekStartDay::Monday.week_start_date(sun_date),
+        NaiveDate::from_ymd_opt(2026, 10, 19).unwrap()
+    );
+    assert_eq!(
+        WeekStartDay::Saturday.week_start_date(sun_date),
+        NaiveDate::from_ymd_opt(2026, 10, 24).unwrap()
+    );
 }
 
 #[test]
@@ -34,10 +52,16 @@ fn test_db_settings_persistence() -> anyhow::Result<()> {
     assert_eq!(db.get_setting("week_start_day")?, None);
 
     db.set_setting("week_start_day", "monday")?;
-    assert_eq!(db.get_setting("week_start_day")?, Some("monday".to_string()));
+    assert_eq!(
+        db.get_setting("week_start_day")?,
+        Some("monday".to_string())
+    );
 
     db.set_setting("week_start_day", "saturday")?;
-    assert_eq!(db.get_setting("week_start_day")?, Some("saturday".to_string()));
+    assert_eq!(
+        db.get_setting("week_start_day")?,
+        Some("saturday".to_string())
+    );
 
     Ok(())
 }
@@ -65,7 +89,10 @@ fn test_app_settings_and_mouse_click() -> anyhow::Result<()> {
     assert_eq!(app.week_start_day, WeekStartDay::Monday);
 
     // Check DB persistence
-    assert_eq!(app.db.get_setting("week_start_day")?, Some("monday".to_string()));
+    assert_eq!(
+        app.db.get_setting("week_start_day")?,
+        Some("monday".to_string())
+    );
 
     // Simulate mouse click on Saturday button
     app.hit_map.register(
@@ -74,7 +101,10 @@ fn test_app_settings_and_mouse_click() -> anyhow::Result<()> {
     );
     app.handle_mouse_click(32, 11)?;
     assert_eq!(app.week_start_day, WeekStartDay::Saturday);
-    assert_eq!(app.db.get_setting("week_start_day")?, Some("saturday".to_string()));
+    assert_eq!(
+        app.db.get_setting("week_start_day")?,
+        Some("saturday".to_string())
+    );
 
     // Create a new App instance pointing to the same DB file - it should automatically load Saturday
     let db2 = Database::new(Some(&db_path))?;
@@ -279,50 +309,120 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
     let accent = app.theme.accent;
 
     // Helper to find cell date position and verify character color
-    let find_date_fg = |app: &App, terminal: &Terminal<TestBackend>, target_date: NaiveDate| -> ratatui::style::Color {
-        let hit = app.hit_map.targets().iter().find(|(_, t)| *t == HitTarget::MonthDay(target_date));
+    let find_date_fg = |app: &App,
+                        terminal: &Terminal<TestBackend>,
+                        target_date: NaiveDate|
+     -> ratatui::style::Color {
+        let hit = app
+            .hit_map
+            .targets()
+            .iter()
+            .find(|(_, t)| *t == HitTarget::MonthDay(target_date));
         let rect = hit.expect("Target date should exist in month grid").0;
         let cell = &terminal.backend().buffer()[(rect.x + 2, rect.y + 1)];
         cell.fg
     };
 
     // Nov 2, 2026 is Monday: should be normal text, NOT weekend accent
-    let mon_fg = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 2).unwrap());
-    assert_eq!(mon_fg, text_normal, "Monday in Monday-start mode must NOT be colored with weekend accent");
+    let mon_fg = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 2).unwrap(),
+    );
+    assert_eq!(
+        mon_fg, text_normal,
+        "Monday in Monday-start mode must NOT be colored with weekend accent"
+    );
 
     // Nov 7, 2026 is Saturday: should be weekend accent
-    let sat_fg = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 7).unwrap());
-    assert_eq!(sat_fg, accent, "Saturday in Monday-start mode must be colored with weekend accent");
+    let sat_fg = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 7).unwrap(),
+    );
+    assert_eq!(
+        sat_fg, accent,
+        "Saturday in Monday-start mode must be colored with weekend accent"
+    );
 
     // Nov 8, 2026 is Sunday: should be weekend accent
-    let sun_fg = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 8).unwrap());
-    assert_eq!(sun_fg, accent, "Sunday in Monday-start mode must be colored with weekend accent");
+    let sun_fg = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 8).unwrap(),
+    );
+    assert_eq!(
+        sun_fg, accent,
+        "Sunday in Monday-start mode must be colored with weekend accent"
+    );
 
     // 2. Sunday as First Day of Week
     app.set_week_start_day(WeekStartDay::Sunday);
     terminal.draw(|f| ui::render(f, &mut app))?;
 
-    let mon_fg_sun = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 2).unwrap());
-    assert_eq!(mon_fg_sun, text_normal, "Monday in Sunday-start mode must be normal text");
+    let mon_fg_sun = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 2).unwrap(),
+    );
+    assert_eq!(
+        mon_fg_sun, text_normal,
+        "Monday in Sunday-start mode must be normal text"
+    );
 
-    let sat_fg_sun = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 7).unwrap());
-    assert_eq!(sat_fg_sun, accent, "Saturday in Sunday-start mode must be weekend accent");
+    let sat_fg_sun = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 7).unwrap(),
+    );
+    assert_eq!(
+        sat_fg_sun, accent,
+        "Saturday in Sunday-start mode must be weekend accent"
+    );
 
-    let sun_fg_sun = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 8).unwrap());
-    assert_eq!(sun_fg_sun, accent, "Sunday in Sunday-start mode must be weekend accent");
+    let sun_fg_sun = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 8).unwrap(),
+    );
+    assert_eq!(
+        sun_fg_sun, accent,
+        "Sunday in Sunday-start mode must be weekend accent"
+    );
 
     // 3. Saturday as First Day of Week
     app.set_week_start_day(WeekStartDay::Saturday);
     terminal.draw(|f| ui::render(f, &mut app))?;
 
-    let sat_fg_sat = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 7).unwrap());
-    assert_eq!(sat_fg_sat, accent, "Saturday in Saturday-start mode must be weekend accent");
+    let sat_fg_sat = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 7).unwrap(),
+    );
+    assert_eq!(
+        sat_fg_sat, accent,
+        "Saturday in Saturday-start mode must be weekend accent"
+    );
 
-    let sun_fg_sat = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 8).unwrap());
-    assert_eq!(sun_fg_sat, accent, "Sunday in Saturday-start mode must be weekend accent");
+    let sun_fg_sat = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 8).unwrap(),
+    );
+    assert_eq!(
+        sun_fg_sat, accent,
+        "Sunday in Saturday-start mode must be weekend accent"
+    );
 
-    let mon_fg_sat = find_date_fg(&app, &terminal, NaiveDate::from_ymd_opt(2026, 11, 9).unwrap());
-    assert_eq!(mon_fg_sat, text_normal, "Monday in Saturday-start mode must be normal text");
+    let mon_fg_sat = find_date_fg(
+        &app,
+        &terminal,
+        NaiveDate::from_ymd_opt(2026, 11, 9).unwrap(),
+    );
+    assert_eq!(
+        mon_fg_sat, text_normal,
+        "Monday in Saturday-start mode must be normal text"
+    );
 
     Ok(())
 }
@@ -354,13 +454,18 @@ fn test_settings_tab_bar_mouse_switching_and_state_preservation() -> anyhow::Res
     assert_eq!(app.week_start_day, WeekStartDay::Monday);
 
     // 2. Click Tab 2 (Notifications) via hit target
-    let notif_tab_target = app.hit_map.targets().iter().find_map(|(r, t)| {
-        if *t == HitTarget::ModalSettingTab(SettingsSection::Notifications) {
-            Some((*r, t.clone()))
-        } else {
-            None
-        }
-    }).expect("Notifications tab should be registered in hit map");
+    let notif_tab_target = app
+        .hit_map
+        .targets()
+        .iter()
+        .find_map(|(r, t)| {
+            if *t == HitTarget::ModalSettingTab(SettingsSection::Notifications) {
+                Some((*r, t.clone()))
+            } else {
+                None
+            }
+        })
+        .expect("Notifications tab should be registered in hit map");
     app.handle_mouse_click(notif_tab_target.0.x + 2, notif_tab_target.0.y)?;
     assert_eq!(app.settings_section, SettingsSection::Notifications);
 
@@ -375,13 +480,18 @@ fn test_settings_tab_bar_mouse_switching_and_state_preservation() -> anyhow::Res
     assert_eq!(app.notification_config.lead_minutes, 15);
 
     // 3. Click Tab 3 (Theme) via hit target
-    let theme_tab_target = app.hit_map.targets().iter().find_map(|(r, t)| {
-        if *t == HitTarget::ModalSettingTab(SettingsSection::Theme) {
-            Some((*r, t.clone()))
-        } else {
-            None
-        }
-    }).expect("Theme tab should be registered in hit map");
+    let theme_tab_target = app
+        .hit_map
+        .targets()
+        .iter()
+        .find_map(|(r, t)| {
+            if *t == HitTarget::ModalSettingTab(SettingsSection::Theme) {
+                Some((*r, t.clone()))
+            } else {
+                None
+            }
+        })
+        .expect("Theme tab should be registered in hit map");
     app.handle_mouse_click(theme_tab_target.0.x + 2, theme_tab_target.0.y)?;
     assert_eq!(app.settings_section, SettingsSection::Theme);
 
@@ -391,13 +501,18 @@ fn test_settings_tab_bar_mouse_switching_and_state_preservation() -> anyhow::Res
     assert_eq!(app.theme.mode, ThemeMode::Nord);
 
     // 4. Click Tab 4 (Language) via hit target
-    let lang_tab_target = app.hit_map.targets().iter().find_map(|(r, t)| {
-        if *t == HitTarget::ModalSettingTab(SettingsSection::Language) {
-            Some((*r, t.clone()))
-        } else {
-            None
-        }
-    }).expect("Language tab should be registered in hit map");
+    let lang_tab_target = app
+        .hit_map
+        .targets()
+        .iter()
+        .find_map(|(r, t)| {
+            if *t == HitTarget::ModalSettingTab(SettingsSection::Language) {
+                Some((*r, t.clone()))
+            } else {
+                None
+            }
+        })
+        .expect("Language tab should be registered in hit map");
     app.handle_mouse_click(lang_tab_target.0.x + 2, lang_tab_target.0.y)?;
     assert_eq!(app.settings_section, SettingsSection::Language);
 
@@ -407,20 +522,35 @@ fn test_settings_tab_bar_mouse_switching_and_state_preservation() -> anyhow::Res
     assert_eq!(app.lang, Language::Ja);
 
     // 5. Navigate back to Tab 1 (WeekStart) and verify ALL states are perfectly preserved
-    let week_tab_target = app.hit_map.targets().iter().find_map(|(r, t)| {
-        if *t == HitTarget::ModalSettingTab(SettingsSection::WeekStart) {
-            Some((*r, t.clone()))
-        } else {
-            None
-        }
-    }).expect("WeekStart tab should be registered in hit map");
+    let week_tab_target = app
+        .hit_map
+        .targets()
+        .iter()
+        .find_map(|(r, t)| {
+            if *t == HitTarget::ModalSettingTab(SettingsSection::WeekStart) {
+                Some((*r, t.clone()))
+            } else {
+                None
+            }
+        })
+        .expect("WeekStart tab should be registered in hit map");
     app.handle_mouse_click(week_tab_target.0.x + 2, week_tab_target.0.y)?;
     assert_eq!(app.settings_section, SettingsSection::WeekStart);
 
     // Verify all states across tabs
-    assert_eq!(app.week_start_day, WeekStartDay::Monday, "WeekStartDay must be preserved");
-    assert_eq!(app.notification_config.enabled, !orig_enabled, "Notification enabled state must be preserved");
-    assert_eq!(app.notification_config.lead_minutes, 15, "Lead minutes must be preserved");
+    assert_eq!(
+        app.week_start_day,
+        WeekStartDay::Monday,
+        "WeekStartDay must be preserved"
+    );
+    assert_eq!(
+        app.notification_config.enabled, !orig_enabled,
+        "Notification enabled state must be preserved"
+    );
+    assert_eq!(
+        app.notification_config.lead_minutes, 15,
+        "Lead minutes must be preserved"
+    );
     assert_eq!(app.theme.mode, ThemeMode::Nord, "Theme must be preserved");
     assert_eq!(app.lang, Language::Ja, "Language must be preserved");
 
@@ -582,12 +712,30 @@ fn test_settings_week_start_modal_controls_and_rendering() -> anyhow::Result<()>
         rendered_text.push('\n');
     }
 
-    assert!(rendered_text.contains("[s]"), "Rendered UI must contain [s] shortcut");
-    assert!(rendered_text.contains("[m]"), "Rendered UI must contain [m] shortcut");
-    assert!(rendered_text.contains("[t]"), "Rendered UI must contain [t] shortcut");
-    assert!(!rendered_text.contains("[1/s]"), "Rendered UI must not contain old [1/s]");
-    assert!(!rendered_text.contains("[2/m]"), "Rendered UI must not contain old [2/m]");
-    assert!(!rendered_text.contains("[3/t]"), "Rendered UI must not contain old [3/t]");
+    assert!(
+        rendered_text.contains("[s]"),
+        "Rendered UI must contain [s] shortcut"
+    );
+    assert!(
+        rendered_text.contains("[m]"),
+        "Rendered UI must contain [m] shortcut"
+    );
+    assert!(
+        rendered_text.contains("[t]"),
+        "Rendered UI must contain [t] shortcut"
+    );
+    assert!(
+        !rendered_text.contains("[1/s]"),
+        "Rendered UI must not contain old [1/s]"
+    );
+    assert!(
+        !rendered_text.contains("[2/m]"),
+        "Rendered UI must not contain old [2/m]"
+    );
+    assert!(
+        !rendered_text.contains("[3/t]"),
+        "Rendered UI must not contain old [3/t]"
+    );
 
     Ok(())
 }

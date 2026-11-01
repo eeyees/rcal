@@ -1,7 +1,8 @@
 use anyhow::Result;
 use chrono::Duration;
 use crossterm::event::{
-    Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+    Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent,
+    MouseEventKind,
 };
 
 use crate::app::{ActiveModal, App, EventFormState, SettingsSection, ViewMode};
@@ -80,8 +81,16 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             KeyCode::Left => {
                 if form.active_field == 1 {
-                    let current_idx = app.calendars.iter().position(|c| c.id == form.calendar_id).unwrap_or(0);
-                    let prev_idx = if current_idx == 0 { app.calendars.len().saturating_sub(1) } else { current_idx - 1 };
+                    let current_idx = app
+                        .calendars
+                        .iter()
+                        .position(|c| c.id == form.calendar_id)
+                        .unwrap_or(0);
+                    let prev_idx = if current_idx == 0 {
+                        app.calendars.len().saturating_sub(1)
+                    } else {
+                        current_idx - 1
+                    };
                     if let Some(c) = app.calendars.get(prev_idx) {
                         form.calendar_id = c.id.clone();
                     }
@@ -91,7 +100,11 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             KeyCode::Right => {
                 if form.active_field == 1 {
-                    let current_idx = app.calendars.iter().position(|c| c.id == form.calendar_id).unwrap_or(0);
+                    let current_idx = app
+                        .calendars
+                        .iter()
+                        .position(|c| c.id == form.calendar_id)
+                        .unwrap_or(0);
                     let next_idx = (current_idx + 1) % app.calendars.len().max(1);
                     if let Some(c) = app.calendars.get(next_idx) {
                         form.calendar_id = c.id.clone();
@@ -108,7 +121,11 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Char(' ') if form.active_field == 1 => {
-                let current_idx = app.calendars.iter().position(|c| c.id == form.calendar_id).unwrap_or(0);
+                let current_idx = app
+                    .calendars
+                    .iter()
+                    .position(|c| c.id == form.calendar_id)
+                    .unwrap_or(0);
                 let next_idx = (current_idx + 1) % app.calendars.len().max(1);
                 if let Some(next_cal) = app.calendars.get(next_idx) {
                     form.calendar_id = next_cal.id.clone();
@@ -123,28 +140,36 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Char(' ') if form.active_field == 9 => {
                 form_action_close = true;
             }
-            KeyCode::Backspace => {
-                match form.active_field {
-                    0 => { form.title.pop(); }
-                    2 => { form.date_str.pop(); }
-                    3 => { form.start_time_str.pop(); }
-                    4 => { form.end_time_str.pop(); }
-                    6 => { form.location.pop(); }
-                    7 => { form.description.pop(); }
-                    _ => {}
+            KeyCode::Backspace => match form.active_field {
+                0 => {
+                    form.title.pop();
                 }
-            }
-            KeyCode::Char(c) => {
-                match form.active_field {
-                    0 => form.title.push(c),
-                    2 => form.date_str.push(c),
-                    3 => form.start_time_str.push(c),
-                    4 => form.end_time_str.push(c),
-                    6 => form.location.push(c),
-                    7 => form.description.push(c),
-                    _ => {}
+                2 => {
+                    form.date_str.pop();
                 }
-            }
+                3 => {
+                    form.start_time_str.pop();
+                }
+                4 => {
+                    form.end_time_str.pop();
+                }
+                6 => {
+                    form.location.pop();
+                }
+                7 => {
+                    form.description.pop();
+                }
+                _ => {}
+            },
+            KeyCode::Char(c) => match form.active_field {
+                0 => form.title.push(c),
+                2 => form.date_str.push(c),
+                3 => form.start_time_str.push(c),
+                4 => form.end_time_str.push(c),
+                6 => form.location.push(c),
+                7 => form.description.push(c),
+                _ => {}
+            },
             _ => {}
         }
     }
@@ -222,7 +247,11 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
                 KeyCode::Left => {
                     if state.active_field == 0 {
-                        let prev_idx = if state.provider_idx == 0 { 5 } else { state.provider_idx - 1 };
+                        let prev_idx = if state.provider_idx == 0 {
+                            5
+                        } else {
+                            state.provider_idx - 1
+                        };
                         state.set_preset(prev_idx);
                     } else if is_oauth {
                         if state.active_field == 7 {
@@ -249,13 +278,17 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
                 // Hotkey 'b' / 'B' on presets or buttons triggers 1-click browser OAuth login
-                KeyCode::Char('b') | KeyCode::Char('B') if is_oauth && (state.active_field == 0 || state.active_field >= 5) => {
+                KeyCode::Char('b') | KeyCode::Char('B')
+                    if is_oauth && (state.active_field == 0 || state.active_field >= 5) =>
+                {
                     app.trigger_oauth_login();
                 }
                 KeyCode::Enter => {
-                    let is_cancel = (is_oauth && state.active_field == 7) || (!is_oauth && state.active_field == 6);
+                    let is_cancel = (is_oauth && state.active_field == 7)
+                        || (!is_oauth && state.active_field == 6);
                     let is_oauth_btn = is_oauth && state.active_field == 5;
-                    let is_connect = (is_oauth && state.active_field == 6) || (!is_oauth && (state.active_field == 5 || state.active_field == 4));
+                    let is_connect = (is_oauth && state.active_field == 6)
+                        || (!is_oauth && (state.active_field == 5 || state.active_field == 4));
 
                     if is_cancel {
                         state.is_adding = false;
@@ -301,7 +334,10 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char(' ') if is_oauth && state.active_field == 5 => {
                     app.trigger_oauth_login();
                 }
-                KeyCode::Char(' ') if (is_oauth && state.active_field == 6) || (!is_oauth && state.active_field == 5) => {
+                KeyCode::Char(' ')
+                    if (is_oauth && state.active_field == 6)
+                        || (!is_oauth && state.active_field == 5) =>
+                {
                     if is_oauth && state.password.trim().is_empty() {
                         app.trigger_oauth_login();
                     } else if !state.username.trim().is_empty() {
@@ -327,16 +363,27 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         acc_action_save = Some(new_acc);
                     }
                 }
-                KeyCode::Char(' ') if (is_oauth && state.active_field == 7) || (!is_oauth && state.active_field == 6) => {
+                KeyCode::Char(' ')
+                    if (is_oauth && state.active_field == 7)
+                        || (!is_oauth && state.active_field == 6) =>
+                {
                     state.is_adding = false;
                 }
                 KeyCode::Backspace => {
                     state.error_msg = None;
                     match state.active_field {
-                        1 => { state.name.pop(); }
-                        2 => { state.url.pop(); }
-                        3 => { state.username.pop(); }
-                        4 => { state.password.pop(); }
+                        1 => {
+                            state.name.pop();
+                        }
+                        2 => {
+                            state.url.pop();
+                        }
+                        3 => {
+                            state.username.pop();
+                        }
+                        4 => {
+                            state.password.pop();
+                        }
                         _ => {}
                     }
                 }
@@ -377,7 +424,10 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         }
         return Ok(());
     } else if let Some(new_acc) = acc_action_save {
-        let is_update = app.db.find_account_by_provider_and_username(&new_acc.provider, &new_acc.username)?.is_some();
+        let is_update = app
+            .db
+            .find_account_by_provider_and_username(&new_acc.provider, &new_acc.username)?
+            .is_some();
         app.db.save_account(&new_acc)?;
         let status_msg = if is_update {
             app.lang.msg_account_updated(&new_acc.name)
@@ -413,7 +463,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Down | KeyCode::Char('j') => {
                     let count = app.calendars.len();
                     if count > 0 {
-                        cal_state.selected_calendar_idx = (cal_state.selected_calendar_idx + 1) % count;
+                        cal_state.selected_calendar_idx =
+                            (cal_state.selected_calendar_idx + 1) % count;
                     }
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
@@ -464,7 +515,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
                 KeyCode::Char(' ') if cal_state.active_field == 2 => {
                     if !cal_state.name.trim().is_empty() {
-                        let color = crate::app::CalendarModalState::PALETTE[cal_state.color_idx % 7];
+                        let color =
+                            crate::app::CalendarModalState::PALETTE[cal_state.color_idx % 7];
                         cal_action_save = Some((cal_state.name.clone(), color.to_string()));
                     }
                 }
@@ -475,7 +527,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     if cal_state.active_field == 3 {
                         cal_state.is_creating = false;
                     } else if !cal_state.name.trim().is_empty() {
-                        let color = crate::app::CalendarModalState::PALETTE[cal_state.color_idx % 7];
+                        let color =
+                            crate::app::CalendarModalState::PALETTE[cal_state.color_idx % 7];
                         cal_action_save = Some((cal_state.name.clone(), color.to_string()));
                     }
                 }
@@ -557,7 +610,10 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         }
         ActiveModal::Help => {
             let norm_code = normalize_key_event(key);
-            if matches!(norm_code, KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter) {
+            if matches!(
+                norm_code,
+                KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter
+            ) {
                 app.close_modal();
             }
             return Ok(());
@@ -620,19 +676,34 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Contextual keys based on current section
                 _ => match app.settings_section {
                     SettingsSection::WeekStart => match norm_code {
-                        KeyCode::Right | KeyCode::Char('l') | KeyCode::Down | KeyCode::Char('j') => {
+                        KeyCode::Right
+                        | KeyCode::Char('l')
+                        | KeyCode::Down
+                        | KeyCode::Char('j') => {
                             let next = match app.week_start_day {
-                                crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Monday,
-                                crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Saturday,
-                                crate::model::WeekStartDay::Saturday => crate::model::WeekStartDay::Sunday,
+                                crate::model::WeekStartDay::Sunday => {
+                                    crate::model::WeekStartDay::Monday
+                                }
+                                crate::model::WeekStartDay::Monday => {
+                                    crate::model::WeekStartDay::Saturday
+                                }
+                                crate::model::WeekStartDay::Saturday => {
+                                    crate::model::WeekStartDay::Sunday
+                                }
                             };
                             app.set_week_start_day(next);
                         }
                         KeyCode::Left | KeyCode::Char('h') | KeyCode::Up | KeyCode::Char('k') => {
                             let prev = match app.week_start_day {
-                                crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Saturday,
-                                crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Sunday,
-                                crate::model::WeekStartDay::Saturday => crate::model::WeekStartDay::Monday,
+                                crate::model::WeekStartDay::Sunday => {
+                                    crate::model::WeekStartDay::Saturday
+                                }
+                                crate::model::WeekStartDay::Monday => {
+                                    crate::model::WeekStartDay::Sunday
+                                }
+                                crate::model::WeekStartDay::Saturday => {
+                                    crate::model::WeekStartDay::Monday
+                                }
                             };
                             app.set_week_start_day(prev);
                         }
@@ -671,7 +742,11 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                             };
                             app.set_notification_lead_minutes(next_mins);
                         }
-                        KeyCode::Char(' ') | KeyCode::Down | KeyCode::Char('j') | KeyCode::Up | KeyCode::Char('k') => {
+                        KeyCode::Char(' ')
+                        | KeyCode::Down
+                        | KeyCode::Char('j')
+                        | KeyCode::Up
+                        | KeyCode::Char('k') => {
                             app.toggle_notifications();
                         }
                         KeyCode::Enter => {
@@ -731,8 +806,13 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                                 if app.settings_lang_idx >= num_cols {
                                     app.settings_lang_idx -= num_cols;
                                 } else {
-                                    let target = app.settings_lang_idx + (all_len / num_cols) * num_cols;
-                                    app.settings_lang_idx = if target < all_len { target } else { target - num_cols };
+                                    let target =
+                                        app.settings_lang_idx + (all_len / num_cols) * num_cols;
+                                    app.settings_lang_idx = if target < all_len {
+                                        target
+                                    } else {
+                                        target - num_cols
+                                    };
                                 }
                             }
                             KeyCode::Down | KeyCode::Char('j') => {
@@ -743,7 +823,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                                 }
                             }
                             KeyCode::Char(' ') | KeyCode::Enter => {
-                                let selected_lang = crate::i18n::Language::ALL[app.settings_lang_idx];
+                                let selected_lang =
+                                    crate::i18n::Language::ALL[app.settings_lang_idx];
                                 app.set_language(selected_lang);
                             }
                             _ => {}
@@ -833,31 +914,46 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char('0') | KeyCode::Char('a') | KeyCode::Char('A') => {
                     state.category_filter = None;
                     let filtered = state.filtered_themes();
-                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    state.selected_idx = filtered
+                        .iter()
+                        .position(|m| *m == app.theme.mode)
+                        .unwrap_or(0);
                     selection_changed = true;
                 }
                 KeyCode::Char('1') => {
                     state.category_filter = Some(crate::ui::theme::ThemeCategory::Dark);
                     let filtered = state.filtered_themes();
-                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    state.selected_idx = filtered
+                        .iter()
+                        .position(|m| *m == app.theme.mode)
+                        .unwrap_or(0);
                     selection_changed = true;
                 }
                 KeyCode::Char('2') => {
                     state.category_filter = Some(crate::ui::theme::ThemeCategory::Nature);
                     let filtered = state.filtered_themes();
-                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    state.selected_idx = filtered
+                        .iter()
+                        .position(|m| *m == app.theme.mode)
+                        .unwrap_or(0);
                     selection_changed = true;
                 }
                 KeyCode::Char('3') => {
                     state.category_filter = Some(crate::ui::theme::ThemeCategory::Vibrant);
                     let filtered = state.filtered_themes();
-                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    state.selected_idx = filtered
+                        .iter()
+                        .position(|m| *m == app.theme.mode)
+                        .unwrap_or(0);
                     selection_changed = true;
                 }
                 KeyCode::Char('4') => {
                     state.category_filter = Some(crate::ui::theme::ThemeCategory::Light);
                     let filtered = state.filtered_themes();
-                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    state.selected_idx = filtered
+                        .iter()
+                        .position(|m| *m == app.theme.mode)
+                        .unwrap_or(0);
                     selection_changed = true;
                 }
                 KeyCode::Left | KeyCode::Char('h') => {
@@ -936,14 +1032,22 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         ActiveModal::ConfirmDelete(ref id) => {
             let id_clone = id.clone();
             let norm_code = normalize_key_event(key);
-            if matches!(norm_code, KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter) {
+            if matches!(
+                norm_code,
+                KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter
+            ) {
                 app.delete_event(&id_clone)?;
-            } else if matches!(norm_code, KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc) {
+            } else if matches!(
+                norm_code,
+                KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc
+            ) {
                 app.close_modal();
             }
             return Ok(());
         }
-        ActiveModal::EventForm(_) | ActiveModal::Accounts(_) | ActiveModal::CalendarManager(_) => return Ok(()),
+        ActiveModal::EventForm(_) | ActiveModal::Accounts(_) | ActiveModal::CalendarManager(_) => {
+            return Ok(())
+        }
         ActiveModal::None => {}
     }
 
@@ -955,9 +1059,15 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.running = false,
 
         // View switching
-        KeyCode::Char('1') | KeyCode::Char('m') | KeyCode::Char('M') => app.current_view = ViewMode::Month,
-        KeyCode::Char('2') | KeyCode::Char('w') | KeyCode::Char('W') => app.current_view = ViewMode::Week,
-        KeyCode::Char('3') | KeyCode::Char('d') | KeyCode::Char('D') => app.current_view = ViewMode::Day,
+        KeyCode::Char('1') | KeyCode::Char('m') | KeyCode::Char('M') => {
+            app.current_view = ViewMode::Month
+        }
+        KeyCode::Char('2') | KeyCode::Char('w') | KeyCode::Char('W') => {
+            app.current_view = ViewMode::Week
+        }
+        KeyCode::Char('3') | KeyCode::Char('d') | KeyCode::Char('D') => {
+            app.current_view = ViewMode::Day
+        }
         KeyCode::Char('4') | KeyCode::Char('a') => app.current_view = ViewMode::Agenda,
 
         // Navigation
@@ -967,38 +1077,34 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('l') | KeyCode::Right => {
             app.selected_date = app.selected_date + Duration::days(1);
         }
-        KeyCode::Char('k') | KeyCode::Up => {
-            match app.current_view {
-                ViewMode::Month | ViewMode::Week => {
-                    app.selected_date = app.selected_date - Duration::days(7);
-                }
-                ViewMode::Day => {
-                    if app.selected_hour > 0 {
-                        app.selected_hour -= 1;
-                    }
-                }
-                ViewMode::Agenda => {
-                    if app.agenda_selected_index > 0 {
-                        app.agenda_selected_index -= 1;
-                    }
+        KeyCode::Char('k') | KeyCode::Up => match app.current_view {
+            ViewMode::Month | ViewMode::Week => {
+                app.selected_date = app.selected_date - Duration::days(7);
+            }
+            ViewMode::Day => {
+                if app.selected_hour > 0 {
+                    app.selected_hour -= 1;
                 }
             }
-        }
-        KeyCode::Char('j') | KeyCode::Down => {
-            match app.current_view {
-                ViewMode::Month | ViewMode::Week => {
-                    app.selected_date = app.selected_date + Duration::days(7);
-                }
-                ViewMode::Day => {
-                    if app.selected_hour < 23 {
-                        app.selected_hour += 1;
-                    }
-                }
-                ViewMode::Agenda => {
-                    app.agenda_selected_index += 1;
+            ViewMode::Agenda => {
+                if app.agenda_selected_index > 0 {
+                    app.agenda_selected_index -= 1;
                 }
             }
-        }
+        },
+        KeyCode::Char('j') | KeyCode::Down => match app.current_view {
+            ViewMode::Month | ViewMode::Week => {
+                app.selected_date = app.selected_date + Duration::days(7);
+            }
+            ViewMode::Day => {
+                if app.selected_hour < 23 {
+                    app.selected_hour += 1;
+                }
+            }
+            ViewMode::Agenda => {
+                app.agenda_selected_index += 1;
+            }
+        },
         KeyCode::Char('[') => app.nav_prev(),
         KeyCode::Char(']') => app.nav_next(),
         KeyCode::Char('t') => app.nav_today(),
@@ -1009,7 +1115,9 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('C') => app.open_calendar_modal(),
         KeyCode::Char('r') | KeyCode::Char('R') => app.trigger_sync(),
         KeyCode::Char('A') => app.open_accounts_modal(),
-        KeyCode::Char('s') | KeyCode::Char('S') | KeyCode::Char('o') | KeyCode::Char('O') => app.open_settings_modal(),
+        KeyCode::Char('s') | KeyCode::Char('S') | KeyCode::Char('o') | KeyCode::Char('O') => {
+            app.open_settings_modal()
+        }
         KeyCode::Char('L') => app.open_language_modal(),
         KeyCode::Char('T') => app.open_theme_modal(),
         KeyCode::Char('?') => app.open_help_modal(),

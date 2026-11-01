@@ -66,14 +66,19 @@ mod tests {
 
         let backend = TestBackend::new(100, 30);
         let mut terminal = Terminal::new(backend).unwrap();
-        terminal.draw(|f| {
-            rcal::ui::render(f, &mut app);
-        }).unwrap();
+        terminal
+            .draw(|f| {
+                rcal::ui::render(f, &mut app);
+            })
+            .unwrap();
 
-        let delete_target = app.hit_map.targets().iter().find(|(_, target)| {
-            matches!(target, HitTarget::ModalCalDelete(id) if id == &custom_cal.id)
-        });
-        assert!(delete_target.is_some(), "Delete button for custom calendar should be registered in hit_map");
+        let delete_target = app.hit_map.targets().iter().find(
+            |(_, target)| matches!(target, HitTarget::ModalCalDelete(id) if id == &custom_cal.id),
+        );
+        assert!(
+            delete_target.is_some(),
+            "Delete button for custom calendar should be registered in hit_map"
+        );
 
         let (del_rect, _) = delete_target.unwrap();
         let click_x = del_rect.x + del_rect.width / 2;

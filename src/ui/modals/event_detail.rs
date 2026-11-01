@@ -37,7 +37,12 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(cal_color))
-        .title(Span::styled(lang.modal_event_details(), Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            lang.modal_event_details(),
+            Style::default()
+                .fg(theme.text_highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -55,16 +60,25 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
         .split(inner);
 
     // Title
-    let title_line = Line::from(vec![
-        Span::styled(&event.title, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)),
-    ]);
+    let title_line = Line::from(vec![Span::styled(
+        &event.title,
+        Style::default()
+            .fg(theme.text_highlight)
+            .add_modifier(Modifier::BOLD),
+    )]);
     f.render_widget(Paragraph::new(title_line), chunks[0]);
 
     // Calendar
     let cal_line = Line::from(vec![
         Span::styled("● ", Style::default().fg(cal_color)),
-        Span::styled(cal_name, Style::default().fg(cal_color).add_modifier(Modifier::BOLD)),
-        Span::styled(format!(" ({})", event.sync_status.as_str()), Style::default().fg(theme.text_dim)),
+        Span::styled(
+            cal_name,
+            Style::default().fg(cal_color).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" ({})", event.sync_status.as_str()),
+            Style::default().fg(theme.text_dim),
+        ),
     ]);
     f.render_widget(Paragraph::new(cal_line), chunks[1]);
 
@@ -72,7 +86,10 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     let date_str = lang.format_date_long(event.start_time.date_naive());
     let time_line = Line::from(vec![
         Span::styled("📅  ", Style::default().fg(theme.accent)),
-        Span::styled(format!("{}, {}", date_str, event.time_str()), Style::default().fg(theme.text_normal)),
+        Span::styled(
+            format!("{}, {}", date_str, event.time_str()),
+            Style::default().fg(theme.text_normal),
+        ),
     ]);
     f.render_widget(Paragraph::new(time_line), chunks[2]);
 
@@ -85,9 +102,15 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     f.render_widget(Paragraph::new(loc_line), chunks[3]);
 
     // Description
-    let desc_text = event.description.as_deref().unwrap_or(lang.t().no_description);
-    let desc_p = Paragraph::new(desc_text)
-        .style(Style::default().fg(theme.text_muted).add_modifier(Modifier::ITALIC));
+    let desc_text = event
+        .description
+        .as_deref()
+        .unwrap_or(lang.t().no_description);
+    let desc_p = Paragraph::new(desc_text).style(
+        Style::default()
+            .fg(theme.text_muted)
+            .add_modifier(Modifier::ITALIC),
+    );
     f.render_widget(desc_p, chunks[4]);
 
     // Buttons: [ Edit (e) ] [ Delete (d) ] [ Close (Esc) ]
@@ -109,7 +132,12 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     app.hit_map.register(btn_chunks[0], HitTarget::ModalEdit);
 
     let btn_del = Paragraph::new(Line::from(vec![Span::raw(lang.btn_delete())]))
-        .style(Style::default().fg(Color::White).bg(theme.danger).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::White)
+                .bg(theme.danger)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center);
     f.render_widget(btn_del, btn_chunks[2]);
     app.hit_map.register(btn_chunks[2], HitTarget::ModalDelete);

@@ -26,15 +26,27 @@ fn format_mn_date_long(date: NaiveDate) -> String {
 }
 
 fn msg_sidebar_cjk(shown: bool) -> &'static str {
-    if shown { "显示侧边栏" } else { "隐藏侧边栏" }
+    if shown {
+        "显示侧边栏"
+    } else {
+        "隐藏侧边栏"
+    }
 }
 
 fn msg_sidebar_cjkt(shown: bool) -> &'static str {
-    if shown { "顯示側邊欄" } else { "隱藏側邊欄" }
+    if shown {
+        "顯示側邊欄"
+    } else {
+        "隱藏側邊欄"
+    }
 }
 
 fn msg_sidebar_default(shown: bool) -> &'static str {
-    if shown { "Sidebar shown" } else { "Sidebar hidden" }
+    if shown {
+        "Sidebar shown"
+    } else {
+        "Sidebar hidden"
+    }
 }
 
 fn msg_jump_today_def(date_str: &str) -> String {

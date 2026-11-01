@@ -1,26 +1,32 @@
 use anyhow::{anyhow, Result};
 use chrono::{Datelike, Local, TimeZone};
 
-use crate::storage::Database;
 use super::tools::parse_flexible_date;
 use super::types::{ContentItem, Prompt, PromptArgument, PromptMessage};
+use crate::storage::Database;
 
 pub fn get_prompts() -> Vec<Prompt> {
     vec![
         Prompt {
             name: "daily_briefing".to_string(),
-            description: Some("Generate a structured morning briefing of scheduled events for a specific day".to_string()),
-            arguments: Some(vec![
-                PromptArgument {
-                    name: "date".to_string(),
-                    description: Some("Target date in YYYY-MM-DD format (defaults to today)".to_string()),
-                    required: Some(false),
-                },
-            ]),
+            description: Some(
+                "Generate a structured morning briefing of scheduled events for a specific day"
+                    .to_string(),
+            ),
+            arguments: Some(vec![PromptArgument {
+                name: "date".to_string(),
+                description: Some(
+                    "Target date in YYYY-MM-DD format (defaults to today)".to_string(),
+                ),
+                required: Some(false),
+            }]),
         },
         Prompt {
             name: "schedule_event".to_string(),
-            description: Some("Draft an event schedule while inspecting existing appointments for conflicts".to_string()),
+            description: Some(
+                "Draft an event schedule while inspecting existing appointments for conflicts"
+                    .to_string(),
+            ),
             arguments: Some(vec![
                 PromptArgument {
                     name: "title".to_string(),
@@ -29,14 +35,19 @@ pub fn get_prompts() -> Vec<Prompt> {
                 },
                 PromptArgument {
                     name: "date".to_string(),
-                    description: Some("Proposed date in YYYY-MM-DD format (defaults to today)".to_string()),
+                    description: Some(
+                        "Proposed date in YYYY-MM-DD format (defaults to today)".to_string(),
+                    ),
                     required: Some(false),
                 },
             ]),
         },
         Prompt {
             name: "find_free_time".to_string(),
-            description: Some("Review open calendar slots on a date and suggest the best meeting times".to_string()),
+            description: Some(
+                "Review open calendar slots on a date and suggest the best meeting times"
+                    .to_string(),
+            ),
             arguments: Some(vec![
                 PromptArgument {
                     name: "date".to_string(),
@@ -70,8 +81,12 @@ pub fn get_prompt_messages(
                 None => Local::now().date_naive(),
             };
 
-            let start = Local.from_local_datetime(&target_date.and_hms_opt(0, 0, 0).unwrap()).unwrap();
-            let end = Local.from_local_datetime(&target_date.and_hms_opt(23, 59, 59).unwrap()).unwrap();
+            let start = Local
+                .from_local_datetime(&target_date.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap();
+            let end = Local
+                .from_local_datetime(&target_date.and_hms_opt(23, 59, 59).unwrap())
+                .unwrap();
             let events = db.get_events_range(start, end)?;
 
             let mut events_summary = String::new();
@@ -123,8 +138,12 @@ pub fn get_prompt_messages(
                 None => Local::now().date_naive(),
             };
 
-            let start = Local.from_local_datetime(&target_date.and_hms_opt(0, 0, 0).unwrap()).unwrap();
-            let end = Local.from_local_datetime(&target_date.and_hms_opt(23, 59, 59).unwrap()).unwrap();
+            let start = Local
+                .from_local_datetime(&target_date.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap();
+            let end = Local
+                .from_local_datetime(&target_date.and_hms_opt(23, 59, 59).unwrap())
+                .unwrap();
             let events = db.get_events_range(start, end)?;
 
             let mut existing = String::new();

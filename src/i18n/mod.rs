@@ -1,19 +1,19 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-pub mod hangul;
-pub mod translations;
-pub mod ko;
 pub mod en;
+pub mod hangul;
 pub mod ja;
+pub mod ko;
 pub mod locales;
+pub mod translations;
 
-pub use hangul::hangul_to_qwerty;
-pub use translations::Translations;
-pub use ko::KO;
 pub use en::EN;
+pub use hangul::hangul_to_qwerty;
 pub use ja::JA;
+pub use ko::KO;
 pub use locales::*;
+pub use translations::Translations;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Language {
@@ -148,10 +148,19 @@ impl Language {
         // 1. Direct match on code, BCP 47 tags, or language names
         match s {
             "ko" | "ko-kr" | "ko-kp" | "korean" => return Some(Language::Ko),
-            "en" | "en-us" | "en-gb" | "en-ca" | "en-au" | "en-nz" | "en-ie" | "en-za" | "english" => return Some(Language::En),
+            "en" | "en-us" | "en-gb" | "en-ca" | "en-au" | "en-nz" | "en-ie" | "en-za"
+            | "english" => return Some(Language::En),
             "ja" | "ja-jp" | "japanese" => return Some(Language::Ja),
-            "zh-cn" | "zh-sg" | "zh-hans" | "zh-hans-cn" | "zh-hans-sg" | "zh" | "chinese" | "chinese-simplified" => return Some(Language::ZhCn),
-            "zh-tw" | "zh-hk" | "zh-mo" | "zh-hant" | "zh-hant-tw" | "zh-hant-hk" | "zh-hant-mo" | "chinese-traditional" => return Some(Language::ZhTw),
+            "zh-cn" | "zh-sg" | "zh-hans" | "zh-hans-cn" | "zh-hans-sg" | "zh" | "chinese"
+            | "chinese-simplified" => return Some(Language::ZhCn),
+            "zh-tw"
+            | "zh-hk"
+            | "zh-mo"
+            | "zh-hant"
+            | "zh-hant-tw"
+            | "zh-hant-hk"
+            | "zh-hant-mo"
+            | "chinese-traditional" => return Some(Language::ZhTw),
             "mn" | "mn-mn" | "mongolian" => return Some(Language::Mn),
             "es" | "es-es" | "es-mx" | "es-419" | "es-ar" | "spanish" => return Some(Language::Es),
             "fr" | "fr-fr" | "fr-ca" | "fr-be" | "fr-ch" | "french" => return Some(Language::Fr),
@@ -172,10 +181,15 @@ impl Language {
         }
 
         // 2. Chinese variants matching
-        if s.starts_with("zh-hant") || s.starts_with("zh-tw") || s.starts_with("zh-hk") || s.starts_with("zh-mo") {
+        if s.starts_with("zh-hant")
+            || s.starts_with("zh-tw")
+            || s.starts_with("zh-hk")
+            || s.starts_with("zh-mo")
+        {
             return Some(Language::ZhTw);
         }
-        if s.starts_with("zh-hans") || s.starts_with("zh-cn") || s.starts_with("zh-sg") || s == "zh" {
+        if s.starts_with("zh-hans") || s.starts_with("zh-cn") || s.starts_with("zh-sg") || s == "zh"
+        {
             return Some(Language::ZhCn);
         }
 

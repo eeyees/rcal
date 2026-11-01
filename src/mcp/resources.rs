@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use chrono::{Datelike, Local, TimeZone};
 use serde_json::json;
 
-use crate::storage::Database;
 use super::types::{Resource, ResourceContent};
+use crate::storage::Database;
 
 pub fn get_resources() -> Vec<Resource> {
     vec![
@@ -32,8 +32,12 @@ pub fn read_resource(uri: &str, db: &Database) -> Result<ResourceContent> {
     match uri {
         "rcal://today" => {
             let today = Local::now().date_naive();
-            let start = Local.from_local_datetime(&today.and_hms_opt(0, 0, 0).unwrap()).unwrap();
-            let end = Local.from_local_datetime(&today.and_hms_opt(23, 59, 59).unwrap()).unwrap();
+            let start = Local
+                .from_local_datetime(&today.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap();
+            let end = Local
+                .from_local_datetime(&today.and_hms_opt(23, 59, 59).unwrap())
+                .unwrap();
 
             let events = db.get_events_range(start, end)?;
             let event_dtos: Vec<serde_json::Value> = events
@@ -69,9 +73,13 @@ pub fn read_resource(uri: &str, db: &Database) -> Result<ResourceContent> {
         "rcal://upcoming" => {
             let now = Local::now();
             let today = now.date_naive();
-            let start = Local.from_local_datetime(&today.and_hms_opt(0, 0, 0).unwrap()).unwrap();
+            let start = Local
+                .from_local_datetime(&today.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap();
             let next_week = today + chrono::Duration::days(7);
-            let end = Local.from_local_datetime(&next_week.and_hms_opt(23, 59, 59).unwrap()).unwrap();
+            let end = Local
+                .from_local_datetime(&next_week.and_hms_opt(23, 59, 59).unwrap())
+                .unwrap();
 
             let events = db.get_events_range(start, end)?;
             let event_dtos: Vec<serde_json::Value> = events

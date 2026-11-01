@@ -1,6 +1,6 @@
-use std::time::{Duration, Instant};
 use anyhow::Result;
 use chrono::{Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime, TimeZone};
+use std::time::{Duration, Instant};
 
 use crate::i18n::Language;
 use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus, WeekStartDay};
@@ -48,7 +48,11 @@ pub struct EventFormState {
 impl EventFormState {
     pub const TOTAL_FIELDS: usize = 9;
 
-    pub fn new_with_date(date: NaiveDate, default_cal_id: String, default_hour: Option<u32>) -> Self {
+    pub fn new_with_date(
+        date: NaiveDate,
+        default_cal_id: String,
+        default_hour: Option<u32>,
+    ) -> Self {
         let hour = default_hour.unwrap_or(9);
         Self {
             is_new: true,
@@ -172,12 +176,16 @@ impl AccountModalState {
             3 => {
                 self.name = "Microsoft 365".to_string();
                 self.url = "https://graph.microsoft.com/v1.0".to_string();
-                if let Ok(env_id) = std::env::var("RCAL_MS_CLIENT_ID").or_else(|_| std::env::var("MS_CLIENT_ID")) {
+                if let Ok(env_id) =
+                    std::env::var("RCAL_MS_CLIENT_ID").or_else(|_| std::env::var("MS_CLIENT_ID"))
+                {
                     if !env_id.trim().is_empty() {
                         self.username = env_id;
                     }
                 }
-                if let Ok(env_sec) = std::env::var("RCAL_MS_CLIENT_SECRET").or_else(|_| std::env::var("MS_CLIENT_SECRET")) {
+                if let Ok(env_sec) = std::env::var("RCAL_MS_CLIENT_SECRET")
+                    .or_else(|_| std::env::var("MS_CLIENT_SECRET"))
+                {
                     if !env_sec.trim().is_empty() {
                         self.password = env_sec;
                     }
@@ -341,28 +349,37 @@ pub struct App {
     pub is_syncing: bool,
     pub last_sync_status: Option<String>,
     pub sync_tx: Option<tokio::sync::mpsc::Sender<()>>,
-    pub oauth_result_tx: Option<tokio::sync::mpsc::Sender<Result<crate::model::CalDavAccount, String>>>,
+    pub oauth_result_tx:
+        Option<tokio::sync::mpsc::Sender<Result<crate::model::CalDavAccount, String>>>,
 }
 
 impl App {
     pub fn new(db: Database) -> Result<Self> {
         let today = Local::now().date_naive();
-        let lang = db.get_setting("language")
+        let lang = db
+            .get_setting("language")
             .ok()
             .flatten()
             .and_then(|s| Language::from_code(&s))
             .unwrap_or_else(Language::detect);
-        let week_start_day = db.get_setting("week_start_day")
+        let week_start_day = db
+            .get_setting("week_start_day")
             .ok()
             .flatten()
             .map(|s| WeekStartDay::from_str(&s))
             .unwrap_or(WeekStartDay::Sunday);
         let (theme_config, _cfg_path) = ThemeConfigFile::load_or_create();
-        let theme_mode = db.get_setting("theme")
+        let theme_mode = db
+            .get_setting("theme")
             .ok()
             .flatten()
             .map(|s| ThemeMode::from_str(&s))
-            .or_else(|| theme_config.active_theme.as_ref().map(|s| ThemeMode::from_str(s)))
+            .or_else(|| {
+                theme_config
+                    .active_theme
+                    .as_ref()
+                    .map(|s| ThemeMode::from_str(s))
+            })
             .unwrap_or(ThemeMode::ModernDark);
         let mut theme = Theme::from_mode(theme_mode);
         theme_config.apply_to(&mut theme);
@@ -529,11 +546,7 @@ impl App {
             self.selected_date = d;
         }
         let cal_id = self.default_calendar_id();
-        let mut form = EventFormState::new_with_date(
-            self.selected_date,
-            cal_id,
-            None,
-        );
+        let mut form = EventFormState::new_with_date(self.selected_date, cal_id, None);
         form.all_day = true;
         self.modal = ActiveModal::EventForm(form);
     }
@@ -562,12 +575,18 @@ impl App {
 
     pub fn open_settings_modal(&mut self) {
         self.settings_section = SettingsSection::WeekStart;
-        self.settings_lang_idx = Language::ALL.iter().position(|l| *l == self.lang).unwrap_or(0);
+        self.settings_lang_idx = Language::ALL
+            .iter()
+            .position(|l| *l == self.lang)
+            .unwrap_or(0);
         self.modal = ActiveModal::Settings;
     }
 
     pub fn open_language_modal(&mut self) {
-        let current_idx = Language::ALL.iter().position(|l| *l == self.lang).unwrap_or(0);
+        let current_idx = Language::ALL
+            .iter()
+            .position(|l| *l == self.lang)
+            .unwrap_or(0);
         self.modal = ActiveModal::Language(LanguageModalState {
             selected_idx: current_idx,
         });
@@ -598,21 +617,30 @@ impl App {
         let msg = match self.lang {
             Language::Ko => {
                 if self.notification_config.enabled {
-                    format!("🔔  바탕화면 알림 활성화 ({}분 전 안내)", self.notification_config.lead_minutes)
+                    format!(
+                        "🔔  바탕화면 알림 활성화 ({}분 전 안내)",
+                        self.notification_config.lead_minutes
+                    )
                 } else {
                     "🔕  바탕화면 알림 비활성화".to_string()
                 }
             }
             Language::Ja => {
                 if self.notification_config.enabled {
-                    format!("🔔  デスクトップ通知有効 ({}分前)", self.notification_config.lead_minutes)
+                    format!(
+                        "🔔  デスクトップ通知有効 ({}分前)",
+                        self.notification_config.lead_minutes
+                    )
                 } else {
                     "🔕  デスクトップ通知無効".to_string()
                 }
             }
             _ => {
                 if self.notification_config.enabled {
-                    format!("🔔  Desktop notifications enabled ({}m before)", self.notification_config.lead_minutes)
+                    format!(
+                        "🔔  Desktop notifications enabled ({}m before)",
+                        self.notification_config.lead_minutes
+                    )
                 } else {
                     "🔕  Desktop notifications disabled".to_string()
                 }
@@ -696,7 +724,12 @@ impl App {
     }
 
     pub fn check_upcoming_notifications(&mut self) -> Result<Vec<(Event, String)>> {
-        let notified = check_and_notify_upcoming(&self.db, &self.notification_config, Local::now(), self.lang)?;
+        let notified = check_and_notify_upcoming(
+            &self.db,
+            &self.notification_config,
+            Local::now(),
+            self.lang,
+        )?;
         if let Some((ev, _)) = notified.first() {
             let msg = match self.lang {
                 Language::Ko => format!("🔔  알림 발송: {}", ev.title),
@@ -718,8 +751,18 @@ impl App {
         let idx = all.iter().position(|m| *m == mode).unwrap_or(0) + 1;
         let label = mode.label(self.lang);
         let msg = match self.lang {
-            Language::Ko => format!("🎨  테마가 '{}' [{}/{}] 로 변경되었습니다.", label, idx, all.len()),
-            Language::Ja => format!("🎨  テーマが「{}」[{}/{}] に変更されました。", label, idx, all.len()),
+            Language::Ko => format!(
+                "🎨  테마가 '{}' [{}/{}] 로 변경되었습니다.",
+                label,
+                idx,
+                all.len()
+            ),
+            Language::Ja => format!(
+                "🎨  テーマが「{}」[{}/{}] に変更されました。",
+                label,
+                idx,
+                all.len()
+            ),
             _ => format!("🎨  Theme changed to '{}' [{}/{}].", label, idx, all.len()),
         };
         self.set_status(msg);
@@ -771,8 +814,12 @@ impl App {
 
             let tx = self.oauth_result_tx.clone();
             let msg = match self.lang {
-                Language::Ko => "🌐 브라우저에서 Google 인증을 완료해주세요... (대기: http://127.0.0.1:8088)",
-                Language::Ja => "🌐 ブラウザでGoogle認証を完了してください... (待機: http://127.0.0.1:8088)",
+                Language::Ko => {
+                    "🌐 브라우저에서 Google 인증을 완료해주세요... (대기: http://127.0.0.1:8088)"
+                }
+                Language::Ja => {
+                    "🌐 ブラウザでGoogle認証を完了してください... (待機: http://127.0.0.1:8088)"
+                }
                 _ => "🌐 Waiting for Google browser authentication at http://127.0.0.1:8088...",
             };
             self.set_status(msg);
@@ -850,12 +897,16 @@ impl App {
 
     // Save event from form state
     pub fn save_event_from_form(&mut self, form: EventFormState) -> Result<()> {
-        let date = NaiveDate::parse_from_str(&form.date_str, "%Y-%m-%d")
-            .unwrap_or(self.selected_date);
+        let date =
+            NaiveDate::parse_from_str(&form.date_str, "%Y-%m-%d").unwrap_or(self.selected_date);
 
         let (start_time, end_time) = if form.all_day {
-            let start = Local.from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap()).unwrap();
-            let end = Local.from_local_datetime(&date.and_hms_opt(23, 59, 59).unwrap()).unwrap();
+            let start = Local
+                .from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap();
+            let end = Local
+                .from_local_datetime(&date.and_hms_opt(23, 59, 59).unwrap())
+                .unwrap();
             (start, end)
         } else {
             let start_time_part = NaiveTime::parse_from_str(&form.start_time_str, "%H:%M")
@@ -863,20 +914,42 @@ impl App {
             let end_time_part = NaiveTime::parse_from_str(&form.end_time_str, "%H:%M")
                 .unwrap_or_else(|_| NaiveTime::from_hms_opt(10, 0, 0).unwrap());
 
-            let start = Local.from_local_datetime(&date.and_time(start_time_part)).unwrap();
-            let end = Local.from_local_datetime(&date.and_time(end_time_part)).unwrap();
+            let start = Local
+                .from_local_datetime(&date.and_time(start_time_part))
+                .unwrap();
+            let end = Local
+                .from_local_datetime(&date.and_time(end_time_part))
+                .unwrap();
             (start, end)
         };
 
         let event = if let Some(id) = form.event_id {
             // Updating existing event
             let mut ev = self.db.get_event_by_id(&id)?.unwrap_or_else(|| {
-                Event::new(form.calendar_id.clone(), form.title.clone(), start_time, end_time, form.all_day)
+                Event::new(
+                    form.calendar_id.clone(),
+                    form.title.clone(),
+                    start_time,
+                    end_time,
+                    form.all_day,
+                )
             });
             ev.calendar_id = form.calendar_id;
-            ev.title = if form.title.trim().is_empty() { "(No title)".to_string() } else { form.title };
-            ev.description = if form.description.trim().is_empty() { None } else { Some(form.description) };
-            ev.location = if form.location.trim().is_empty() { None } else { Some(form.location) };
+            ev.title = if form.title.trim().is_empty() {
+                "(No title)".to_string()
+            } else {
+                form.title
+            };
+            ev.description = if form.description.trim().is_empty() {
+                None
+            } else {
+                Some(form.description)
+            };
+            ev.location = if form.location.trim().is_empty() {
+                None
+            } else {
+                Some(form.location)
+            };
             ev.start_time = start_time;
             ev.end_time = end_time;
             ev.all_day = form.all_day;
@@ -887,13 +960,25 @@ impl App {
             // New event
             let mut ev = Event::new(
                 form.calendar_id,
-                if form.title.trim().is_empty() { "(No title)".to_string() } else { form.title },
+                if form.title.trim().is_empty() {
+                    "(No title)".to_string()
+                } else {
+                    form.title
+                },
                 start_time,
                 end_time,
                 form.all_day,
             );
-            ev.description = if form.description.trim().is_empty() { None } else { Some(form.description) };
-            ev.location = if form.location.trim().is_empty() { None } else { Some(form.location) };
+            ev.description = if form.description.trim().is_empty() {
+                None
+            } else {
+                Some(form.description)
+            };
+            ev.location = if form.location.trim().is_empty() {
+                None
+            } else {
+                Some(form.location)
+            };
             ev
         };
 
@@ -1019,7 +1104,10 @@ impl App {
                     if let ActiveModal::Theme(ref mut state) = self.modal {
                         state.category_filter = cat;
                         let filtered = state.filtered_themes();
-                        let pos = filtered.iter().position(|m| *m == self.theme.mode).unwrap_or(0);
+                        let pos = filtered
+                            .iter()
+                            .position(|m| *m == self.theme.mode)
+                            .unwrap_or(0);
                         state.selected_idx = pos;
                         if let Some(mode) = filtered.get(pos) {
                             let m = *mode;
@@ -1044,7 +1132,8 @@ impl App {
                 HitTarget::ModalCalSave => {
                     if let ActiveModal::CalendarManager(ref cal_state) = self.modal {
                         if !cal_state.name.trim().is_empty() {
-                            let color = CalendarModalState::PALETTE[cal_state.color_idx % CalendarModalState::PALETTE.len()];
+                            let color = CalendarModalState::PALETTE
+                                [cal_state.color_idx % CalendarModalState::PALETTE.len()];
                             let new_cal = Calendar {
                                 id: format!("cal_custom_{}", uuid::Uuid::new_v4()),
                                 account_id: None,
@@ -1120,9 +1209,14 @@ impl App {
                             _ => (ProviderType::Local, crate::model::AuthType::Basic),
                         };
 
-                        let existing = self.db.find_account_by_provider_and_username(&provider, &acc_state.username)?;
+                        let existing = self.db.find_account_by_provider_and_username(
+                            &provider,
+                            &acc_state.username,
+                        )?;
                         let is_update = existing.is_some();
-                        let account_id = existing.map(|a| a.id).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                        let account_id = existing
+                            .map(|a| a.id)
+                            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
                         let mut new_acc = CalDavAccount::new(
                             acc_state.name.clone(),

@@ -13,28 +13,41 @@ pub fn event_to_ics(event: &Event) -> String {
 
     let (dtstart, dtend) = if event.all_day {
         let s = event.start_time.format("%Y%m%d").to_string();
-        let e = (event.end_time + chrono::Duration::days(1)).format("%Y%m%d").to_string();
+        let e = (event.end_time + chrono::Duration::days(1))
+            .format("%Y%m%d")
+            .to_string();
         (
             format!("DTSTART;VALUE=DATE:{}", s),
             format!("DTEND;VALUE=DATE:{}", e),
         )
     } else {
-        let s = event.start_time.with_timezone(&Utc).format("%Y%m%dT%H%M%SZ").to_string();
-        let e = event.end_time.with_timezone(&Utc).format("%Y%m%dT%H%M%SZ").to_string();
-        (
-            format!("DTSTART:{}", s),
-            format!("DTEND:{}", e),
-        )
+        let s = event
+            .start_time
+            .with_timezone(&Utc)
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        let e = event
+            .end_time
+            .with_timezone(&Utc)
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string();
+        (format!("DTSTART:{}", s), format!("DTEND:{}", e))
     };
 
     let summary = escape_ics_text(&event.title);
-    let desc_line = event.description.as_ref()
+    let desc_line = event
+        .description
+        .as_ref()
         .map(|d| format!("\r\nDESCRIPTION:{}", escape_ics_text(d)))
         .unwrap_or_default();
-    let loc_line = event.location.as_ref()
+    let loc_line = event
+        .location
+        .as_ref()
         .map(|l| format!("\r\nLOCATION:{}", escape_ics_text(l)))
         .unwrap_or_default();
-    let rrule_line = event.rrule.as_ref()
+    let rrule_line = event
+        .rrule
+        .as_ref()
         .map(|r| format!("\r\nRRULE:{}", r))
         .unwrap_or_default();
 
@@ -223,14 +236,18 @@ pub fn parse_ics_datetime(key_part: &str, val: &str) -> Option<(DateTime<Local>,
     let upper_key = key_part.to_ascii_uppercase();
 
     // 1. All-day date only: YYYYMMDD (8 chars) or VALUE=DATE
-    if (val.len() == 8 && val.chars().all(|c| c.is_ascii_digit())) || upper_key.contains("VALUE=DATE") {
+    if (val.len() == 8 && val.chars().all(|c| c.is_ascii_digit()))
+        || upper_key.contains("VALUE=DATE")
+    {
         let date_str = if val.len() >= 8 { &val[0..8] } else { val };
         if date_str.len() == 8 && date_str.chars().all(|c| c.is_ascii_digit()) {
             let year = date_str[0..4].parse::<i32>().ok()?;
             let month = date_str[4..6].parse::<u32>().ok()?;
             let day = date_str[6..8].parse::<u32>().ok()?;
             let naive_date = NaiveDate::from_ymd_opt(year, month, day)?;
-            let dt = Local.from_local_datetime(&naive_date.and_hms_opt(0, 0, 0)?).single()?;
+            let dt = Local
+                .from_local_datetime(&naive_date.and_hms_opt(0, 0, 0)?)
+                .single()?;
             return Some((dt, true));
         }
     }
@@ -258,7 +275,11 @@ pub fn parse_ics_datetime(key_part: &str, val: &str) -> Option<(DateTime<Local>,
         if let Some(tz) = parse_tzid(tzid_str) {
             if val.contains('T') {
                 if let Ok(naive) = NaiveDateTime::parse_from_str(val, "%Y%m%dT%H%M%S") {
-                    if let Some(tz_dt) = tz.from_local_datetime(&naive).single().or_else(|| tz.from_local_datetime(&naive).earliest()) {
+                    if let Some(tz_dt) = tz
+                        .from_local_datetime(&naive)
+                        .single()
+                        .or_else(|| tz.from_local_datetime(&naive).earliest())
+                    {
                         return Some((tz_dt.with_timezone(&Local), false));
                     }
                 }
@@ -269,7 +290,11 @@ pub fn parse_ics_datetime(key_part: &str, val: &str) -> Option<(DateTime<Local>,
     // 4. Local/Floating Date Time: YYYYMMDDTHHMMSS
     if val.contains('T') {
         if let Ok(naive) = NaiveDateTime::parse_from_str(val, "%Y%m%dT%H%M%S") {
-            if let Some(dt) = Local.from_local_datetime(&naive).single().or_else(|| Local.from_local_datetime(&naive).earliest()) {
+            if let Some(dt) = Local
+                .from_local_datetime(&naive)
+                .single()
+                .or_else(|| Local.from_local_datetime(&naive).earliest())
+            {
                 return Some((dt, false));
             }
         }

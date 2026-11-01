@@ -44,7 +44,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         Constraint::Length(1), // All-Day row
     ];
     let mut all_time_constraints = time_row_constraints;
-    all_time_constraints.extend(vec![Constraint::Ratio(1, num_hours as u32); num_hours as usize]);
+    all_time_constraints.extend(vec![
+        Constraint::Ratio(1, num_hours as u32);
+        num_hours as usize
+    ]);
 
     let time_rows = Layout::default()
         .direction(Direction::Vertical)
@@ -55,7 +58,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let all_day_lbl = app.lang.t().all_day_short;
     let p_all = Paragraph::new(Line::from(vec![Span::styled(
         all_day_lbl,
-        Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(theme.accent)
+            .add_modifier(Modifier::BOLD),
     )]))
     .alignment(Alignment::Right);
     f.render_widget(p_all, time_rows[1]);
@@ -92,16 +97,26 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         // Header for this day
         let dows = app.week_start_day.weekday_headers(app.lang);
         let dow_str = dows[col as usize];
-        let date_header_text = format!("{} {:02}/{:02}", dow_str, current_date.month(), current_date.day());
-        let is_weekend = current_date.weekday() == chrono::Weekday::Sat || current_date.weekday() == chrono::Weekday::Sun;
+        let date_header_text = format!(
+            "{} {:02}/{:02}",
+            dow_str,
+            current_date.month(),
+            current_date.day()
+        );
+        let is_weekend = current_date.weekday() == chrono::Weekday::Sat
+            || current_date.weekday() == chrono::Weekday::Sun;
         let header_style = if is_today {
             theme.today_style()
         } else if is_selected {
             theme.selected_day_style()
         } else if is_weekend {
-            Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(theme.text_normal).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(theme.text_normal)
+                .add_modifier(Modifier::BOLD)
         };
 
         let p_head = Paragraph::new(Line::from(vec![Span::raw(date_header_text)]))
@@ -110,10 +125,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         f.render_widget(p_head, col_chunks[0]);
 
         // Register hit for day header
-        app.hit_map.register(col_chunks[0], HitTarget::MonthDay(current_date));
+        app.hit_map
+            .register(col_chunks[0], HitTarget::MonthDay(current_date));
 
         // Render All-day events row
-        let all_day_events_on_day: Vec<&_> = app.events_cache.iter()
+        let all_day_events_on_day: Vec<&_> = app
+            .events_cache
+            .iter()
             .filter(|ev| ev.all_day && ev.occurs_on(current_date))
             .collect();
 
@@ -125,43 +143,56 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             } else {
                 String::new()
             };
-            let all_day_p = Paragraph::new(Line::from(vec![
-                Span::styled(
-                    format!(" ■ {}{}", first_ev.title, count_suffix),
-                    Style::default().fg(Color::Black).bg(cal_color).add_modifier(Modifier::BOLD),
-                )
-            ]));
+            let all_day_p = Paragraph::new(Line::from(vec![Span::styled(
+                format!(" ■ {}{}", first_ev.title, count_suffix),
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(cal_color)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             f.render_widget(all_day_p, col_chunks[1]);
-            app.hit_map.register(col_chunks[1], HitTarget::EventItem(first_ev.id.clone()));
+            app.hit_map
+                .register(col_chunks[1], HitTarget::EventItem(first_ev.id.clone()));
         } else {
             let empty_block = Block::default()
                 .borders(Borders::BOTTOM)
                 .border_style(Style::default().fg(theme.border));
             f.render_widget(empty_block, col_chunks[1]);
-            app.hit_map.register(col_chunks[1], HitTarget::WeekAllDaySlot(current_date));
+            app.hit_map
+                .register(col_chunks[1], HitTarget::WeekAllDaySlot(current_date));
         }
 
         // Timeline Body with borders
         let block = Block::default()
             .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
-            .border_style(Style::default().fg(if is_selected { theme.primary } else { theme.border }));
+            .border_style(Style::default().fg(if is_selected {
+                theme.primary
+            } else {
+                theme.border
+            }));
         let body_inner = block.inner(col_chunks[2]);
         f.render_widget(block, col_chunks[2]);
 
         let hour_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Ratio(1, num_hours as u32); num_hours as usize])
+            .constraints(vec![
+                Constraint::Ratio(1, num_hours as u32);
+                num_hours as usize
+            ])
             .split(body_inner);
 
         // Register slots for clicking
         for h in start_hour..=end_hour {
             let idx = (h - start_hour) as usize;
             let slot_rect = hour_chunks[idx];
-            app.hit_map.register(slot_rect, HitTarget::WeekSlot(current_date, h));
+            app.hit_map
+                .register(slot_rect, HitTarget::WeekSlot(current_date, h));
         }
 
         // Render Timed Events that fall on this day
-        let timed_events_on_day: Vec<&_> = app.events_cache.iter()
+        let timed_events_on_day: Vec<&_> = app
+            .events_cache
+            .iter()
             .filter(|ev| !ev.all_day && ev.occurs_on(current_date))
             .collect();
 
@@ -174,17 +205,16 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 let slot_idx = (ev_hour - start_hour) as usize;
                 let target_rect = hour_chunks[slot_idx];
 
-                let ev_block = Paragraph::new(Line::from(vec![
-                    Span::styled(
-                        format!(" {}", ev.title),
-                        Style::default()
-                            .fg(Color::Black)
-                            .bg(cal_color)
-                            .add_modifier(Modifier::BOLD),
-                    )
-                ]));
+                let ev_block = Paragraph::new(Line::from(vec![Span::styled(
+                    format!(" {}", ev.title),
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(cal_color)
+                        .add_modifier(Modifier::BOLD),
+                )]));
                 f.render_widget(ev_block, target_rect);
-                app.hit_map.register(target_rect, HitTarget::EventItem(ev.id.clone()));
+                app.hit_map
+                    .register(target_rect, HitTarget::EventItem(ev.id.clone()));
             }
         }
     }

@@ -8,7 +8,9 @@ use rcal::mouse::HitTarget;
 use rcal::storage::Database;
 use rcal::ui;
 use rcal::ui::theme::{Theme, ThemeCategory, ThemeMode};
-use rcal::ui::theme_config::{parse_color, ThemeColorOverrides, ThemeConfigFile, VisibilityOptions};
+use rcal::ui::theme_config::{
+    parse_color, ThemeColorOverrides, ThemeConfigFile, VisibilityOptions,
+};
 
 fn make_key_event(code: KeyCode, modifiers: KeyModifiers) -> crossterm::event::Event {
     crossterm::event::Event::Key(KeyEvent::new(code, modifiers))
@@ -17,7 +19,11 @@ fn make_key_event(code: KeyCode, modifiers: KeyModifiers) -> crossterm::event::E
 #[test]
 fn test_theme_mode_all_and_cycling() {
     let all = ThemeMode::all();
-    assert_eq!(all.len(), 37, "Must support at least 30 themes (currently 37)");
+    assert_eq!(
+        all.len(),
+        37,
+        "Must support at least 30 themes (currently 37)"
+    );
 
     // Verify round-trip strings for all 37 themes
     for mode in all {
@@ -59,7 +65,11 @@ fn test_theme_categories_and_light_modes() {
                 assert!(mode.is_light());
                 // Light themes must have explicit light background to avoid transparent black terminal clash
                 let theme = Theme::from_mode(*mode);
-                assert_ne!(theme.bg, Color::Reset, "Light themes must have non-Reset background");
+                assert_ne!(
+                    theme.bg,
+                    Color::Reset,
+                    "Light themes must have non-Reset background"
+                );
             }
         }
     }
@@ -117,7 +127,11 @@ fn test_theme_config_parsing_and_overrides() {
 
     let mut dark_theme = Theme::from_mode(ThemeMode::ModernDark);
     hc_config.apply_to(&mut dark_theme);
-    assert_ne!(dark_theme.bg, Color::Reset, "force_opaque_bg should make background non-Reset");
+    assert_ne!(
+        dark_theme.bg,
+        Color::Reset,
+        "force_opaque_bg should make background non-Reset"
+    );
     assert_eq!(dark_theme.text_normal, Color::Rgb(255, 255, 255));
 }
 
@@ -132,7 +146,10 @@ fn test_theme_db_persistence_and_startup() -> anyhow::Result<()> {
     // Change to Tokyo Night
     app.set_theme(ThemeMode::TokyoNight);
     assert_eq!(app.theme.mode, ThemeMode::TokyoNight);
-    assert_eq!(app.db.get_setting("theme")?, Some("tokyo_night".to_string()));
+    assert_eq!(
+        app.db.get_setting("theme")?,
+        Some("tokyo_night".to_string())
+    );
 
     // Create new App from same db file -> should restore Tokyo Night
     let db2 = Database::new(Some(&db_path))?;
@@ -150,11 +167,17 @@ fn test_normal_mode_theme_shortcuts_and_modal() -> anyhow::Result<()> {
     assert_eq!(app.theme.mode, ThemeMode::ModernDark);
 
     // Shift + T in normal mode opens the Theme Selection Modal
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('T'), KeyModifiers::SHIFT))?;
+    handle_crossterm_event(
+        &mut app,
+        make_key_event(KeyCode::Char('T'), KeyModifiers::SHIFT),
+    )?;
     assert!(matches!(app.modal, ActiveModal::Theme(_)));
 
     // In Theme modal, navigate right with 'l'
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('l'), KeyModifiers::NONE))?;
+    handle_crossterm_event(
+        &mut app,
+        make_key_event(KeyCode::Char('l'), KeyModifiers::NONE),
+    )?;
     if let ActiveModal::Theme(ref state) = app.modal {
         assert_eq!(state.selected_idx, 1);
     } else {
@@ -202,7 +225,10 @@ fn test_theme_modal_mouse_interaction() -> anyhow::Result<()> {
     app.handle_mouse_click(22, 10)?;
     assert_eq!(app.theme.mode, ThemeMode::GitHubLight);
     assert_eq!(app.modal, ActiveModal::None);
-    assert_eq!(app.db.get_setting("theme")?, Some("github_light".to_string()));
+    assert_eq!(
+        app.db.get_setting("theme")?,
+        Some("github_light".to_string())
+    );
 
     Ok(())
 }
@@ -216,11 +242,17 @@ fn test_settings_modal_theme_interaction() -> anyhow::Result<()> {
     assert!(matches!(app.modal, ActiveModal::Settings));
 
     // Shortcut 'c' inside settings modal cycles theme
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('c'), KeyModifiers::NONE))?;
+    handle_crossterm_event(
+        &mut app,
+        make_key_event(KeyCode::Char('c'), KeyModifiers::NONE),
+    )?;
     assert_eq!(app.theme.mode, ThemeMode::Nord);
 
     // Shortcut 'C' inside settings modal cycles theme backwards
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('C'), KeyModifiers::SHIFT))?;
+    handle_crossterm_event(
+        &mut app,
+        make_key_event(KeyCode::Char('C'), KeyModifiers::SHIFT),
+    )?;
     assert_eq!(app.theme.mode, ThemeMode::ModernDark);
 
     // Mouse click on category tab
@@ -236,10 +268,16 @@ fn test_settings_modal_theme_interaction() -> anyhow::Result<()> {
     );
     app.handle_mouse_click(22, 11)?;
     assert_eq!(app.theme.mode, ThemeMode::TokyoNightLight);
-    assert_eq!(app.db.get_setting("theme")?, Some("tokyo_night_light".to_string()));
+    assert_eq!(
+        app.db.get_setting("theme")?,
+        Some("tokyo_night_light".to_string())
+    );
 
     // Pressing T inside settings opens Theme Modal
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('T'), KeyModifiers::SHIFT))?;
+    handle_crossterm_event(
+        &mut app,
+        make_key_event(KeyCode::Char('T'), KeyModifiers::SHIFT),
+    )?;
     assert!(matches!(app.modal, ActiveModal::Theme(_)));
 
     Ok(())
@@ -288,16 +326,28 @@ fn test_theme_modal_live_preview_and_esc_revert() -> anyhow::Result<()> {
     // Navigate right: focus moves to index 1 (Nord)
     // The theme behind MUST immediately update to Nord (Live Preview)
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Right, KeyModifiers::NONE))?;
-    assert_eq!(app.theme.mode, ThemeMode::Nord, "Theme should immediately live-preview on focus");
+    assert_eq!(
+        app.theme.mode,
+        ThemeMode::Nord,
+        "Theme should immediately live-preview on focus"
+    );
 
     // Navigate down: focus moves to index 4 (1 + 3 = 4, Catppuccin Mocha)
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Down, KeyModifiers::NONE))?;
-    assert_eq!(app.theme.mode, ThemeMode::CatppuccinMocha, "Theme should live-preview on cursor down");
+    assert_eq!(
+        app.theme.mode,
+        ThemeMode::CatppuccinMocha,
+        "Theme should live-preview on cursor down"
+    );
 
     // Press Esc: cancel preview and revert to original theme (ModernDark)
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Esc, KeyModifiers::NONE))?;
     assert_eq!(app.modal, ActiveModal::None);
-    assert_eq!(app.theme.mode, ThemeMode::ModernDark, "Esc must restore original theme");
+    assert_eq!(
+        app.theme.mode,
+        ThemeMode::ModernDark,
+        "Esc must restore original theme"
+    );
 
     // Reopen and navigate to Nord, then confirm with Enter
     app.open_theme_modal();
@@ -305,7 +355,11 @@ fn test_theme_modal_live_preview_and_esc_revert() -> anyhow::Result<()> {
     assert_eq!(app.theme.mode, ThemeMode::Nord);
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Enter, KeyModifiers::NONE))?;
     assert_eq!(app.modal, ActiveModal::None);
-    assert_eq!(app.theme.mode, ThemeMode::Nord, "Enter must finalize and persist theme");
+    assert_eq!(
+        app.theme.mode,
+        ThemeMode::Nord,
+        "Enter must finalize and persist theme"
+    );
     assert_eq!(app.db.get_setting("theme")?, Some("nord".to_string()));
 
     Ok(())
@@ -320,7 +374,10 @@ fn test_theme_modal_category_filter_live_preview() -> anyhow::Result<()> {
     app.open_theme_modal();
 
     // Press '4' to switch category to Light themes
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('4'), KeyModifiers::NONE))?;
+    handle_crossterm_event(
+        &mut app,
+        make_key_event(KeyCode::Char('4'), KeyModifiers::NONE),
+    )?;
     if let ActiveModal::Theme(ref state) = app.modal {
         assert_eq!(state.category_filter, Some(ThemeCategory::Light));
     } else {
@@ -328,12 +385,23 @@ fn test_theme_modal_category_filter_live_preview() -> anyhow::Result<()> {
     }
 
     // Switching category immediately applies the first light theme (SolarizedLight)
-    assert_eq!(app.theme.mode, ThemeMode::SolarizedLight, "Category switch should live preview light theme");
+    assert_eq!(
+        app.theme.mode,
+        ThemeMode::SolarizedLight,
+        "Category switch should live preview light theme"
+    );
 
     // Cancel with 'q'
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('q'), KeyModifiers::NONE))?;
+    handle_crossterm_event(
+        &mut app,
+        make_key_event(KeyCode::Char('q'), KeyModifiers::NONE),
+    )?;
     assert_eq!(app.modal, ActiveModal::None);
-    assert_eq!(app.theme.mode, ThemeMode::ModernDark, "Closing with q should restore original ModernDark");
+    assert_eq!(
+        app.theme.mode,
+        ThemeMode::ModernDark,
+        "Closing with q should restore original ModernDark"
+    );
 
     Ok(())
 }
@@ -353,18 +421,26 @@ fn test_theme_modal_left_menu_panel() -> anyhow::Result<()> {
     })?;
 
     // Check hit map contains ModalThemeCategory targets inside modal left panel
-    let cat_targets: Vec<_> = app.hit_map.targets().iter().filter_map(|(r, t)| {
-        if let HitTarget::ModalThemeCategory(cat) = t {
-            Some((*r, *cat))
-        } else {
-            None
-        }
-    }).collect();
+    let cat_targets: Vec<_> = app
+        .hit_map
+        .targets()
+        .iter()
+        .filter_map(|(r, t)| {
+            if let HitTarget::ModalThemeCategory(cat) = t {
+                Some((*r, *cat))
+            } else {
+                None
+            }
+        })
+        .collect();
 
     assert_eq!(cat_targets.len(), 5, "Left menu panel must contain 5 category options (0:All, 1:Dark, 2:Nature, 3:Vibrant, 4:Light)");
 
     // Clicking category 'Dark' in left menu
-    let dark_target = cat_targets.iter().find(|(_, cat)| *cat == Some(ThemeCategory::Dark)).unwrap();
+    let dark_target = cat_targets
+        .iter()
+        .find(|(_, cat)| *cat == Some(ThemeCategory::Dark))
+        .unwrap();
     app.handle_mouse_click(dark_target.0.x + 1, dark_target.0.y)?;
 
     if let ActiveModal::Theme(ref state) = app.modal {

@@ -12,10 +12,7 @@ use crate::app::App;
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Min(40),
-            Constraint::Length(28),
-        ])
+        .constraints([Constraint::Min(40), Constraint::Length(28)])
         .split(area);
 
     let lang = app.lang;
@@ -23,13 +20,26 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
 
     let status_line = if let Some(msg) = app.get_active_status() {
         Line::from(vec![
-            Span::styled(" ℹ ", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
-            Span::styled(msg, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ℹ ",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                msg,
+                Style::default()
+                    .fg(theme.text_highlight)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ])
     } else {
         let t = lang.t();
         Line::from(vec![
-            Span::styled(format!(" {} ", t.footer_keys_label), Style::default().fg(theme.text_muted)),
+            Span::styled(
+                format!(" {} ", t.footer_keys_label),
+                Style::default().fg(theme.text_muted),
+            ),
             Span::styled("1-4", Style::default().fg(theme.primary)),
             Span::raw(format!(" {} | ", t.footer_view)),
             Span::styled("b", Style::default().fg(theme.primary)),
@@ -41,11 +51,14 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             Span::styled("L", Style::default().fg(theme.primary)),
             Span::raw(format!(" {} | ", t.footer_lang)),
             Span::styled("T", Style::default().fg(theme.accent)),
-            Span::raw(format!(" {} | ", match lang {
-                crate::i18n::Language::Ko => "테마",
-                crate::i18n::Language::Ja => "テーマ",
-                _ => "Theme",
-            })),
+            Span::raw(format!(
+                " {} | ",
+                match lang {
+                    crate::i18n::Language::Ko => "테마",
+                    crate::i18n::Language::Ja => "テーマ",
+                    _ => "Theme",
+                }
+            )),
             Span::styled("A", Style::default().fg(theme.secondary)),
             Span::raw(format!(" {} | ", t.footer_accounts)),
             Span::styled("?", Style::default().fg(theme.text_muted)),
@@ -59,9 +72,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p_left, chunks[0]);
 
     let now_str = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    let p_right = Paragraph::new(Line::from(vec![
-        Span::styled(format!(" {} ", now_str), Style::default().fg(theme.text_dim)),
-    ]))
+    let p_right = Paragraph::new(Line::from(vec![Span::styled(
+        format!(" {} ", now_str),
+        Style::default().fg(theme.text_dim),
+    )]))
     .alignment(Alignment::Right)
     .style(Style::default().bg(theme.panel_bg));
     f.render_widget(p_right, chunks[1]);

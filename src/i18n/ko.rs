@@ -15,7 +15,13 @@ fn format_date_long_ko(date: NaiveDate) -> String {
         5 => "금요일",
         _ => "토요일",
     };
-    format!("{}년 {}월 {}일 {}", date.year(), date.month(), date.day(), dow)
+    format!(
+        "{}년 {}월 {}일 {}",
+        date.year(),
+        date.month(),
+        date.day(),
+        dow
+    )
 }
 
 fn more_events_ko(count: usize) -> String {
@@ -31,7 +37,11 @@ fn msg_lang_changed_ko(name: &str) -> String {
 }
 
 fn msg_sidebar_toggle_ko(shown: bool) -> &'static str {
-    if shown { "사이드바 표시" } else { "사이드바 숨김" }
+    if shown {
+        "사이드바 표시"
+    } else {
+        "사이드바 숨김"
+    }
 }
 
 fn msg_week_start_changed_ko(label: &str) -> String {

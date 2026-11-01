@@ -27,8 +27,8 @@ pub struct CalDavClient {
 
 impl CalDavClient {
     pub fn new(url_str: &str, username: String, password: String) -> Result<Self> {
-        let mut base_url = Url::parse(url_str)
-            .with_context(|| format!("Invalid CalDAV URL: {}", url_str))?;
+        let mut base_url =
+            Url::parse(url_str).with_context(|| format!("Invalid CalDAV URL: {}", url_str))?;
 
         // If path is empty, make sure it ends with /
         if base_url.path().is_empty() {
@@ -41,9 +41,7 @@ impl CalDavClient {
             headers.insert(USER_AGENT, val);
         }
 
-        let client = Client::builder()
-            .default_headers(headers)
-            .build()?;
+        let client = Client::builder().default_headers(headers).build()?;
 
         Ok(Self {
             client,
@@ -66,7 +64,9 @@ impl CalDavClient {
 
     /// Check if URL host belongs to Naver CalDAV
     pub fn is_naver_host(url: &Url) -> bool {
-        url.host_str().map(|h| h.contains("naver.com")).unwrap_or(false)
+        url.host_str()
+            .map(|h| h.contains("naver.com"))
+            .unwrap_or(false)
     }
 
     /// Step 1: Query current-user-principal via PROPFIND Depth 0
@@ -78,8 +78,12 @@ impl CalDavClient {
   </d:prop>
 </d:propfind>"#;
 
-        let res = self.client
-            .request(Method::from_bytes(b"PROPFIND").unwrap(), self.base_url.as_str())
+        let res = self
+            .client
+            .request(
+                Method::from_bytes(b"PROPFIND").unwrap(),
+                self.base_url.as_str(),
+            )
             .basic_auth(&self.username, Some(&self.password))
             .header("Depth", "0")
             .header(CONTENT_TYPE, "application/xml; charset=utf-8")
@@ -108,7 +112,8 @@ impl CalDavClient {
 </d:propfind>"#;
 
         let resolved = self.resolve_url(principal_url)?;
-        let res = self.client
+        let res = self
+            .client
             .request(Method::from_bytes(b"PROPFIND").unwrap(), resolved.as_str())
             .basic_auth(&self.username, Some(&self.password))
             .header("Depth", "0")
@@ -141,7 +146,8 @@ impl CalDavClient {
 </d:propfind>"#;
 
         let resolved = self.resolve_url(target_url)?;
-        let res = self.client
+        let res = self
+            .client
             .request(Method::from_bytes(b"PROPFIND").unwrap(), resolved.as_str())
             .basic_auth(&self.username, Some(&self.password))
             .header("Depth", "1")
@@ -152,7 +158,10 @@ impl CalDavClient {
             .with_context(|| format!("Failed to connect to CalDAV server at {}", resolved))?;
 
         if !res.status().is_success() && res.status() != StatusCode::MULTI_STATUS {
-            return Err(anyhow!("CalDAV PROPFIND failed with HTTP status: {}", res.status()));
+            return Err(anyhow!(
+                "CalDAV PROPFIND failed with HTTP status: {}",
+                res.status()
+            ));
         }
 
         let text = res.text().await?;
@@ -166,7 +175,9 @@ impl CalDavClient {
 
         // Step 1: Discover Principal URL
         let principal_url = if is_naver {
-            if self.base_url.path().contains("/principals/") || self.base_url.path().contains("/caldav/") {
+            if self.base_url.path().contains("/principals/")
+                || self.base_url.path().contains("/caldav/")
+            {
                 self.base_url.path().to_string()
             } else {
                 Self::get_principal_url_for_naver(&self.username)
@@ -254,14 +265,20 @@ impl CalDavClient {
             Ok(events) if !events.is_empty() => Ok(events),
             Ok(_empty) => {
                 // If REPORT returned 0 events, try PROPFIND fallback
-                match self.fetch_events_propfind(&calendar_url, calendar_href).await {
+                match self
+                    .fetch_events_propfind(&calendar_url, calendar_href)
+                    .await
+                {
                     Ok(fallback_events) if !fallback_events.is_empty() => Ok(fallback_events),
                     _ => Ok(Vec::new()),
                 }
             }
             Err(report_err) => {
                 // If REPORT returned 405/501 or another error, try PROPFIND fallback
-                match self.fetch_events_propfind(&calendar_url, calendar_href).await {
+                match self
+                    .fetch_events_propfind(&calendar_url, calendar_href)
+                    .await
+                {
                     Ok(fallback_events) => Ok(fallback_events),
                     Err(_) => Err(report_err),
                 }
@@ -283,8 +300,12 @@ impl CalDavClient {
   </c:filter>
 </c:calendar-query>"#;
 
-        let res = self.client
-            .request(Method::from_bytes(b"REPORT").unwrap(), calendar_url.as_str())
+        let res = self
+            .client
+            .request(
+                Method::from_bytes(b"REPORT").unwrap(),
+                calendar_url.as_str(),
+            )
             .basic_auth(&self.username, Some(&self.password))
             .header("Depth", "1")
             .header(CONTENT_TYPE, "application/xml; charset=utf-8")
@@ -294,14 +315,21 @@ impl CalDavClient {
             .with_context(|| format!("Failed to query events from {}", calendar_url))?;
 
         if !res.status().is_success() && res.status() != StatusCode::MULTI_STATUS {
-            return Err(anyhow!("CalDAV REPORT failed with HTTP status: {}", res.status()));
+            return Err(anyhow!(
+                "CalDAV REPORT failed with HTTP status: {}",
+                res.status()
+            ));
         }
 
         let text = res.text().await?;
         Self::parse_multistatus_events(&text)
     }
 
-    async fn fetch_events_propfind(&self, calendar_url: &Url, calendar_href: &str) -> Result<Vec<RemoteEventData>> {
+    async fn fetch_events_propfind(
+        &self,
+        calendar_url: &Url,
+        calendar_href: &str,
+    ) -> Result<Vec<RemoteEventData>> {
         let propfind_xml = r#"<?xml version="1.0" encoding="utf-8" ?>
 <d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
   <d:prop>
@@ -312,8 +340,12 @@ impl CalDavClient {
   </d:prop>
 </d:propfind>"#;
 
-        let res = self.client
-            .request(Method::from_bytes(b"PROPFIND").unwrap(), calendar_url.as_str())
+        let res = self
+            .client
+            .request(
+                Method::from_bytes(b"PROPFIND").unwrap(),
+                calendar_url.as_str(),
+            )
             .basic_auth(&self.username, Some(&self.password))
             .header("Depth", "1")
             .header(CONTENT_TYPE, "application/xml; charset=utf-8")
@@ -323,7 +355,10 @@ impl CalDavClient {
             .with_context(|| format!("Failed to PROPFIND events from {}", calendar_url))?;
 
         if !res.status().is_success() && res.status() != StatusCode::MULTI_STATUS {
-            return Err(anyhow!("CalDAV Depth 1 PROPFIND failed with HTTP status: {}", res.status()));
+            return Err(anyhow!(
+                "CalDAV Depth 1 PROPFIND failed with HTTP status: {}",
+                res.status()
+            ));
         }
 
         let text = res.text().await?;
@@ -339,16 +374,21 @@ impl CalDavClient {
 
         for (href, etag) in ics_items {
             if let Ok(event_url) = self.resolve_url(&href) {
-                let get_res = self.client
+                let get_res = self
+                    .client
                     .get(event_url.as_str())
                     .basic_auth(&self.username, Some(&self.password))
-                    .header(USER_AGENT, format!("rcal/{} (Rust TUI Calendar)", crate::version()))
+                    .header(
+                        USER_AGENT,
+                        format!("rcal/{} (Rust TUI Calendar)", crate::version()),
+                    )
                     .send()
                     .await;
 
                 if let Ok(resp) = get_res {
                     if resp.status().is_success() {
-                        let resp_etag = resp.headers()
+                        let resp_etag = resp
+                            .headers()
                             .get("ETag")
                             .and_then(|v| v.to_str().ok())
                             .map(|s| s.trim_matches('"').to_string())
@@ -386,23 +426,32 @@ impl CalDavClient {
         };
         let resolved_url = self.resolve_url(&target_url)?;
 
-        let mut req = self.client
+        let mut req = self
+            .client
             .put(resolved_url.as_str())
             .basic_auth(&self.username, Some(&self.password))
             .header(CONTENT_TYPE, "text/calendar; charset=utf-8")
             .body(ics_content.to_string());
 
         if let Some(e) = etag {
-            let quoted = if e.starts_with('"') { e.to_string() } else { format!("\"{}\"", e) };
+            let quoted = if e.starts_with('"') {
+                e.to_string()
+            } else {
+                format!("\"{}\"", e)
+            };
             req = req.header("If-Match", quoted);
         }
 
         let res = req.send().await?;
         if !res.status().is_success() {
-            return Err(anyhow!("CalDAV PUT failed with HTTP status: {}", res.status()));
+            return Err(anyhow!(
+                "CalDAV PUT failed with HTTP status: {}",
+                res.status()
+            ));
         }
 
-        let new_etag = res.headers()
+        let new_etag = res
+            .headers()
             .get("ETag")
             .and_then(|v| v.to_str().ok())
             .map(|s| s.trim_matches('"').to_string());
@@ -414,18 +463,26 @@ impl CalDavClient {
     pub async fn delete_event(&self, event_href: &str, etag: Option<&str>) -> Result<()> {
         let resolved_url = self.resolve_url(event_href)?;
 
-        let mut req = self.client
+        let mut req = self
+            .client
             .delete(resolved_url.as_str())
             .basic_auth(&self.username, Some(&self.password));
 
         if let Some(e) = etag {
-            let quoted = if e.starts_with('"') { e.to_string() } else { format!("\"{}\"", e) };
+            let quoted = if e.starts_with('"') {
+                e.to_string()
+            } else {
+                format!("\"{}\"", e)
+            };
             req = req.header("If-Match", quoted);
         }
 
         let res = req.send().await?;
         if !res.status().is_success() && res.status() != StatusCode::NOT_FOUND {
-            return Err(anyhow!("CalDAV DELETE failed with HTTP status: {}", res.status()));
+            return Err(anyhow!(
+                "CalDAV DELETE failed with HTTP status: {}",
+                res.status()
+            ));
         }
 
         Ok(())
@@ -435,7 +492,9 @@ impl CalDavClient {
         if href.starts_with("http://") || href.starts_with("https://") {
             Url::parse(href).context("Invalid absolute URL")
         } else {
-            self.base_url.join(href).context("Failed to join relative URL with base")
+            self.base_url
+                .join(href)
+                .context("Failed to join relative URL with base")
         }
     }
 
@@ -630,7 +689,10 @@ impl CalDavClient {
     }
 
     /// Parse calendars with fallback to Primary Calendar if empty
-    pub fn parse_multistatus_calendars(base_url: &Url, xml_text: &str) -> Result<Vec<RemoteCalendarInfo>> {
+    pub fn parse_multistatus_calendars(
+        base_url: &Url,
+        xml_text: &str,
+    ) -> Result<Vec<RemoteCalendarInfo>> {
         let mut calendars = Self::parse_multistatus_calendars_raw(xml_text)?;
 
         if calendars.is_empty() {
@@ -720,7 +782,10 @@ impl CalDavClient {
     }
 
     /// Extract .ics resource URLs and ETags from Multi-Status PROPFIND response
-    pub fn parse_multistatus_ics_resources(xml_text: &str, calendar_href: &str) -> Vec<(String, Option<String>)> {
+    pub fn parse_multistatus_ics_resources(
+        xml_text: &str,
+        calendar_href: &str,
+    ) -> Vec<(String, Option<String>)> {
         use quick_xml::events::Event as XmlEvent;
         use quick_xml::reader::Reader;
 
@@ -782,7 +847,9 @@ impl CalDavClient {
                         if in_response && !current_href.is_empty() && !is_collection {
                             let trimmed_href = current_href.trim_end_matches('/');
                             if trimmed_href != norm_cal_href {
-                                if current_href.ends_with(".ics") || content_type.contains("calendar") {
+                                if current_href.ends_with(".ics")
+                                    || content_type.contains("calendar")
+                                {
                                     resources.push((current_href.clone(), current_etag.clone()));
                                 }
                             }

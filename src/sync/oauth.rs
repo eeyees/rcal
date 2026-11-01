@@ -1,7 +1,7 @@
-use std::time::Duration;
 use anyhow::{anyhow, Context, Result};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
@@ -228,7 +228,7 @@ pub fn open_browser(url: &str) -> Result<()> {
 /// Parse query parameter from a raw HTTP request line
 pub fn parse_query_param(request_line: &str, param_name: &str) -> Option<String> {
     let path = request_line.split_whitespace().nth(1)?;
-    let query_str = path.split_once('?')? .1;
+    let query_str = path.split_once('?')?.1;
 
     for pair in query_str.split('&') {
         let mut parts = pair.splitn(2, '=');
@@ -249,7 +249,8 @@ pub async fn listen_for_oauth_code(
     provider_name: &str,
 ) -> Result<String> {
     let addr = format!("127.0.0.1:{}", port);
-    let listener = TcpListener::bind(&addr).await
+    let listener = TcpListener::bind(&addr)
+        .await
         .with_context(|| format!("Failed to bind local loopback server to {}", addr))?;
 
     let timeout_duration = Duration::from_secs(timeout_secs);
@@ -270,7 +271,8 @@ pub async fn listen_for_oauth_code(
 
             // Ignore browser favicon requests
             if first_line.starts_with("GET /favicon.ico") {
-                let not_found = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                let not_found =
+                    "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
                 let _ = socket.write_all(not_found.as_bytes()).await;
                 continue;
             }
@@ -361,8 +363,14 @@ p {{ color: #cdd6f4; line-height: 1.6; }}
         }
     };
 
-    tokio::time::timeout(timeout_duration, listener_task).await
-        .map_err(|_| anyhow!("OAuth authentication timed out after {} seconds. Please try again.", timeout_secs))?
+    tokio::time::timeout(timeout_duration, listener_task)
+        .await
+        .map_err(|_| {
+            anyhow!(
+                "OAuth authentication timed out after {} seconds. Please try again.",
+                timeout_secs
+            )
+        })?
 }
 
 /// Fetch user profile details (displayName, email) from Microsoft Graph API
@@ -393,7 +401,9 @@ pub async fn fetch_microsoft_user_info(access_token: &str) -> Result<(String, St
                 .mail
                 .or(user.user_principal_name)
                 .unwrap_or_else(|| "microsoft_user".to_string());
-            let name = user.display_name.unwrap_or_else(|| "Microsoft 365".to_string());
+            let name = user
+                .display_name
+                .unwrap_or_else(|| "Microsoft 365".to_string());
             return Ok((name, email));
         }
     }
@@ -450,7 +460,8 @@ pub async fn execute_microsoft_one_click_flow(
     user_id: Option<&str>,
     user_secret: Option<&str>,
 ) -> Result<CalDavAccount> {
-    let (client_id, client_secret) = OAuth2Config::resolve_microsoft_credentials(user_id, user_secret);
+    let (client_id, client_secret) =
+        OAuth2Config::resolve_microsoft_credentials(user_id, user_secret);
     let config = OAuth2Config::for_microsoft(&client_id, &client_secret);
 
     let state = uuid::Uuid::new_v4().to_string();
@@ -473,9 +484,9 @@ pub async fn execute_microsoft_one_click_flow(
         .await
         .unwrap_or_else(|_| ("Microsoft 365".to_string(), "ms_user".to_string()));
 
-    let expires_at = token_resp.expires_in.map(|secs| {
-        chrono::Local::now() + chrono::Duration::seconds(secs)
-    });
+    let expires_at = token_resp
+        .expires_in
+        .map(|secs| chrono::Local::now() + chrono::Duration::seconds(secs));
 
     let short_id = &uuid::Uuid::new_v4().to_string().replace('-', "")[..12];
     let account = CalDavAccount {
@@ -529,9 +540,9 @@ pub async fn execute_google_one_click_flow(
         .await
         .unwrap_or_else(|_| "google_user".to_string());
 
-    let expires_at = token_resp.expires_in.map(|secs| {
-        chrono::Local::now() + chrono::Duration::seconds(secs)
-    });
+    let expires_at = token_resp
+        .expires_in
+        .map(|secs| chrono::Local::now() + chrono::Duration::seconds(secs));
 
     let short_id = &uuid::Uuid::new_v4().to_string().replace('-', "")[..12];
     let account = CalDavAccount {
@@ -574,7 +585,9 @@ pub mod urlencoding {
         let mut i = 0;
         while i < bytes.len() {
             if bytes[i] == b'%' && i + 2 < bytes.len() {
-                if let Ok(byte) = u8::from_str_radix(std::str::from_utf8(&bytes[i + 1..=i + 2]).unwrap_or(""), 16) {
+                if let Ok(byte) =
+                    u8::from_str_radix(std::str::from_utf8(&bytes[i + 1..=i + 2]).unwrap_or(""), 16)
+                {
                     result.push(byte);
                     i += 3;
                     continue;

@@ -86,7 +86,11 @@ impl MicrosoftCalendarClient {
 
     pub async fn list_calendars(&self) -> Result<Vec<RemoteCalendarInfo>> {
         let url = "https://graph.microsoft.com/v1.0/me/calendars";
-        let res = self.client.get(url).send().await
+        let res = self
+            .client
+            .get(url)
+            .send()
+            .await
             .with_context(|| "Failed to query Microsoft Graph calendars")?;
 
         if !res.status().is_success() {
@@ -111,14 +115,22 @@ impl MicrosoftCalendarClient {
         Ok(list)
     }
 
-    pub async fn list_events(&self, calendar_id: &str, local_calendar_id: &str) -> Result<Vec<Event>> {
+    pub async fn list_events(
+        &self,
+        calendar_id: &str,
+        local_calendar_id: &str,
+    ) -> Result<Vec<Event>> {
         let url = format!(
             "https://graph.microsoft.com/v1.0/me/calendars/{}/events?$top=250",
             calendar_id
         );
 
-        let res = self.client.get(&url).send().await
-            .with_context(|| format!("Failed to query events from Microsoft calendar {}", calendar_id))?;
+        let res = self.client.get(&url).send().await.with_context(|| {
+            format!(
+                "Failed to query events from Microsoft calendar {}",
+                calendar_id
+            )
+        })?;
 
         if !res.status().is_success() {
             let err = res.text().await.unwrap_or_default();
@@ -130,7 +142,8 @@ impl MicrosoftCalendarClient {
 
         if let Some(items) = data.value {
             for item in items {
-                if let (Some(start_time), Some(end_time)) = parse_graph_time(&item.start, &item.end) {
+                if let (Some(start_time), Some(end_time)) = parse_graph_time(&item.start, &item.end)
+                {
                     let all_day = item.is_all_day.unwrap_or(false);
                     let location = item.location.and_then(|l| l.display_name);
 
@@ -157,14 +170,20 @@ impl MicrosoftCalendarClient {
         Ok(events)
     }
 
-    pub async fn insert_event(&self, calendar_id: &str, event: &Event) -> Result<(String, Option<String>)> {
+    pub async fn insert_event(
+        &self,
+        calendar_id: &str,
+        event: &Event,
+    ) -> Result<(String, Option<String>)> {
         let url = format!(
             "https://graph.microsoft.com/v1.0/me/calendars/{}/events",
             calendar_id
         );
 
         let payload = event_to_graph_payload(event);
-        let res = self.client.post(&url)
+        let res = self
+            .client
+            .post(&url)
             .header(CONTENT_TYPE, "application/json")
             .json(&payload)
             .send()
@@ -176,18 +195,27 @@ impl MicrosoftCalendarClient {
         }
 
         let created: GraphEventItem = res.json().await?;
-        let remote_id = created.id.ok_or_else(|| anyhow!("Missing created event ID"))?;
+        let remote_id = created
+            .id
+            .ok_or_else(|| anyhow!("Missing created event ID"))?;
         Ok((remote_id, created.change_key))
     }
 
-    pub async fn update_event(&self, calendar_id: &str, remote_id: &str, event: &Event) -> Result<Option<String>> {
+    pub async fn update_event(
+        &self,
+        calendar_id: &str,
+        remote_id: &str,
+        event: &Event,
+    ) -> Result<Option<String>> {
         let url = format!(
             "https://graph.microsoft.com/v1.0/me/calendars/{}/events/{}",
             calendar_id, remote_id
         );
 
         let payload = event_to_graph_payload(event);
-        let res = self.client.patch(&url)
+        let res = self
+            .client
+            .patch(&url)
             .header(CONTENT_TYPE, "application/json")
             .json(&payload)
             .send()

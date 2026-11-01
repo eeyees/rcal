@@ -33,7 +33,12 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))
-        .title(Span::styled(title_text, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            title_text,
+            Style::default()
+                .fg(theme.text_highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -60,15 +65,25 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
     let title_line = Line::from(vec![
         Span::styled(lang.field_title(), Style::default().fg(theme.text_muted)),
         Span::styled(
-            if form.title.is_empty() { lang.placeholder_title() } else { &form.title },
-            if form.active_field == 0 { active_style } else { normal_style },
+            if form.title.is_empty() {
+                lang.placeholder_title()
+            } else {
+                &form.title
+            },
+            if form.active_field == 0 {
+                active_style
+            } else {
+                normal_style
+            },
         ),
     ]);
     f.render_widget(Paragraph::new(title_line), chunks[0]);
     app.hit_map.register(chunks[0], HitTarget::ModalField(0));
 
     // 1: Calendar
-    let cal_name = app.calendars.iter()
+    let cal_name = app
+        .calendars
+        .iter()
         .find(|c| c.id == form.calendar_id)
         .map(|c| c.name.as_str())
         .unwrap_or("Default");
@@ -77,7 +92,11 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
         Span::styled(lang.field_calendar(), Style::default().fg(theme.text_muted)),
         Span::styled(
             format!("[ {} ] {}", cal_name, cal_hint),
-            if form.active_field == 1 { active_style } else { normal_style },
+            if form.active_field == 1 {
+                active_style
+            } else {
+                normal_style
+            },
         ),
     ]);
     f.render_widget(Paragraph::new(cal_line), chunks[1]);
@@ -88,7 +107,11 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
         Span::styled(lang.field_date(), Style::default().fg(theme.text_muted)),
         Span::styled(
             &form.date_str,
-            if form.active_field == 2 { active_style } else { normal_style },
+            if form.active_field == 2 {
+                active_style
+            } else {
+                normal_style
+            },
         ),
     ]);
     f.render_widget(Paragraph::new(date_line), chunks[2]);
@@ -96,10 +119,17 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     // 3: Start Time
     let start_line = Line::from(vec![
-        Span::styled(lang.field_start_time(), Style::default().fg(theme.text_muted)),
+        Span::styled(
+            lang.field_start_time(),
+            Style::default().fg(theme.text_muted),
+        ),
         Span::styled(
             &form.start_time_str,
-            if form.active_field == 3 { active_style } else { normal_style },
+            if form.active_field == 3 {
+                active_style
+            } else {
+                normal_style
+            },
         ),
     ]);
     f.render_widget(Paragraph::new(start_line), chunks[3]);
@@ -110,7 +140,11 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
         Span::styled(lang.field_end_time(), Style::default().fg(theme.text_muted)),
         Span::styled(
             &form.end_time_str,
-            if form.active_field == 4 { active_style } else { normal_style },
+            if form.active_field == 4 {
+                active_style
+            } else {
+                normal_style
+            },
         ),
     ]);
     f.render_widget(Paragraph::new(end_line), chunks[4]);
@@ -126,7 +160,11 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
         Span::styled(lang.field_all_day(), Style::default().fg(theme.text_muted)),
         Span::styled(
             all_day_str,
-            if form.active_field == 5 { active_style } else { normal_style },
+            if form.active_field == 5 {
+                active_style
+            } else {
+                normal_style
+            },
         ),
     ]);
     f.render_widget(Paragraph::new(all_day_line), chunks[5]);
@@ -136,8 +174,16 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
     let loc_line = Line::from(vec![
         Span::styled(lang.field_location(), Style::default().fg(theme.text_muted)),
         Span::styled(
-            if form.location.is_empty() { lang.placeholder_location() } else { &form.location },
-            if form.active_field == 6 { active_style } else { normal_style },
+            if form.location.is_empty() {
+                lang.placeholder_location()
+            } else {
+                &form.location
+            },
+            if form.active_field == 6 {
+                active_style
+            } else {
+                normal_style
+            },
         ),
     ]);
     f.render_widget(Paragraph::new(loc_line), chunks[6]);
@@ -145,10 +191,21 @@ pub fn render(f: &mut Frame, app: &mut App, form: &EventFormState, area: Rect) {
 
     // 7: Description
     let desc_line = Line::from(vec![
-        Span::styled(lang.field_description(), Style::default().fg(theme.text_muted)),
         Span::styled(
-            if form.description.is_empty() { lang.placeholder_description() } else { &form.description },
-            if form.active_field == 7 { active_style } else { normal_style },
+            lang.field_description(),
+            Style::default().fg(theme.text_muted),
+        ),
+        Span::styled(
+            if form.description.is_empty() {
+                lang.placeholder_description()
+            } else {
+                &form.description
+            },
+            if form.active_field == 7 {
+                active_style
+            } else {
+                normal_style
+            },
         ),
     ]);
     f.render_widget(Paragraph::new(desc_line), chunks[7]);

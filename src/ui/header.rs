@@ -16,7 +16,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(22), // Title & Month display
             Constraint::Length(18), // Navigation buttons (<, Today, >)
             Constraint::Length(40), // View tabs (Month, Week, Day, Agenda: 9+1+9+1+9+1+9 = 39)
-            Constraint::Min(60),    // Action buttons (+ New, ⟳ Sync, ☁ Accounts, Settings, Theme, L:Lang, ? Help)
+            Constraint::Min(60), // Action buttons (+ New, ⟳ Sync, ☁ Accounts, Settings, Theme, L:Lang, ? Help)
         ])
         .split(area);
 
@@ -62,9 +62,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_prev, nav_chunks[0]);
     app.hit_map.register(nav_chunks[0], HitTarget::NavPrev);
 
-    let btn_today = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_today()))]))
-        .style(theme.button_style())
-        .alignment(Alignment::Center);
+    let btn_today = Paragraph::new(Line::from(vec![Span::raw(format!(
+        " {} ",
+        lang.btn_today()
+    ))]))
+    .style(theme.button_style())
+    .alignment(Alignment::Center);
     f.render_widget(btn_today, nav_chunks[2]);
     app.hit_map.register(nav_chunks[2], HitTarget::NavToday);
 
@@ -90,10 +93,30 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .split(chunks[2]);
 
     let views = [
-        (ViewMode::Month, format!(" {} ", lang.view_month()), tab_chunks[0], HitTarget::TabMonth),
-        (ViewMode::Week, format!(" {} ", lang.view_week()), tab_chunks[2], HitTarget::TabWeek),
-        (ViewMode::Day, format!(" {} ", lang.view_day()), tab_chunks[4], HitTarget::TabDay),
-        (ViewMode::Agenda, format!(" {} ", lang.view_agenda()), tab_chunks[6], HitTarget::TabAgenda),
+        (
+            ViewMode::Month,
+            format!(" {} ", lang.view_month()),
+            tab_chunks[0],
+            HitTarget::TabMonth,
+        ),
+        (
+            ViewMode::Week,
+            format!(" {} ", lang.view_week()),
+            tab_chunks[2],
+            HitTarget::TabWeek,
+        ),
+        (
+            ViewMode::Day,
+            format!(" {} ", lang.view_day()),
+            tab_chunks[4],
+            HitTarget::TabDay,
+        ),
+        (
+            ViewMode::Agenda,
+            format!(" {} ", lang.view_agenda()),
+            tab_chunks[6],
+            HitTarget::TabAgenda,
+        ),
     ];
 
     for (mode, label, rect, hit) in views {
@@ -123,23 +146,27 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(1),
             Constraint::Length(11), // [🎨  테마]
             Constraint::Length(1),
-            Constraint::Length(8),  // [L: 한/EN]
+            Constraint::Length(8), // [L: 한/EN]
             Constraint::Length(1),
-            Constraint::Length(9),  // [? 도움말]
+            Constraint::Length(9), // [? 도움말]
             Constraint::Min(0),
         ])
         .split(chunks[3]);
 
-    let btn_new = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_new_event()))]))
-        .style(
-            Style::default()
-                .fg(Color::Black)
-                .bg(theme.secondary)
-                .add_modifier(Modifier::BOLD),
-        )
-        .alignment(Alignment::Center);
+    let btn_new = Paragraph::new(Line::from(vec![Span::raw(format!(
+        " {} ",
+        lang.btn_new_event()
+    ))]))
+    .style(
+        Style::default()
+            .fg(Color::Black)
+            .bg(theme.secondary)
+            .add_modifier(Modifier::BOLD),
+    )
+    .alignment(Alignment::Center);
     f.render_widget(btn_new, action_chunks[0]);
-    app.hit_map.register(action_chunks[0], HitTarget::BtnNewEvent);
+    app.hit_map
+        .register(action_chunks[0], HitTarget::BtnNewEvent);
 
     let sync_label = if app.is_syncing {
         lang.btn_syncing()
@@ -151,7 +178,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         sync_label.to_string()
     };
-    let sync_bg = if app.is_syncing { theme.accent } else { Color::Rgb(45, 90, 160) };
+    let sync_bg = if app.is_syncing {
+        theme.accent
+    } else {
+        Color::Rgb(45, 90, 160)
+    };
     let btn_sync = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", sync_text))]))
         .style(
             Style::default()
@@ -173,11 +204,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_acc, action_chunks[4]);
-    app.hit_map.register(action_chunks[4], HitTarget::BtnAccounts);
+    app.hit_map
+        .register(action_chunks[4], HitTarget::BtnAccounts);
 
     // Settings button: [ ⚙  설정 ]
     let settings_label = lang.btn_settings();
-    let settings_text = if settings_label.starts_with("⚙ ") && !settings_label.starts_with("⚙  ") {
+    let settings_text = if settings_label.starts_with("⚙ ") && !settings_label.starts_with("⚙  ")
+    {
         settings_label.replacen("⚙ ", "⚙  ", 1)
     } else {
         settings_label.to_string()
@@ -186,7 +219,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_settings, action_chunks[6]);
-    app.hit_map.register(action_chunks[6], HitTarget::BtnSettings);
+    app.hit_map
+        .register(action_chunks[6], HitTarget::BtnSettings);
 
     // Theme button: [ 🎨  테마 ]
     let theme_label = lang.btn_theme();
@@ -207,11 +241,15 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_lang, action_chunks[10]);
-    app.hit_map.register(action_chunks[10], HitTarget::BtnLanguage);
+    app.hit_map
+        .register(action_chunks[10], HitTarget::BtnLanguage);
 
-    let btn_help = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_help()))]))
-        .style(theme.button_style())
-        .alignment(Alignment::Center);
+    let btn_help = Paragraph::new(Line::from(vec![Span::raw(format!(
+        " {} ",
+        lang.btn_help()
+    ))]))
+    .style(theme.button_style())
+    .alignment(Alignment::Center);
     f.render_widget(btn_help, action_chunks[12]);
     app.hit_map.register(action_chunks[12], HitTarget::BtnHelp);
 }

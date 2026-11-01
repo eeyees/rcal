@@ -73,15 +73,13 @@ fn test_notification_formatting_and_localization() {
     assert!(body_ko.contains("Discussion on sprint backlog"));
 
     // English formatting
-    let (summary_en, body_en) =
-        format_event_notification(&event, "Work", 10, 10, Language::En);
+    let (summary_en, body_en) = format_event_notification(&event, "Work", 10, 10, Language::En);
     assert!(summary_en.contains("Upcoming"));
     assert!(summary_en.contains("in 10m"));
     assert!(body_en.contains("Work"));
 
     // Starting now (0 minutes)
-    let (summary_now, _) =
-        format_event_notification(&event, "Work", 0, 0, Language::Ko);
+    let (summary_now, _) = format_event_notification(&event, "Work", 0, 0, Language::Ko);
     assert!(summary_now.contains("시작"));
 
     // All-day event formatting
@@ -101,8 +99,7 @@ fn test_notification_formatting_and_localization() {
         updated_at: Local::now(),
     };
 
-    let (summary_allday, _) =
-        format_event_notification(&all_day_ev, "개인", 10, 0, Language::Ko);
+    let (summary_allday, _) = format_event_notification(&all_day_ev, "개인", 10, 0, Language::Ko);
     assert!(summary_allday.contains("오늘 종일 일정"));
 }
 
@@ -234,7 +231,10 @@ fn test_disabled_calendar_events_are_not_notified() -> anyhow::Result<()> {
     };
 
     let notified = check_and_notify_upcoming(&db, &config, now, Language::En)?;
-    assert!(notified.is_empty(), "Events in disabled calendars should not trigger notifications");
+    assert!(
+        notified.is_empty(),
+        "Events in disabled calendars should not trigger notifications"
+    );
 
     Ok(())
 }
@@ -304,8 +304,12 @@ fn test_all_day_event_notification_timing() -> anyhow::Result<()> {
         title: "National Holiday".to_string(),
         description: None,
         location: None,
-        start_time: Local.from_local_datetime(&day.and_hms_opt(0, 0, 0).unwrap()).unwrap(),
-        end_time: Local.from_local_datetime(&day.and_hms_opt(23, 59, 59).unwrap()).unwrap(),
+        start_time: Local
+            .from_local_datetime(&day.and_hms_opt(0, 0, 0).unwrap())
+            .unwrap(),
+        end_time: Local
+            .from_local_datetime(&day.and_hms_opt(23, 59, 59).unwrap())
+            .unwrap(),
         all_day: true,
         rrule: None,
         sync_status: SyncStatus::Synced,
@@ -353,22 +357,34 @@ fn test_app_notification_toggles_and_mouse_interaction() -> anyhow::Result<()> {
     // Toggle notification
     app.toggle_notifications();
     assert!(!app.notification_config.enabled);
-    assert_eq!(app.db.get_setting("notification_enabled")?, Some("false".to_string()));
+    assert_eq!(
+        app.db.get_setting("notification_enabled")?,
+        Some("false".to_string())
+    );
 
     // Toggle back
     app.toggle_notifications();
     assert!(app.notification_config.enabled);
-    assert_eq!(app.db.get_setting("notification_enabled")?, Some("true".to_string()));
+    assert_eq!(
+        app.db.get_setting("notification_enabled")?,
+        Some("true".to_string())
+    );
 
     // Set lead time to 30 min
     app.set_notification_lead_minutes(30);
     assert_eq!(app.notification_config.lead_minutes, 30);
-    assert_eq!(app.db.get_setting("notification_lead_minutes")?, Some("30".to_string()));
+    assert_eq!(
+        app.db.get_setting("notification_lead_minutes")?,
+        Some("30".to_string())
+    );
 
     // Toggle sound
     app.toggle_notification_sound();
     assert!(!app.notification_config.sound);
-    assert_eq!(app.db.get_setting("notification_sound")?, Some("false".to_string()));
+    assert_eq!(
+        app.db.get_setting("notification_sound")?,
+        Some("false".to_string())
+    );
 
     // Mouse clicks in Settings modal
     app.open_settings_modal();

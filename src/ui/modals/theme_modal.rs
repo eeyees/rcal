@@ -32,7 +32,12 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.primary))
         .style(Style::default().bg(theme.panel_bg))
-        .title(Span::styled(title, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            title,
+            Style::default()
+                .fg(theme.text_highlight)
+                .add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -96,9 +101,12 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
         )
     };
     f.render_widget(
-        Paragraph::new(Line::from(vec![
-            Span::styled(current_badge, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-        ])),
+        Paragraph::new(Line::from(vec![Span::styled(
+            current_badge,
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        )])),
         chunks[0],
     );
 
@@ -126,36 +134,56 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
         .style(Style::default().bg(theme.panel_bg))
-        .title(Span::styled(menu_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            menu_title,
+            Style::default()
+                .fg(theme.secondary)
+                .add_modifier(Modifier::BOLD),
+        ));
     let menu_inner = menu_block.inner(body_chunks[0]);
     f.render_widget(menu_block, body_chunks[0]);
 
     let cat_filters = [
-        (None, match lang {
-            crate::i18n::Language::Ko => "0: 전체 (37)",
-            crate::i18n::Language::Ja => "0: 全体 (37)",
-            _ => "0: All (37)",
-        }),
-        (Some(ThemeCategory::Dark), match lang {
-            crate::i18n::Language::Ko => "1: 다크 (10)",
-            crate::i18n::Language::Ja => "1: ダーク (10)",
-            _ => "1: Dark (10)",
-        }),
-        (Some(ThemeCategory::Nature), match lang {
-            crate::i18n::Language::Ko => "2: 내추럴 (9)",
-            crate::i18n::Language::Ja => "2: 自然 (9)",
-            _ => "2: Nature (9)",
-        }),
-        (Some(ThemeCategory::Vibrant), match lang {
-            crate::i18n::Language::Ko => "3: 비비드 (8)",
-            crate::i18n::Language::Ja => "3: ビビッド (8)",
-            _ => "3: Vibrant (8)",
-        }),
-        (Some(ThemeCategory::Light), match lang {
-            crate::i18n::Language::Ko => "4: 라이트 (10)",
-            crate::i18n::Language::Ja => "4: ライト (10)",
-            _ => "4: Light (10)",
-        }),
+        (
+            None,
+            match lang {
+                crate::i18n::Language::Ko => "0: 전체 (37)",
+                crate::i18n::Language::Ja => "0: 全体 (37)",
+                _ => "0: All (37)",
+            },
+        ),
+        (
+            Some(ThemeCategory::Dark),
+            match lang {
+                crate::i18n::Language::Ko => "1: 다크 (10)",
+                crate::i18n::Language::Ja => "1: ダーク (10)",
+                _ => "1: Dark (10)",
+            },
+        ),
+        (
+            Some(ThemeCategory::Nature),
+            match lang {
+                crate::i18n::Language::Ko => "2: 내추럴 (9)",
+                crate::i18n::Language::Ja => "2: 自然 (9)",
+                _ => "2: Nature (9)",
+            },
+        ),
+        (
+            Some(ThemeCategory::Vibrant),
+            match lang {
+                crate::i18n::Language::Ko => "3: 비비드 (8)",
+                crate::i18n::Language::Ja => "3: ビビッド (8)",
+                _ => "3: Vibrant (8)",
+            },
+        ),
+        (
+            Some(ThemeCategory::Light),
+            match lang {
+                crate::i18n::Language::Ko => "4: 라이트 (10)",
+                crate::i18n::Language::Ja => "4: ライト (10)",
+                _ => "4: Light (10)",
+            },
+        ),
     ];
 
     // Render 5 categories in Left Menu with clean spacing
@@ -169,7 +197,11 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
 
         let style = if is_active {
             Style::default()
-                .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                .fg(if theme.mode.is_light() {
+                    Color::White
+                } else {
+                    Color::Black
+                })
                 .bg(theme.primary)
                 .add_modifier(Modifier::BOLD)
         } else {
@@ -185,7 +217,8 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
 
         let p = Paragraph::new(Line::from(vec![Span::raw(text)])).style(style);
         f.render_widget(p, row_rect);
-        app.hit_map.register(row_rect, HitTarget::ModalThemeCategory(*cat_opt));
+        app.hit_map
+            .register(row_rect, HitTarget::ModalThemeCategory(*cat_opt));
     }
 
     // Divider and Keyboard Shortcuts in Left Menu
@@ -240,7 +273,9 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
             break;
         }
         let style = if s_idx == 0 {
-            Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(theme.text_dim)
         };
@@ -250,7 +285,13 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
             width: menu_inner.width,
             height: 1,
         };
-        f.render_widget(Paragraph::new(Line::from(vec![Span::styled(format!(" {}", s_text), style)])), line_rect);
+        f.render_widget(
+            Paragraph::new(Line::from(vec![Span::styled(
+                format!(" {}", s_text),
+                style,
+            )])),
+            line_rect,
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -288,14 +329,20 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
             let name = mode.short_name(lang);
 
             // Format cell text with color palette swatches: [■■■■]
-            let swatch4 = if mode.is_light() { sample.today_bg } else { sample.border_focused };
+            let swatch4 = if mode.is_light() {
+                sample.today_bg
+            } else {
+                sample.border_focused
+            };
 
             let label_span = Span::styled(
                 format!("{} {} {:<9}", cursor, radio, name),
                 if is_focused {
                     Style::default().add_modifier(Modifier::BOLD)
                 } else if is_current {
-                    Style::default().fg(sample.primary).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(sample.primary)
+                        .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(theme.text_normal)
                 },
@@ -314,13 +361,15 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
 
             let cell_style = if is_focused {
                 Style::default()
-                    .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                    .fg(if theme.mode.is_light() {
+                        Color::White
+                    } else {
+                        Color::Black
+                    })
                     .bg(theme.accent)
                     .add_modifier(Modifier::BOLD)
             } else if is_current {
-                Style::default()
-                    .fg(theme.primary)
-                    .bg(theme.button_bg)
+                Style::default().fg(theme.primary).bg(theme.button_bg)
             } else {
                 Style::default().bg(theme.panel_bg)
             };
@@ -341,7 +390,8 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
 
             let p = Paragraph::new(Line::from(spans)).style(cell_style);
             f.render_widget(p, rect);
-            app.hit_map.register(rect, HitTarget::ModalSelectTheme(mode));
+            app.hit_map
+                .register(rect, HitTarget::ModalSelectTheme(mode));
         }
     }
 
@@ -349,8 +399,12 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
     // 3. Config file hint & Close Button
     // =========================================================================
     let cfg_hint = match lang {
-        crate::i18n::Language::Ko => "📁  설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 고대비 조절 가능)",
-        crate::i18n::Language::Ja => "📁  設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)",
+        crate::i18n::Language::Ko => {
+            "📁  설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 고대비 조절 가능)"
+        }
+        crate::i18n::Language::Ja => {
+            "📁  設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)"
+        }
         _ => "📁  Config file: ~/.config/rcal/theme.toml (Color overrides & contrast options)",
     };
     f.render_widget(

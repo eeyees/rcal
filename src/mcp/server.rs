@@ -1,17 +1,17 @@
-use std::sync::Arc;
 use anyhow::Result;
 use serde_json::json;
+use std::sync::Arc;
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 
-use crate::storage::Database;
 use super::prompts::{get_prompt_messages, get_prompts};
 use super::resources::{get_resources, read_resource};
 use super::tools::{call_tool, get_tools};
 use super::types::{
     InitializeResult, JsonRpcRequest, JsonRpcResponse, PromptsCapability, ResourcesCapability,
-    ServerCapabilities, ServerInfo, ToolsCapability, INVALID_PARAMS, METHOD_NOT_FOUND,
-    MCP_PROTOCOL_VERSION, PARSE_ERROR,
+    ServerCapabilities, ServerInfo, ToolsCapability, INVALID_PARAMS, MCP_PROTOCOL_VERSION,
+    METHOD_NOT_FOUND, PARSE_ERROR,
 };
+use crate::storage::Database;
 
 /// Runs the MCP server over standard input and output (stdio).
 pub async fn run_stdio(db: Database) -> Result<()> {
@@ -107,15 +107,19 @@ async fn handle_request(
         }
 
         "tools/call" => {
-            let params = params.ok_or_else(|| (INVALID_PARAMS, "Missing params for tools/call".to_string()))?;
-            let name = params
-                .get("name")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| (INVALID_PARAMS, "Missing 'name' in tools/call params".to_string()))?;
+            let params = params
+                .ok_or_else(|| (INVALID_PARAMS, "Missing params for tools/call".to_string()))?;
+            let name = params.get("name").and_then(|v| v.as_str()).ok_or_else(|| {
+                (
+                    INVALID_PARAMS,
+                    "Missing 'name' in tools/call params".to_string(),
+                )
+            })?;
             let args = params.get("arguments").cloned().unwrap_or(json!({}));
 
             let result = call_tool(name, args, db).await;
-            serde_json::to_value(result).map_err(|e| (-32603, format!("Serialization error: {}", e)))
+            serde_json::to_value(result)
+                .map_err(|e| (-32603, format!("Serialization error: {}", e)))
         }
 
         "resources/list" => {
@@ -124,11 +128,18 @@ async fn handle_request(
         }
 
         "resources/read" => {
-            let params = params.ok_or_else(|| (INVALID_PARAMS, "Missing params for resources/read".to_string()))?;
-            let uri = params
-                .get("uri")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| (INVALID_PARAMS, "Missing 'uri' in resources/read params".to_string()))?;
+            let params = params.ok_or_else(|| {
+                (
+                    INVALID_PARAMS,
+                    "Missing params for resources/read".to_string(),
+                )
+            })?;
+            let uri = params.get("uri").and_then(|v| v.as_str()).ok_or_else(|| {
+                (
+                    INVALID_PARAMS,
+                    "Missing 'uri' in resources/read params".to_string(),
+                )
+            })?;
 
             match read_resource(uri, db) {
                 Ok(content) => Ok(json!({ "contents": [content] })),
@@ -142,11 +153,14 @@ async fn handle_request(
         }
 
         "prompts/get" => {
-            let params = params.ok_or_else(|| (INVALID_PARAMS, "Missing params for prompts/get".to_string()))?;
-            let name = params
-                .get("name")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| (INVALID_PARAMS, "Missing 'name' in prompts/get params".to_string()))?;
+            let params = params
+                .ok_or_else(|| (INVALID_PARAMS, "Missing params for prompts/get".to_string()))?;
+            let name = params.get("name").and_then(|v| v.as_str()).ok_or_else(|| {
+                (
+                    INVALID_PARAMS,
+                    "Missing 'name' in prompts/get params".to_string(),
+                )
+            })?;
             let args = params.get("arguments").cloned();
 
             match get_prompt_messages(name, args, db) {

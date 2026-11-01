@@ -104,15 +104,24 @@ mod tests {
         assert_eq!(ko_headers, ["일", "월", "화", "수", "목", "금", "토"]);
 
         let en_headers = Language::En.weekday_headers();
-        assert_eq!(en_headers, ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]);
+        assert_eq!(
+            en_headers,
+            ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+        );
 
         let ja_headers = Language::Ja.weekday_headers();
         assert_eq!(ja_headers, ["日", "月", "火", "水", "木", "金", "土"]);
 
         // Long date formatting
-        assert!(Language::Ko.format_date_long(date).contains("2026년 10월 30일"));
-        assert!(Language::En.format_date_long(date).contains("October 30, 2026"));
-        assert!(Language::Ja.format_date_long(date).contains("2026年 10月 30日"));
+        assert!(Language::Ko
+            .format_date_long(date)
+            .contains("2026년 10월 30일"));
+        assert!(Language::En
+            .format_date_long(date)
+            .contains("October 30, 2026"));
+        assert!(Language::Ja
+            .format_date_long(date)
+            .contains("2026年 10月 30日"));
     }
 
     #[test]
@@ -122,7 +131,11 @@ mod tests {
             // Metadata
             assert!(!t.code.is_empty(), "Language {:?} has empty code", lang);
             assert!(!t.label.is_empty(), "Language {:?} has empty label", lang);
-            assert!(!t.short_label.is_empty(), "Language {:?} has empty short_label", lang);
+            assert!(
+                !t.short_label.is_empty(),
+                "Language {:?} has empty short_label",
+                lang
+            );
 
             // Views
             assert!(!t.view_month.is_empty());
@@ -231,8 +244,14 @@ mod tests {
         assert_eq!(Language::detect_from_locales(["ko-KR"]), Language::Ko);
         assert_eq!(Language::detect_from_locales(["en-US"]), Language::En);
         assert_eq!(Language::detect_from_locales(["ja-JP"]), Language::Ja);
-        assert_eq!(Language::detect_from_locales(["zh-Hans-CN"]), Language::ZhCn);
-        assert_eq!(Language::detect_from_locales(["zh-Hant-TW"]), Language::ZhTw);
+        assert_eq!(
+            Language::detect_from_locales(["zh-Hans-CN"]),
+            Language::ZhCn
+        );
+        assert_eq!(
+            Language::detect_from_locales(["zh-Hant-TW"]),
+            Language::ZhTw
+        );
         assert_eq!(Language::detect_from_locales(["es-MX"]), Language::Es);
         assert_eq!(Language::detect_from_locales(["fr-FR"]), Language::Fr);
         assert_eq!(Language::detect_from_locales(["de-DE"]), Language::De);
@@ -243,7 +262,10 @@ mod tests {
         assert_eq!(Language::detect_from_locales(["da-DK"]), Language::En);
         assert_eq!(Language::detect_from_locales(["el-GR"]), Language::En);
         assert_eq!(Language::detect_from_locales(["hu-HU"]), Language::En);
-        assert_eq!(Language::detect_from_locales(["invalid_lang_code"]), Language::En);
+        assert_eq!(
+            Language::detect_from_locales(["invalid_lang_code"]),
+            Language::En
+        );
         assert_eq!(Language::detect_from_locales(&[] as &[&str]), Language::En);
 
         // Multiple preferred locales: skips unsupported and picks first supported

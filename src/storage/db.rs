@@ -1,8 +1,8 @@
-use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, TimeZone};
 use rusqlite::{params, Connection, OptionalExtension};
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use crate::model::{AuthType, CalDavAccount, Calendar, Event, ProviderType, SyncStatus};
 
@@ -28,7 +28,9 @@ impl Database {
         // Enable WAL mode for high performance concurrent reads
         conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;")?;
 
-        let db = Self { conn: Mutex::new(conn) };
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
         db.init_schema()?;
         db.ensure_default_data()?;
 
@@ -38,15 +40,20 @@ impl Database {
     #[allow(dead_code)]
     pub fn in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;
-        let db = Self { conn: Mutex::new(conn) };
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
         db.init_schema()?;
         db.ensure_default_data()?;
         Ok(db)
     }
 
     fn default_db_path() -> Result<PathBuf> {
-        let mut path = dirs::data_local_dir()
-            .unwrap_or_else(|| dirs::home_dir().map(|h| h.join(".local/share")).unwrap_or_else(|| PathBuf::from(".")));
+        let mut path = dirs::data_local_dir().unwrap_or_else(|| {
+            dirs::home_dir()
+                .map(|h| h.join(".local/share"))
+                .unwrap_or_else(|| PathBuf::from("."))
+        });
         path.push("rcal");
         path.push("rcal.db");
         Ok(path)
@@ -123,7 +130,10 @@ impl Database {
         let _ = conn.execute("ALTER TABLE calendars ADD COLUMN remote_url TEXT", []);
         let _ = conn.execute("ALTER TABLE calendars ADD COLUMN ctag TEXT", []);
 
-        let _ = conn.execute("ALTER TABLE accounts ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'basic'", []);
+        let _ = conn.execute(
+            "ALTER TABLE accounts ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'basic'",
+            [],
+        );
         let _ = conn.execute("ALTER TABLE accounts ADD COLUMN client_id TEXT", []);
         let _ = conn.execute("ALTER TABLE accounts ADD COLUMN access_token TEXT", []);
         let _ = conn.execute("ALTER TABLE accounts ADD COLUMN refresh_token TEXT", []);
@@ -141,11 +151,7 @@ impl Database {
     fn ensure_default_data(&self) -> Result<()> {
         let count: i64 = {
             let conn = self.conn.lock().unwrap();
-            conn.query_row(
-                "SELECT COUNT(*) FROM calendars",
-                [],
-                |row| row.get(0),
-            )?
+            conn.query_row("SELECT COUNT(*) FROM calendars", [], |row| row.get(0))?
         };
 
         if count == 0 {
@@ -191,7 +197,7 @@ impl Database {
 
             // Seed sample events relative to today
             let today = Local::now().date_naive();
-            
+
             let sample_events = vec![
                 Event {
                     id: uuid::Uuid::new_v4().to_string(),
@@ -199,8 +205,12 @@ impl Database {
                     title: "Weekly Team Standup".to_string(),
                     description: Some("Project roadmap & Sprint review".to_string()),
                     location: Some("Google Meet / Room A".to_string()),
-                    start_time: Local.from_local_datetime(&today.and_hms_opt(10, 0, 0).unwrap()).unwrap(),
-                    end_time: Local.from_local_datetime(&today.and_hms_opt(11, 0, 0).unwrap()).unwrap(),
+                    start_time: Local
+                        .from_local_datetime(&today.and_hms_opt(10, 0, 0).unwrap())
+                        .unwrap(),
+                    end_time: Local
+                        .from_local_datetime(&today.and_hms_opt(11, 0, 0).unwrap())
+                        .unwrap(),
                     all_day: false,
                     rrule: None,
                     sync_status: SyncStatus::Synced,
@@ -214,8 +224,12 @@ impl Database {
                     title: "Lunch with Alex".to_string(),
                     description: Some("Try the new ramen place nearby".to_string()),
                     location: Some("Downtown Diner".to_string()),
-                    start_time: Local.from_local_datetime(&today.and_hms_opt(12, 30, 0).unwrap()).unwrap(),
-                    end_time: Local.from_local_datetime(&today.and_hms_opt(13, 30, 0).unwrap()).unwrap(),
+                    start_time: Local
+                        .from_local_datetime(&today.and_hms_opt(12, 30, 0).unwrap())
+                        .unwrap(),
+                    end_time: Local
+                        .from_local_datetime(&today.and_hms_opt(13, 30, 0).unwrap())
+                        .unwrap(),
                     all_day: false,
                     rrule: None,
                     sync_status: SyncStatus::Synced,
@@ -229,8 +243,12 @@ impl Database {
                     title: "Architecture Design Review".to_string(),
                     description: Some("Review TUI event loop & CalDAV sync flow".to_string()),
                     location: Some("Virtual Room 4".to_string()),
-                    start_time: Local.from_local_datetime(&today.and_hms_opt(15, 0, 0).unwrap()).unwrap(),
-                    end_time: Local.from_local_datetime(&today.and_hms_opt(16, 30, 0).unwrap()).unwrap(),
+                    start_time: Local
+                        .from_local_datetime(&today.and_hms_opt(15, 0, 0).unwrap())
+                        .unwrap(),
+                    end_time: Local
+                        .from_local_datetime(&today.and_hms_opt(16, 30, 0).unwrap())
+                        .unwrap(),
                     all_day: false,
                     rrule: None,
                     sync_status: SyncStatus::Synced,
@@ -244,8 +262,12 @@ impl Database {
                     title: "Evening Gym / Workout".to_string(),
                     description: Some("Leg day & 5km cardio".to_string()),
                     location: Some("Fitness Center".to_string()),
-                    start_time: Local.from_local_datetime(&today.and_hms_opt(19, 0, 0).unwrap()).unwrap(),
-                    end_time: Local.from_local_datetime(&today.and_hms_opt(20, 30, 0).unwrap()).unwrap(),
+                    start_time: Local
+                        .from_local_datetime(&today.and_hms_opt(19, 0, 0).unwrap())
+                        .unwrap(),
+                    end_time: Local
+                        .from_local_datetime(&today.and_hms_opt(20, 30, 0).unwrap())
+                        .unwrap(),
                     all_day: false,
                     rrule: None,
                     sync_status: SyncStatus::Synced,
@@ -293,7 +315,11 @@ impl Database {
 
     pub fn get_default_calendar(&self) -> Result<Option<Calendar>> {
         let calendars = self.get_calendars()?;
-        if let Some(cal) = calendars.iter().find(|c| c.is_default && c.enabled).cloned() {
+        if let Some(cal) = calendars
+            .iter()
+            .find(|c| c.is_default && c.enabled)
+            .cloned()
+        {
             return Ok(Some(cal));
         }
         if let Some(cal) = calendars.iter().find(|c| c.enabled).cloned() {
@@ -336,15 +362,21 @@ impl Database {
     // Account management
     fn row_to_account(row: &rusqlite::Row) -> rusqlite::Result<CalDavAccount> {
         let provider_str: String = row.get(2)?;
-        let auth_type_str: String = row.get::<_, Option<String>>(6)?.unwrap_or_else(|| "basic".to_string());
+        let auth_type_str: String = row
+            .get::<_, Option<String>>(6)?
+            .unwrap_or_else(|| "basic".to_string());
         let expires_str: Option<String> = row.get(10)?;
         let token_expires_at = expires_str.and_then(|s| {
-            DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
+            DateTime::parse_from_rfc3339(&s)
+                .ok()
+                .map(|dt| dt.with_timezone(&Local))
         });
 
         let last_sync_str: Option<String> = row.get(11)?;
         let last_synced_at = last_sync_str.and_then(|s| {
-            DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
+            DateTime::parse_from_rfc3339(&s)
+                .ok()
+                .map(|dt| dt.with_timezone(&Local))
         });
 
         Ok(CalDavAccount {
@@ -388,7 +420,10 @@ impl Database {
         username: &str,
     ) -> Result<Option<CalDavAccount>> {
         let trimmed_user = username.trim();
-        let clean_user = trimmed_user.strip_suffix("@naver.com").unwrap_or(trimmed_user).trim();
+        let clean_user = trimmed_user
+            .strip_suffix("@naver.com")
+            .unwrap_or(trimmed_user)
+            .trim();
         let full_user = format!("{}@naver.com", clean_user);
 
         let conn = self.conn.lock().unwrap();
@@ -407,16 +442,18 @@ impl Database {
             "#,
         )?;
 
-        let account = stmt.query_row(
-            params![
-                provider.as_str(),
-                trimmed_user,
-                username,
-                clean_user,
-                full_user
-            ],
-            |row| Self::row_to_account(row),
-        ).optional()?;
+        let account = stmt
+            .query_row(
+                params![
+                    provider.as_str(),
+                    trimmed_user,
+                    username,
+                    clean_user,
+                    full_user
+                ],
+                |row| Self::row_to_account(row),
+            )
+            .optional()?;
 
         Ok(account)
     }
@@ -434,7 +471,8 @@ impl Database {
                     "SELECT id FROM accounts WHERE url = ?1 AND username = ?2 LIMIT 1",
                     params![acc.url.trim(), acc.username.trim()],
                     |row| row.get(0),
-                ).optional()?
+                )
+                .optional()?
             } else {
                 None
             };
@@ -696,7 +734,9 @@ impl Database {
             "#,
         )?;
 
-        let res = stmt.query_row(params![id], |row| Self::row_to_event(row)).optional()?;
+        let res = stmt
+            .query_row(params![id], |row| Self::row_to_event(row))
+            .optional()?;
         Ok(res)
     }
 
@@ -742,18 +782,24 @@ impl Database {
         )?;
 
         // Reset notification history for modified event so updated times trigger reminders
-        let _ = conn.execute("DELETE FROM notified_events WHERE event_id = ?1", params![event.id]);
+        let _ = conn.execute(
+            "DELETE FROM notified_events WHERE event_id = ?1",
+            params![event.id],
+        );
 
         Ok(())
     }
 
     pub fn delete_event(&self, id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        let remote_id: Option<String> = conn.query_row(
-            "SELECT remote_id FROM events WHERE id = ?1",
-            params![id],
-            |r| r.get(0),
-        ).optional()?.flatten();
+        let remote_id: Option<String> = conn
+            .query_row(
+                "SELECT remote_id FROM events WHERE id = ?1",
+                params![id],
+                |r| r.get(0),
+            )
+            .optional()?
+            .flatten();
 
         if remote_id.is_some() {
             conn.execute(
@@ -764,7 +810,10 @@ impl Database {
             conn.execute("DELETE FROM events WHERE id = ?1", params![id])?;
         }
 
-        let _ = conn.execute("DELETE FROM notified_events WHERE event_id = ?1", params![id]);
+        let _ = conn.execute(
+            "DELETE FROM notified_events WHERE event_id = ?1",
+            params![id],
+        );
         Ok(())
     }
 
@@ -789,14 +838,20 @@ impl Database {
 
     pub fn clear_notifications_for_event(&self, event_id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("DELETE FROM notified_events WHERE event_id = ?1", params![event_id])?;
+        conn.execute(
+            "DELETE FROM notified_events WHERE event_id = ?1",
+            params![event_id],
+        )?;
         Ok(())
     }
 
     pub fn cleanup_old_notifications(&self, older_than: DateTime<Local>) -> Result<usize> {
         let conn = self.conn.lock().unwrap();
         let older_str = older_than.to_rfc3339();
-        let count = conn.execute("DELETE FROM notified_events WHERE notified_at < ?1", params![older_str])?;
+        let count = conn.execute(
+            "DELETE FROM notified_events WHERE notified_at < ?1",
+            params![older_str],
+        )?;
         Ok(count)
     }
 
@@ -839,7 +894,6 @@ impl Database {
         }
         Ok(results)
     }
-
 
     fn row_to_event(row: &rusqlite::Row) -> rusqlite::Result<Event> {
         let start_str: String = row.get(5)?;

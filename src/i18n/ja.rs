@@ -15,7 +15,13 @@ fn format_date_long_ja(date: NaiveDate) -> String {
         5 => "金曜日",
         _ => "土曜日",
     };
-    format!("{}年 {}月 {}日 {}", date.year(), date.month(), date.day(), dow)
+    format!(
+        "{}年 {}月 {}日 {}",
+        date.year(),
+        date.month(),
+        date.day(),
+        dow
+    )
 }
 
 fn more_events_ja(count: usize) -> String {
@@ -31,7 +37,11 @@ fn msg_lang_changed_ja(name: &str) -> String {
 }
 
 fn msg_sidebar_toggle_ja(shown: bool) -> &'static str {
-    if shown { "サイドバー表示" } else { "サイドバー非表示" }
+    if shown {
+        "サイドバー表示"
+    } else {
+        "サイドバー非表示"
+    }
 }
 
 fn msg_week_start_changed_ja(label: &str) -> String {
