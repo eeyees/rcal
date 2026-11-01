@@ -77,7 +77,7 @@
 ## <a id="-ui-views"></a>🖥️ Giao diện
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -257,7 +257,7 @@ rcal
 - [x] **Giai đoạn 2**: Đồng bộ CalDAV (Apple iCloud & Naver), tiến trình nền Tokio, UI tài khoản.
 - [x] **Giai đoạn 3**: Google Calendar, Microsoft Graph, Samsung, xử lý phím tắt, 7 chủ đề.
 - [ ] **Giai đoạn 4**: Hỗ trợ giao thức mở:
-    - [ ] Máy chủ MCP (Model Context Protocol) cho AI Agent
+    - [x] Máy chủ MCP (Model Context Protocol) cho AI Agent
     - [ ] Máy chủ HTTP xuất lịch WebCal (`.ics`)
     - [ ] Sự kiện lặp lại (RFC 5545 RRULE)
     - [ ] Thêm sự kiện bằng ngôn ngữ tự nhiên

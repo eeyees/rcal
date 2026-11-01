@@ -77,7 +77,7 @@
 ## <a id="-ui-views"></a>🖥️ Görünümler
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -257,7 +257,7 @@ rcal
 - [x] **Aşama 2**: CalDAV motoru (Apple iCloud & Naver), Tokio arka plan iş parçacığı, hesap yönetimi.
 - [x] **Aşama 3**: Google Calendar, MS Graph, Samsung, 7 tema, hafta başlangıcı ayarı.
 - [ ] **Aşama 4**: Ekosistem ve açık protokoller:
-    - [ ] Yapay Zeka Ajanları için MCP (Model Context Protocol) sunucusu
+    - [x] Yapay Zeka Ajanları için MCP (Model Context Protocol) sunucusu
     - [ ] WebCal / iCalendar (`.ics`) HTTP takvim sunucusu
     - [ ] Yinelenen etkinlik kuralları (RFC 5545 RRULE)
     - [ ] Doğal dil ile etkinlik ekleme

@@ -55,6 +55,7 @@
   <a href="#-keyboard--mouse-controls">Controls</a> •
   <a href="#-multi-cloud--caldav-sync">Cloud Sync</a> •
   <a href="#-themes--customization">Themes</a> •
+  <a href="#-model-context-protocol-mcp-server-for-ai-agents">MCP Server</a> •
   <a href="#-installation">Installation</a> •
   <a href="#-architecture">Architecture</a>
 </p>
@@ -82,11 +83,11 @@
   - **Day View**: High-precision single-day schedule with intelligent side-by-side positioning for concurrent/overlapping events.
   - **Agenda View**: Chronological upcoming event stream grouped by date.
 - ☁️ **Multi-Cloud & CalDAV Sync Engine**:
-  - **Apple iCloud**: Native two-way CalDAV synchronization.
-  - **Naver Calendar**: CalDAV sync integration with auto-discovery.
-  - **Google Calendar**: Google API OAuth2 adapter.
-  - **Microsoft 365 / Outlook**: Microsoft Graph API OAuth2 engine.
-  - **Samsung Calendar**: Cloud adapter integration.
+  - **Apple iCloud**: Native two-way CalDAV synchronization (via App-Specific Password).
+  - **Naver Calendar**: Native CalDAV sync integration with auto-discovery (RFC 4791).
+  - **Google Calendar**: Google API v3 REST adapter (manual Bearer token entry; interactive 1-click browser OAuth2 loopback server in progress 🚧).
+  - **Microsoft 365 / Outlook**: Microsoft Graph API adapter (manual Access token entry; interactive 1-click browser OAuth2 loopback server in progress 🚧).
+  - **Samsung Calendar**: Sync via CalDAV endpoint or Microsoft Graph exchange bridge.
   - **Background Worker**: Dedicated Tokio background task syncing silently every 5 minutes or on-demand without freezing the UI.
 - ⌨️ **Vim Navigation & Transparent Korean IME Handling**:
   - Classic `h` / `j` / `k` / `l` navigation, tab switching, and modal controls.
@@ -95,6 +96,13 @@
   - Automatic system locale detection (`LANG` / `LC_ALL`).
   - Runtime 1-key language toggle between **한국어 (Korean)** and **English** with `L` or mouse click.
   - Localized dates, day names, modals, forms, and status notifications.
+- 🔔 **Native OS Desktop Notifications**:
+  - Cross-platform native banner and toast alerts on **macOS** (Notification Center), **Linux** (D-Bus Desktop Notifications), and **Windows** (Action Center).
+  - Background Tokio worker monitoring upcoming events with zero CPU overhead.
+  - Configurable lead times: **At start (0m)**, **5m before**, **10m before**, **15m before**, or **30m before**.
+  - Persistent SQLite deduplication so notifications never repeat, even across restarts.
+  - Interactive settings modal controls (`n` to toggle, `d` for test notification, `o` for sound).
+  - Standalone CLI & daemon support: `rcal notify`, `rcal notify --daemon`, and `rcal notify --test`.
 - 🎨 **Rich Themes & Customization**:
   - 37 Curated color palettes: **Modern Dark**, **Nord**, **Dracula**, **Tokyo Night**, **Catppuccin**, **Gruvbox**, **One Dark**, **GitHub Dark/Light**, **Kanagawa**, **Everforest**, **Rose Pine**, and more across 4 categories (Dark, Nature, Vibrant, Light).
   - Configurable `theme.toml` for fine-tuning any color, high-contrast boost, and custom themes.
@@ -125,7 +133,7 @@
 <summary><b>🔍 Click to view ASCII Terminal Text Preview</b></summary>
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -203,13 +211,15 @@ flowchart LR
     C <--> H["Samsung Calendar"]
 ```
 
-### Supported Providers
+### Provider Support Status
 
-- **Apple iCloud**: Connect with your Apple ID and an App-Specific Password via CalDAV.
-- **Naver Calendar**: Connect using Naver CalDAV (`https://caldav.calendar.naver.com:443/caldav/`) and 2-step verification app password.
-- **Google Calendar**: Secure token exchange via Google Cloud OAuth2 credentials.
-- **Microsoft 365 / Outlook**: Enterprise and personal Outlook calendar sync via Microsoft Graph REST endpoints.
-- **Samsung Calendar**: Samsung Cloud account integration.
+| Provider | Engine & Protocol | Status | Details |
+| :--- | :--- | :---: | :--- |
+| **Naver Calendar** | CalDAV (RFC 4791) | ✅ **Full Support** | Native two-way sync with auto-discovery & 2-step verification app password |
+| **Apple iCloud** | CalDAV (RFC 4791) | ✅ **Full Support** | Native two-way sync with Apple ID & App-Specific Password |
+| **Google Calendar** | Google Calendar API v3 | 🚧 **In Progress** | Full REST API client & CRUD implemented; currently requires manual Bearer Token entry (1-click browser OAuth2 flow in development) |
+| **Microsoft 365** | MS Graph REST API | 🚧 **In Progress** | Full Graph API client & CRUD implemented; currently requires manual Access Token entry (1-click browser OAuth2 flow in development) |
+| **Samsung Calendar** | CalDAV / MS Bridge | 🔄 **Bridge Fallback** | Syncs via custom CalDAV endpoint or Microsoft Outlook/Exchange account bridge (no public standalone Samsung Cloud API exists) |
 
 To configure your accounts, press `a` inside `rcal` or select the **Accounts** menu in the sidebar.
 
@@ -410,6 +420,79 @@ rcal
 
 ---
 
+## 🤖 Model Context Protocol (MCP) Server for AI Agents
+
+`rcal` includes built-in, native **Model Context Protocol (MCP)** server support over standard input/output (`stdio`), allowing AI agents (such as **Claude Desktop**, **Cursor**, **Google Antigravity**, **Cline**, and **Zed**) to read, query, schedule, and synchronize calendar events seamlessly.
+
+### Running MCP Server
+
+```bash
+# Start MCP server with default SQLite database
+rcal mcp
+
+# Start with custom database path
+rcal mcp --db /path/to/custom_calendar.db
+```
+
+### Configuration Examples
+
+#### Claude Desktop (`claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "rcal": {
+      "command": "rcal",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+#### Cursor (`Settings` -> `Features` -> `MCP`)
+- **Name**: `rcal`
+- **Type**: `command`
+- **Command**: `rcal mcp`
+
+#### Google Antigravity / AGY CLI (`~/.gemini/antigravity-cli/mcp.json`)
+```json
+{
+  "mcpServers": {
+    "rcal": {
+      "command": "rcal",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+### Supported MCP Capabilities
+
+#### 🛠️ Tools
+| Tool | Description |
+| :--- | :--- |
+| `list_calendars` | List all calendars with IDs, names, color codes, providers, and enabled state |
+| `list_events` | Query events within date/time ranges with optional calendar ID, query search, and limits |
+| `get_event` | Get full details of an event by ID |
+| `create_event` | Create new events with ISO 8601 timestamps, title, all-day flag, description, and location |
+| `update_event` | Incrementally update title, times, description, location, or calendar of an event |
+| `delete_event` | Delete an event by ID (sync-aware) |
+| `search_events` | Full-text keyword search across titles, descriptions, and locations |
+| `find_free_slots` | Intelligent slot finder for meeting durations during working hours (e.g. 09:00 - 18:00) |
+| `get_current_time` | Returns local date, time, weekday, and timezone offset to resolve relative expressions |
+| `sync_calendars` | Trigger immediate two-way cloud synchronization with registered accounts |
+
+#### 📦 Resources
+- `rcal://today` - Today's schedule and events summary
+- `rcal://upcoming` - Upcoming schedule over the next 7 days
+- `rcal://calendars` - List of configured calendars and status
+
+#### 💬 Prompts
+- `daily_briefing` - Structured morning briefing template of scheduled appointments
+- `schedule_event` - Conflict-checking and scheduling assistant prompt
+- `find_free_time` - Meeting arrangement prompt with available working hour slots
+
+---
+
 ## 🗺️ Development Roadmap
 
 - [x] **Phase 1: Local TUI MVP**
@@ -417,23 +500,25 @@ rcal
   - 100% Mouse hit-testing engine
   - Embedded SQLite WAL database persistence
   - Event CRUD modal with full validation
-- [x] **Phase 2: CalDAV Synchronization**
-  - Apple iCloud two-way sync
-  - Naver Calendar two-way sync
-  - Background Tokio sync worker & auto-interval ticker
-  - Account configuration UI
-- [x] **Phase 3: Multi-Cloud Adapters & Polishing**
-  - Google Calendar OAuth2 engine
-  - Microsoft 365 Graph API adapter
-  - Samsung Calendar adapter
-  - Transparent Korean IME navigation mapping
-  - Multiple color themes and week start day settings
+- [x] **Phase 2: CalDAV Synchronization (Production Ready)**
+  - [x] Apple iCloud two-way sync via App-Specific Password
+  - [x] Naver Calendar two-way sync with auto-discovery
+  - [x] Background Tokio sync worker & 5-minute auto-interval ticker
+  - [x] Cloud accounts management UI (`A` key / mouse click)
+- [ ] **Phase 3: Multi-Cloud Adapters & Polishing (Partially Completed 🚧)**
+  - [x] Transparent Korean IME navigation mapping (`ㅗ/ㅓ/ㅏ/ㅣ` -> `h/j/k/l`)
+  - [x] 37 Curated color palettes with instant theme cycler & modal (`T` key)
+  - [x] Configurable week start day (Sunday, Monday, Saturday)
+  - [x] Google Calendar REST API v3 client (manual Bearer Token)
+  - [x] Microsoft 365 Graph API client (manual Access Token)
+  - [x] Samsung Calendar sync via CalDAV / Microsoft Bridge
+  - [ ] **In Progress**: Interactive 1-click browser OAuth2 loopback server (`localhost:8088` PKCE flow) for Google & Microsoft
 - [ ] **Phase 4: Ecosystem & Extensibility**
-  - [ ] Model Context Protocol (MCP) server support for AI agents
+  - [x] Model Context Protocol (MCP) server support for AI agents
   - [ ] WebCal / iCalendar (`.ics`) local HTTP subscription server
   - [ ] Recurrence rules (RFC 5545 RRULE support)
   - [ ] Natural language event entry (e.g., `rcal add "Lunch tomorrow at 12pm"`)
-  - [ ] Native OS notifications for upcoming events
+  - [x] Native OS notifications for upcoming events
 
 ---
 

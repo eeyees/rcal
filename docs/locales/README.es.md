@@ -77,7 +77,7 @@
 ## <a id="-ui-views"></a>🖥️ Vistas
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -257,7 +257,7 @@ rcal
 - [x] **Fase 2**: Motor CalDAV (Apple iCloud y Naver), tarea en Tokio, interfaz de cuentas.
 - [x] **Fase 3**: Google Calendar, MS Graph, Samsung, 7 temas, inicio de semana.
 - [ ] **Fase 4**: Ecosistema y protocolos abiertos:
-    - [ ] Servidor MCP (Model Context Protocol) para agentes de IA
+    - [x] Servidor MCP (Model Context Protocol) para agentes de IA
     - [ ] Servidor HTTP de suscripción WebCal / iCalendar (`.ics`)
     - [ ] Reglas de eventos recurrentes (RFC 5545 RRULE)
     - [ ] Creación de eventos con lenguaje natural

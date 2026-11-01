@@ -12,8 +12,8 @@ use crate::mouse::HitTarget;
 use crate::ui::theme::{Theme, ThemeCategory, ThemeMode};
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
-    let popup_width = 86.min(area.width.saturating_sub(2));
-    let popup_height = 26.min(area.height.saturating_sub(1));
+    let popup_width = 88.min(area.width.saturating_sub(2));
+    let popup_height = 29.min(area.height.saturating_sub(1));
 
     let popup_rect = Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
@@ -41,23 +41,26 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Title 1: Week start day
-            Constraint::Length(1), // Subtitle 1
-            Constraint::Length(1), // 3 Buttons for Week start day
-            Constraint::Length(1), // Spacer
-            Constraint::Length(1), // Title 2: Color Themes
-            Constraint::Length(1), // Subtitle 2 & Active Theme Indicator
-            Constraint::Length(1), // Category Tabs & [◀ Prev] [Next ▶]
-            Constraint::Length(1), // Theme Row 1 (up to 5 buttons)
-            Constraint::Length(1), // Theme Row 2 (up to 5 buttons)
-            Constraint::Length(1), // Config file path hint
-            Constraint::Length(1), // Spacer
-            Constraint::Length(1), // Title 3: Language
-            Constraint::Length(6), // Buttons for Language (4 cols x 6 rows grid)
-            Constraint::Length(1), // Spacer
-            Constraint::Length(1), // Keyboard navigation guide
-            Constraint::Length(1), // Spacer
-            Constraint::Length(1), // Close button
+            Constraint::Length(1), // Title 1: Week start day (0)
+            Constraint::Length(1), // Subtitle 1 (1)
+            Constraint::Length(1), // 3 Buttons for Week start day (2)
+            Constraint::Length(1), // Spacer (3)
+            Constraint::Length(1), // Title: Desktop Notifications (4)
+            Constraint::Length(1), // Controls: Toggle, Lead time, Sound (5)
+            Constraint::Length(1), // Spacer (6)
+            Constraint::Length(1), // Title 2: Color Themes (7)
+            Constraint::Length(1), // Subtitle 2 & Active Theme Indicator (8)
+            Constraint::Length(1), // Category Tabs & [◀ Prev] [Next ▶] (9)
+            Constraint::Length(1), // Theme Row 1 (up to 5 buttons) (10)
+            Constraint::Length(1), // Theme Row 2 (up to 5 buttons) (11)
+            Constraint::Length(1), // Config file path hint (12)
+            Constraint::Length(1), // Spacer (13)
+            Constraint::Length(1), // Title 3: Language (14)
+            Constraint::Length(6), // Buttons for Language (4 cols x 6 rows grid) (15)
+            Constraint::Length(1), // Spacer (16)
+            Constraint::Length(1), // Keyboard navigation guide (17)
+            Constraint::Length(1), // Spacer (18)
+            Constraint::Length(1), // Close button (19)
         ])
         .split(inner);
 
@@ -115,7 +118,128 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     }
 
     // =========================================================================
-    // Section 2: Color Themes (37 Themes across 4 Categories)
+    // Section 2: Desktop Notifications
+    // =========================================================================
+    let notif_header_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Min(20),
+            Constraint::Length(26),
+        ])
+        .split(chunks[4]);
+
+    let notif_title = match lang {
+        crate::i18n::Language::Ko => "🔔 바탕화면 알림 (Desktop Notifications)",
+        crate::i18n::Language::Ja => "🔔 デスクトップ通知 (Desktop Notifications)",
+        _ => "🔔 Desktop Notifications",
+    };
+    f.render_widget(
+        Paragraph::new(Span::styled(notif_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))),
+        notif_header_chunks[0],
+    );
+
+    let test_btn_label = match lang {
+        crate::i18n::Language::Ko => "[ 🔔 테스트 발송 (d) ]",
+        crate::i18n::Language::Ja => "[ 🔔 テスト送信 (d) ]",
+        _ => "[ 🔔 Test Alert (d) ]",
+    };
+    let btn_test = Paragraph::new(Line::from(vec![Span::raw(test_btn_label)]))
+        .style(theme.button_style())
+        .alignment(Alignment::Right);
+    f.render_widget(btn_test, notif_header_chunks[1]);
+    app.hit_map.register(notif_header_chunks[1], HitTarget::ModalSettingNotificationTest);
+
+    // Controls Row (chunks[5]): [● 알림 켬 (n)] | [정시(0m)] [5m] [10m] [15m] [30m] | [🔊 소리 (o)]
+    let notif_ctrl_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(16), // Toggle button
+            Constraint::Length(2),  // Spacer
+            Constraint::Length(11), // 0m
+            Constraint::Length(1),
+            Constraint::Length(9),  // 5m
+            Constraint::Length(1),
+            Constraint::Length(10), // 10m
+            Constraint::Length(1),
+            Constraint::Length(10), // 15m
+            Constraint::Length(1),
+            Constraint::Length(10), // 30m
+            Constraint::Length(2),  // Spacer
+            Constraint::Length(15), // Sound
+            Constraint::Min(0),
+        ])
+        .split(chunks[5]);
+
+    // 1. Toggle Button
+    let notif_enabled = app.notification_config.enabled;
+    let toggle_label = match lang {
+        crate::i18n::Language::Ko => if notif_enabled { "● 알림 켬 [n]" } else { "○ 알림 끔 [n]" },
+        crate::i18n::Language::Ja => if notif_enabled { "● 通知オン [n]" } else { "○ 通知オフ [n]" },
+        _ => if notif_enabled { "● Alerts ON [n]" } else { "○ Alerts OFF [n]" },
+    };
+    let toggle_style = if notif_enabled {
+        Style::default()
+            .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+            .bg(theme.primary)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        theme.button_style()
+    };
+    let toggle_p = Paragraph::new(Line::from(vec![Span::raw(toggle_label)]))
+        .style(toggle_style)
+        .alignment(Alignment::Center);
+    f.render_widget(toggle_p, notif_ctrl_chunks[0]);
+    app.hit_map.register(notif_ctrl_chunks[0], HitTarget::ModalSettingNotificationToggle);
+
+    // 2. Lead Times (0, 5, 10, 15, 30)
+    let lead_opts = [
+        (0u32, match lang { crate::i18n::Language::Ko => "정시 (0m)", crate::i18n::Language::Ja => "定時 (0m)", _ => "0m (At start)" }),
+        (5u32, match lang { crate::i18n::Language::Ko => "5분 전", crate::i18n::Language::Ja => "5分前", _ => "5m before" }),
+        (10u32, match lang { crate::i18n::Language::Ko => "10분 전", crate::i18n::Language::Ja => "10分前", _ => "10m before" }),
+        (15u32, match lang { crate::i18n::Language::Ko => "15분 전", crate::i18n::Language::Ja => "15分前", _ => "15m before" }),
+        (30u32, match lang { crate::i18n::Language::Ko => "30분 전", crate::i18n::Language::Ja => "30分前", _ => "30m before" }),
+    ];
+
+    for (idx, (mins, label)) in lead_opts.iter().enumerate() {
+        let is_selected = app.notification_config.lead_minutes == *mins;
+        let prefix = if is_selected { "● " } else { "○ " };
+        let text = format!("{}{}", prefix, label);
+        let style = if is_selected {
+            Style::default()
+                .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                .bg(theme.accent)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            theme.button_style()
+        };
+        let rect = notif_ctrl_chunks[2 + idx * 2];
+        let p = Paragraph::new(Line::from(vec![Span::raw(text)]))
+            .style(style)
+            .alignment(Alignment::Center);
+        f.render_widget(p, rect);
+        app.hit_map.register(rect, HitTarget::ModalSettingNotificationLead(*mins));
+    }
+
+    // 3. Sound Button
+    let sound_enabled = app.notification_config.sound;
+    let sound_label = match lang {
+        crate::i18n::Language::Ko => if sound_enabled { "● 🔊 소리 [o]" } else { "○ 🔇 무음 [o]" },
+        crate::i18n::Language::Ja => if sound_enabled { "● 🔊 音 [o]" } else { "○ 🔇 消音 [o]" },
+        _ => if sound_enabled { "● 🔊 Sound [o]" } else { "○ 🔇 Mute [o]" },
+    };
+    let sound_style = if sound_enabled {
+        Style::default().fg(theme.text_highlight).bg(theme.button_bg).add_modifier(Modifier::BOLD)
+    } else {
+        theme.button_style()
+    };
+    let sound_p = Paragraph::new(Line::from(vec![Span::raw(sound_label)]))
+        .style(sound_style)
+        .alignment(Alignment::Center);
+    f.render_widget(sound_p, notif_ctrl_chunks[12]);
+    app.hit_map.register(notif_ctrl_chunks[12], HitTarget::ModalSettingNotificationSound);
+
+    // =========================================================================
+    // Section 3: Color Themes (37 Themes across 4 Categories)
     // =========================================================================
     let all_themes = ThemeMode::all();
     let current_idx = all_themes.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
@@ -126,7 +250,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Min(20),
             Constraint::Length(26),
         ])
-        .split(chunks[4]);
+        .split(chunks[7]);
 
     f.render_widget(
         Paragraph::new(Span::styled(t.settings_theme_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))),
@@ -149,7 +273,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         Span::styled(t.settings_theme_desc, Style::default().fg(theme.text_muted)),
         Span::styled(current_theme_badge, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
     ]);
-    f.render_widget(Paragraph::new(theme_desc_line), chunks[5]);
+    f.render_widget(Paragraph::new(theme_desc_line), chunks[8]);
 
     // Row: [◀ Prev] | [1:Dark] [2:Nature] [3:Vibrant] [4:Light] | [Next ▶]
     let cat_chunks = Layout::default()
@@ -168,7 +292,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(10), // [Next ▶]
             Constraint::Min(0),
         ])
-        .split(chunks[6]);
+        .split(chunks[9]);
 
     // Prev Button
     let prev_btn = Paragraph::new(Line::from(vec![Span::raw("◀ 이전 (c)")]))
@@ -231,7 +355,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let row1_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(row1_constraints)
-        .split(chunks[7]);
+        .split(chunks[10]);
 
     for (idx, mode) in row1_themes.iter().enumerate() {
         let is_selected = app.theme.mode == *mode;
@@ -271,7 +395,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let row2_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(row2_constraints)
-            .split(chunks[8]);
+            .split(chunks[11]);
 
         for (idx, mode) in row2_themes.iter().enumerate() {
             let is_selected = app.theme.mode == *mode;
@@ -305,18 +429,18 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         crate::i18n::Language::Ja => "📁 設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)",
         _ => "📁 Config file: ~/.config/rcal/theme.toml (Color overrides & contrast options)",
     };
-    f.render_widget(Paragraph::new(Span::styled(cfg_hint, Style::default().fg(theme.text_dim))), chunks[9]);
+    f.render_widget(Paragraph::new(Span::styled(cfg_hint, Style::default().fg(theme.text_dim))), chunks[12]);
 
     // =========================================================================
-    // Section 3: Language (4 columns x 6 rows grid for all supported languages)
+    // Section 4: Language (4 columns x 6 rows grid for all supported languages)
     // =========================================================================
     f.render_widget(
         Paragraph::new(Span::styled(t.settings_lang_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))),
-        chunks[11],
+        chunks[14],
     );
 
     let all_langs = crate::i18n::Language::ALL;
-    let grid_area = chunks[12];
+    let grid_area = chunks[15];
     let num_cols = 4;
     let num_rows = (all_langs.len() + num_cols - 1) / num_cols;
     let col_w = (grid_area.width.saturating_sub(num_cols as u16 - 1)) / (num_cols as u16);
@@ -365,12 +489,18 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     }
 
     // =========================================================================
-    // Section 4: Keyboard shortcuts guide & Close
+    // Section 5: Keyboard shortcuts guide & Close
     // =========================================================================
     let hint_line = Line::from(vec![
         Span::styled(t.settings_hint_shortcuts, Style::default().fg(theme.text_muted)),
         Span::styled("[1/2/3]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
         Span::raw(t.settings_hint_day_select),
+        Span::styled("[n/d/o]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+        Span::raw(match lang {
+            crate::i18n::Language::Ko => " 알림/테스트/소리  ",
+            crate::i18n::Language::Ja => " 通知/テスト/音  ",
+            _ => " Notif/Test/Sound  ",
+        }),
         Span::styled("[T/c/C]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
         Span::raw(" Theme  "),
         Span::styled("[Tab/←/→]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
@@ -378,14 +508,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         Span::styled("[L]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
         Span::raw(t.settings_hint_lang),
     ]);
-    f.render_widget(Paragraph::new(hint_line).alignment(Alignment::Center), chunks[14]);
+    f.render_widget(Paragraph::new(hint_line).alignment(Alignment::Center), chunks[17]);
 
     // Close button
     let close_btn = Paragraph::new(Line::from(vec![Span::raw(t.settings_btn_close)]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
-    f.render_widget(close_btn, chunks[16]);
-    app.hit_map.register(chunks[16], HitTarget::ModalClose);
+    f.render_widget(close_btn, chunks[19]);
+    app.hit_map.register(chunks[19], HitTarget::ModalClose);
 
     // Place cursor on active week start option
     let active_idx = match app.week_start_day {

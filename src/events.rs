@@ -531,6 +531,15 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char('3') | KeyCode::Char('t') => {
                     app.set_week_start_day(crate::model::WeekStartDay::Saturday);
                 }
+                KeyCode::Char('n') | KeyCode::Char('N') => {
+                    app.toggle_notifications();
+                }
+                KeyCode::Char('d') | KeyCode::Char('D') => {
+                    app.send_test_notification();
+                }
+                KeyCode::Char('o') | KeyCode::Char('O') => {
+                    app.toggle_notification_sound();
+                }
                 KeyCode::Char('T') => {
                     app.open_theme_modal();
                 }

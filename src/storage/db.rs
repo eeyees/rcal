@@ -108,6 +108,14 @@ impl Database {
 
             CREATE INDEX IF NOT EXISTS idx_events_start_end ON events(start_time, end_time);
             CREATE INDEX IF NOT EXISTS idx_events_calendar ON events(calendar_id);
+
+            CREATE TABLE IF NOT EXISTS notified_events (
+                event_id TEXT NOT NULL,
+                notification_type TEXT NOT NULL,
+                notified_at TEXT NOT NULL,
+                PRIMARY KEY (event_id, notification_type)
+            );
+            CREATE INDEX IF NOT EXISTS idx_notified_events_time ON notified_events(notified_at);
             "#,
         )?;
 
@@ -281,6 +289,17 @@ impl Database {
             list.push(item?);
         }
         Ok(list)
+    }
+
+    pub fn get_default_calendar(&self) -> Result<Option<Calendar>> {
+        let calendars = self.get_calendars()?;
+        if let Some(cal) = calendars.iter().find(|c| c.is_default && c.enabled).cloned() {
+            return Ok(Some(cal));
+        }
+        if let Some(cal) = calendars.iter().find(|c| c.enabled).cloned() {
+            return Ok(Some(cal));
+        }
+        Ok(calendars.into_iter().next())
     }
 
     pub fn save_calendar(&self, cal: &Calendar) -> Result<()> {
@@ -587,6 +606,84 @@ impl Database {
         Ok(events)
     }
 
+    pub fn search_events(&self, query: &str, limit: Option<usize>) -> Result<Vec<Event>> {
+        let conn = self.conn.lock().unwrap();
+        let pattern = format!("%{}%", query);
+        let max_limit = limit.unwrap_or(50) as i64;
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT e.id, e.calendar_id, e.title, e.description, e.location,
+                   e.start_time, e.end_time, e.all_day, e.rrule, e.sync_status,
+                   e.remote_id, e.etag, e.updated_at
+            FROM events e
+            JOIN calendars c ON e.calendar_id = c.id
+            WHERE c.enabled = 1 
+              AND e.sync_status != 'deleted_locally'
+              AND (
+                  e.title LIKE ?1 
+                  OR (e.description IS NOT NULL AND e.description LIKE ?1)
+                  OR (e.location IS NOT NULL AND e.location LIKE ?1)
+              )
+            ORDER BY e.start_time ASC
+            LIMIT ?2
+            "#,
+        )?;
+
+        let iter = stmt.query_map(params![pattern, max_limit], |row| Self::row_to_event(row))?;
+        let mut events = Vec::new();
+        for ev in iter {
+            events.push(ev?);
+        }
+        Ok(events)
+    }
+
+    pub fn get_events_filtered(
+        &self,
+        start_inclusive: Option<DateTime<Local>>,
+        end_inclusive: Option<DateTime<Local>>,
+        calendar_id: Option<&str>,
+        query: Option<&str>,
+        limit: Option<usize>,
+    ) -> Result<Vec<Event>> {
+        let conn = self.conn.lock().unwrap();
+        let start_str = start_inclusive.map(|dt| dt.to_rfc3339());
+        let end_str = end_inclusive.map(|dt| dt.to_rfc3339());
+        let pattern = query.map(|q| format!("%{}%", q));
+        let max_limit = limit.unwrap_or(100) as i64;
+
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT e.id, e.calendar_id, e.title, e.description, e.location,
+                   e.start_time, e.end_time, e.all_day, e.rrule, e.sync_status,
+                   e.remote_id, e.etag, e.updated_at
+            FROM events e
+            JOIN calendars c ON e.calendar_id = c.id
+            WHERE e.sync_status != 'deleted_locally'
+              AND (?1 IS NOT NULL OR c.enabled = 1)
+              AND (?1 IS NULL OR e.calendar_id = ?1)
+              AND (?2 IS NULL OR e.end_time >= ?2)
+              AND (?3 IS NULL OR e.start_time <= ?3)
+              AND (?4 IS NULL OR (
+                  e.title LIKE ?4 
+                  OR (e.description IS NOT NULL AND e.description LIKE ?4)
+                  OR (e.location IS NOT NULL AND e.location LIKE ?4)
+              ))
+            ORDER BY e.start_time ASC
+            LIMIT ?5
+            "#,
+        )?;
+
+        let iter = stmt.query_map(
+            params![calendar_id, start_str, end_str, pattern, max_limit],
+            |row| Self::row_to_event(row),
+        )?;
+        let mut events = Vec::new();
+        for ev in iter {
+            events.push(ev?);
+        }
+        Ok(events)
+    }
+
     pub fn get_event_by_id(&self, id: &str) -> Result<Option<Event>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
@@ -643,6 +740,10 @@ impl Database {
                 event.updated_at.to_rfc3339()
             ],
         )?;
+
+        // Reset notification history for modified event so updated times trigger reminders
+        let _ = conn.execute("DELETE FROM notified_events WHERE event_id = ?1", params![event.id]);
+
         Ok(())
     }
 
@@ -662,8 +763,83 @@ impl Database {
         } else {
             conn.execute("DELETE FROM events WHERE id = ?1", params![id])?;
         }
+
+        let _ = conn.execute("DELETE FROM notified_events WHERE event_id = ?1", params![id]);
         Ok(())
     }
+
+    pub fn has_notified(&self, event_id: &str, notification_type: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT 1 FROM notified_events WHERE event_id = ?1 AND notification_type = ?2 LIMIT 1",
+        )?;
+        let exists = stmt.exists(params![event_id, notification_type])?;
+        Ok(exists)
+    }
+
+    pub fn mark_notified(&self, event_id: &str, notification_type: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Local::now().to_rfc3339();
+        conn.execute(
+            "INSERT OR REPLACE INTO notified_events (event_id, notification_type, notified_at) VALUES (?1, ?2, ?3)",
+            params![event_id, notification_type, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn clear_notifications_for_event(&self, event_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM notified_events WHERE event_id = ?1", params![event_id])?;
+        Ok(())
+    }
+
+    pub fn cleanup_old_notifications(&self, older_than: DateTime<Local>) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let older_str = older_than.to_rfc3339();
+        let count = conn.execute("DELETE FROM notified_events WHERE notified_at < ?1", params![older_str])?;
+        Ok(count)
+    }
+
+    pub fn get_events_for_notification(
+        &self,
+        from_time: DateTime<Local>,
+        to_time: DateTime<Local>,
+    ) -> Result<Vec<(Event, String)>> {
+        let from_str = from_time.to_rfc3339();
+        let to_str = to_time.to_rfc3339();
+
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT e.id, e.calendar_id, e.title, e.description, e.location,
+                   e.start_time, e.end_time, e.all_day, e.rrule, e.sync_status,
+                   e.remote_id, e.etag, e.updated_at, c.name
+            FROM events e
+            JOIN calendars c ON e.calendar_id = c.id
+            WHERE c.enabled = 1
+              AND e.sync_status != 'deleted_locally'
+              AND (
+                  (e.all_day = 0 AND e.start_time >= ?1 AND e.start_time <= ?2)
+                  OR
+                  (e.all_day = 1 AND substr(e.start_time, 1, 10) = substr(?1, 1, 10))
+              )
+            ORDER BY e.start_time ASC
+            "#,
+        )?;
+
+        let iter = stmt.query_map(params![from_str, to_str], |row| {
+            let ev = Self::row_to_event(row)?;
+            let cal_name: String = row.get(13)?;
+            Ok((ev, cal_name))
+        })?;
+
+        let mut results = Vec::new();
+        for item in iter {
+            results.push(item?);
+        }
+        Ok(results)
+    }
+
 
     fn row_to_event(row: &rusqlite::Row) -> rusqlite::Result<Event> {
         let start_str: String = row.get(5)?;

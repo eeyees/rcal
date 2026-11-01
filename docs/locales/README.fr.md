@@ -77,7 +77,7 @@
 ## <a id="-ui-views"></a>🖥️ Vues UI
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -257,11 +257,11 @@ rcal
 - [x] **Phase 2** : CalDAV (Apple iCloud et Naver), tâche de fond Tokio, gestion des comptes.
 - [x] **Phase 3** : Google Calendar, MS Graph, Samsung, 7 thèmes, jour de début de semaine.
 - [ ] **Phase 4** : Écosystème et protocoles ouverts :
-    - [ ] Serveur MCP (Model Context Protocol) pour agents IA
+    - [x] Serveur MCP (Model Context Protocol) pour agents IA
     - [ ] Serveur de diffusion HTTP WebCal / iCalendar (`.ics`)
     - [ ] Événements récurrents (RFC 5545 RRULE)
     - [ ] Ajout d'événements en langage naturel
-    - [ ] Notifications système du bureau
+    - [x] Notifications système du bureau
 
 ---
 

@@ -54,6 +54,7 @@
   <a href="#-키보드--마우스-조작법">조작법</a> •
   <a href="#-멀티-클라우드--caldav-동기화">클라우드 동기화</a> •
   <a href="#-테마--개인화">테마</a> •
+  <a href="#-ai-에이전트를-위한-mcpmodel-context-protocol-서버-지원">MCP 서버</a> •
   <a href="#-설치--실행">설치</a> •
   <a href="#-아키텍처">아키텍처</a>
 </p>
@@ -81,11 +82,11 @@
   - **일간 뷰 (Day View)**: 동시간대 겹치는 일정들을 나란히 배치(Concurrent Overlap Slotting)하는 고정밀 타임라인.
   - **목록 뷰 (Agenda View)**: 날짜별로 그룹화된 다가오는 일정 목록 스트림.
 - ☁️ **멀티 클라우드 & CalDAV 동기화 엔진**:
-  - **Apple iCloud**: CalDAV 기반 안정적인 양방향 동기화.
-  - **네이버 캘린더 (Naver)**: 네이버 캘린더 CalDAV 자동 주소 탐색 및 동기화.
-  - **Google Calendar**: Google Cloud OAuth2 토큰 기반 캘린더 API 어댑터.
-  - **Microsoft 365 / Outlook**: Microsoft Graph API 어댑터.
-  - **삼성 캘린더 (Samsung)**: 삼성 클라우드 연동 어댑터.
+  - **Apple iCloud**: CalDAV 기반 안정적인 양방향 동기화 (앱 암호 연동).
+  - **네이버 캘린더 (Naver)**: CalDAV 표준 자동 탐색 및 실시간 2-way 동기화 완비 (실제 일정 연동 검증 완료).
+  - **Google Calendar**: Google API v3 REST 어댑터 (현재 Bearer Access Token 수동 입력 지원; 브라우저 자동 원클릭 OAuth2 개발 중 🚧).
+  - **Microsoft 365 / Outlook**: Microsoft Graph API 어댑터 (현재 Access Token 수동 입력 지원; 브라우저 자동 원클릭 OAuth2 개발 중 🚧).
+  - **삼성 캘린더 (Samsung)**: CalDAV 엔드포인트 또는 Microsoft Graph 계정 연동 브릿지 fallback.
   - **백그라운드 비동기 워커**: UI를 멈추지 않고 5분 주기 또는 수동 호출 시 백그라운드 Tokio 워커가 조용히 동기화 수행.
 - ⌨️ **Vim 키바인딩 & 투명 한글 IME 네비게이션**:
   - `h` / `j` / `k` / `l` 방향 이동, 숫자 뷰 전환, 간편한 단축키 제공.
@@ -124,7 +125,7 @@
 <summary><b>🔍 아스키 텍스트 터미널 레이아웃 보기 (ASCII Preview)</b></summary>
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? 도움말 ] [ ⚙ 설정 ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? 도움말 ] [ ⚙ 설정 ] ──┐
 │ [ 1:월간 ] [ 2:주간 ] [ 3:일간 ] [ 4:목록 ]      [ < ] [ 오늘 ] [ > ]  2026-11-01 (일)   [ ⟳ 동기화 ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ 캘린더 목록        │                               2026년 11월                                         │
@@ -202,13 +203,15 @@ flowchart LR
     C <--> H["삼성 캘린더"]
 ```
 
-### 지원 계정 서비스
+### 클라우드 제공자별 지원 현황
 
-- **Apple iCloud**: Apple ID 및 앱 전용 암호(App-Specific Password)를 통한 CalDAV 연결.
-- **네이버 캘린더**: 네이버 CalDAV 서버 주소와 2단계 인증 전용 비밀번호로 연결.
-- **Google Calendar**: Google Cloud OAuth2 인증 토큰 교환을 통한 동기화.
-- **Microsoft 365 / Outlook**: Microsoft Graph API를 통한 기업 및 개인 Outlook 캘린더 연동.
-- **삼성 캘린더**: 삼성 클라우드 계정 연동.
+| 캘린더 제공자 | 엔진 및 프로토콜 | 현재 상태 | 상세 설명 |
+| :--- | :--- | :---: | :--- |
+| **네이버 캘린더** | CalDAV (RFC 4791) | ✅ **완전 지원** | CalDAV 자동 탐색 및 2단계 인증 애플리케이션 비밀번호로 양방향 동기화 완비 |
+| **Apple iCloud** | CalDAV (RFC 4791) | ✅ **완전 지원** | Apple ID 및 앱 암호(App-Specific Password) 기반 양방향 동기화 |
+| **Google Calendar** | Google Calendar API v3 | 🚧 **진행 중 (수동 토큰)** | REST API CRUD 클라이언트 완료; 현재 Bearer 토큰 수동 입력 방식 (원클릭 브라우저 OAuth2 플로우 개발 중) |
+| **Microsoft 365** | MS Graph REST API | 🚧 **진행 중 (수동 토큰)** | Graph API 클라이언트 완료; 현재 Access 토큰 수동 입력 방식 (원클릭 브라우저 OAuth2 플로우 개발 중) |
+| **삼성 캘린더** | CalDAV / MS 브릿지 | 🔄 **브릿지 Fallback** | 독자 클라우드 API 부재로 맞춤 CalDAV 엔드포인트 또는 MS Outlook 연동 기능 브릿지 사용 |
 
 `rcal` 실행 후 `a` 키를 누르거나 사이드바의 **계정** 항목을 클릭하여 손쉽게 계정을 등록할 수 있습니다.
 
@@ -307,6 +310,79 @@ rcal
 
 ---
 
+## 🤖 AI 에이전트를 위한 MCP(Model Context Protocol) 서버 지원
+
+`rcal`은 표준 입출력(`stdio`) 기반의 네이티브 **Model Context Protocol (MCP)** 서버 모드를 내장하고 있습니다. **Claude Desktop**, **Cursor**, **Google Antigravity**, **Cline**, **Zed** 등 최신 AI 코딩 및 비서 에이전트가 캘린더 일정을 조회, 검색, 등록, 수정, 조율할 수 있습니다.
+
+### MCP 서버 실행
+
+```bash
+# 기본 SQLite 데이터베이스로 MCP 서버 실행
+rcal mcp
+
+# 사용자 지정 DB 경로 지정 실행
+rcal mcp --db /path/to/custom_calendar.db
+```
+
+### AI 클라이언트별 설정 예시
+
+#### Claude Desktop (`claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "rcal": {
+      "command": "rcal",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+#### Cursor (`설정` -> `Features` -> `MCP`)
+- **이름**: `rcal`
+- **유형**: `command`
+- **명령어**: `rcal mcp`
+
+#### Google Antigravity / AGY CLI (`~/.gemini/antigravity-cli/mcp.json`)
+```json
+{
+  "mcpServers": {
+    "rcal": {
+      "command": "rcal",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+### 제공되는 MCP 기능
+
+#### 🛠️ 도구 (Tools)
+| 도구 이름 | 설명 |
+| :--- | :--- |
+| `list_calendars` | 등록된 모든 캘린더 ID, 이름, 색상, 제공자(Google, Apple, Naver 등), 활성화 상태 조회 |
+| `list_events` | 지정 날짜/시간 범위 일정 목록 조회 (캘린더 필터, 검색 키워드, 개수 제한 지원) |
+| `get_event` | 고유 ID 기반 개별 일정 상세 정보 조회 |
+| `create_event` | 새 일정 생성 (ISO 8601 시각, 종일 일정 여부, 캘린더 지정, 장소, 설명) |
+| `update_event` | 기존 일정의 제목, 시각, 장소, 설명, 캘린더 점진적 수정 |
+| `delete_event` | 고유 ID 기반 일정 삭제 (클라우드 동기화 상태 자동 반영) |
+| `search_events` | 일정 제목, 본문 설명, 장소 전체 대상 전문 키워드 검색 |
+| `find_free_slots` | 업무 시간(예: 09:00 ~ 18:00) 내 회의를 위한 최적의 빈 시간 슬롯 자동 계산 |
+| `get_current_time` | 시스템 로컬 현재 날짜, 시각, 요일, 타임존 오프셋 반환 (상대적 날짜 계산용) |
+| `sync_calendars` | 등록된 모든 클라우드 계정(Google, iCloud, Naver 등)과 즉시 양방향 동기화 실행 |
+
+#### 📦 리소스 (Resources)
+- `rcal://today` - 오늘 하루의 전체 일정 및 요약 JSON
+- `rcal://upcoming` - 향후 7일간의 예정 일정 목록 JSON
+- `rcal://calendars` - 등록된 모든 캘린더 및 설정 상태 JSON
+
+#### 💬 프롬프트 (Prompts)
+- `daily_briefing` - 특정 날짜의 우선순위 아침 일정 브리핑 프롬프트 템플릿
+- `schedule_event` - 기존 일정과의 충돌 여부를 감지하며 새 일정을 잡는 프롬프트 템플릿
+- `find_free_time` - 업무 시간 내 빈 시간대를 검토하여 회의 시간을 제안하는 프롬프트 템플릿
+
+---
+
 ## 🗺️ 개발 로드맵
 
 - [x] **1단계: 로컬 TUI MVP**
@@ -314,23 +390,25 @@ rcal
   - 100% 마우스 인터랙션 히트테스팅 엔진
   - SQLite WAL 기반 영구 저장 및 캐시
   - 일정 CRUD 모달 및 유효성 검사
-- [x] **2단계: CalDAV 동기화**
-  - Apple iCloud 양방향 동기화
-  - 네이버 캘린더 양방향 동기화
-  - Tokio 비동기 백그라운드 동기화 워커
-  - 계정 설정 관리 UI
-- [x] **3단계: 멀티 클라우드 어댑터 및 완성도 향상**
-  - Google Calendar OAuth2 동기화
-  - Microsoft 365 Graph API 어댑터
-  - 삼성 캘린더 어댑터
-  - 한글 IME 상태 투명 단축키 매핑
-  - 7가지 테마 및 주 시작 요일 설정
+- [x] **2단계: CalDAV 동기화 (완전 작동)**
+  - [x] Apple iCloud 양방향 동기화 (앱 전용 암호)
+  - [x] 네이버 캘린더 양방향 동기화 (CalDAV 자동 탐색)
+  - [x] Tokio 비동기 백그라운드 동기화 워커 (5분 주기 자동 갱신)
+  - [x] 클라우드 계정 관리자 UI (`A` key / 마우스 클릭)
+- [ ] **3단계: 멀티 클라우드 어댑터 및 완성도 향상 (부분 완료 🚧)**
+  - [x] 한글 IME 상태 투명 단축키 매핑 (`ㅗ/ㅓ/ㅏ/ㅣ` -> `h/j/k/l`)
+  - [x] 37가지 테마 컬러 팔레트 및 실시간 테마 모달 (`T` 키)
+  - [x] 주 시작 요일 설정 (일요일 / 월요일 / 토요일)
+  - [x] Google Calendar REST API 클라이언트 (Bearer 토큰 수동 입력 방식)
+  - [x] Microsoft 365 Graph API 어댑터 (Access 토큰 수동 입력 방식)
+  - [x] 삼성 캘린더 CalDAV / MS 브릿지 연동
+  - [ ] **진행 중**: 브라우저 자동 팝업 원클릭 OAuth2 루프백 인증 서버 (`localhost:8088` PKCE 플로우)
 - [ ] **4단계: 확장 생태계 및 프로토콜 지원**
-  - [ ] AI 에이전트를 위한 MCP(Model Context Protocol) 서버 모드 지원
+  - [x] AI 에이전트를 위한 MCP(Model Context Protocol) 서버 모드 지원
   - [ ] 외부 캘린더용 WebCal / iCalendar(`.ics`) HTTP 구독 서버
   - [ ] 반복 일정 규칙(RFC 5545 RRULE) 지원
   - [ ] 자연어 일정 등록 (예: `rcal add "내일 오후 2시 팀 회의"`)
-  - [ ] OS 시스템 알림 연동
+  - [x] OS 시스템 알림 연동 (macOS / Linux / Windows 네이티브 알림 및 백그라운드 모니터링)
 
 ---
 

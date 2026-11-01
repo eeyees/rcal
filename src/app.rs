@@ -5,6 +5,7 @@ use chrono::{Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime, 
 use crate::i18n::Language;
 use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus, WeekStartDay};
 use crate::mouse::{HitMap, HitTarget};
+use crate::notification::{check_and_notify_upcoming, send_test_notification, NotificationConfig};
 use crate::storage::Database;
 use crate::ui::theme::{Theme, ThemeCategory, ThemeMode};
 use crate::ui::theme_config::ThemeConfigFile;
@@ -228,6 +229,7 @@ pub struct App {
     pub theme_config: ThemeConfigFile,
     pub theme_category: ThemeCategory,
     pub show_sidebar: bool,
+    pub notification_config: NotificationConfig,
 
     // Synchronization state
     pub is_syncing: bool,
@@ -258,6 +260,7 @@ impl App {
         let mut theme = Theme::from_mode(theme_mode);
         theme_config.apply_to(&mut theme);
         let theme_category = theme_mode.category();
+        let notification_config = NotificationConfig::load_from_db(&db);
 
         let mut app = Self {
             running: true,
@@ -277,6 +280,7 @@ impl App {
             theme_config,
             theme_category,
             show_sidebar: true,
+            notification_config,
             is_syncing: false,
             last_sync_status: None,
             sync_tx: None,
@@ -476,6 +480,122 @@ impl App {
         self.set_status(msg);
     }
 
+    pub fn toggle_notifications(&mut self) {
+        self.notification_config.enabled = !self.notification_config.enabled;
+        let _ = self.notification_config.save_to_db(&self.db);
+        let msg = match self.lang {
+            Language::Ko => {
+                if self.notification_config.enabled {
+                    format!("🔔 바탕화면 알림 활성화 ({}분 전 안내)", self.notification_config.lead_minutes)
+                } else {
+                    "🔕 바탕화면 알림 비활성화".to_string()
+                }
+            }
+            Language::Ja => {
+                if self.notification_config.enabled {
+                    format!("🔔 デスクトップ通知有効 ({}分前)", self.notification_config.lead_minutes)
+                } else {
+                    "🔕 デスクトップ通知無効".to_string()
+                }
+            }
+            _ => {
+                if self.notification_config.enabled {
+                    format!("🔔 Desktop notifications enabled ({}m before)", self.notification_config.lead_minutes)
+                } else {
+                    "🔕 Desktop notifications disabled".to_string()
+                }
+            }
+        };
+        self.set_status(msg);
+    }
+
+    pub fn set_notification_lead_minutes(&mut self, minutes: u32) {
+        self.notification_config.lead_minutes = minutes;
+        let _ = self.notification_config.save_to_db(&self.db);
+        let label = if minutes == 0 {
+            match self.lang {
+                Language::Ko => "정시 (0분)".to_string(),
+                Language::Ja => "開始時 (0分)".to_string(),
+                _ => "At start (0m)".to_string(),
+            }
+        } else {
+            match self.lang {
+                Language::Ko => format!("{}분 전", minutes),
+                Language::Ja => format!("{}分前", minutes),
+                _ => format!("{}m before", minutes),
+            }
+        };
+        let msg = match self.lang {
+            Language::Ko => format!("🔔 알림 시간이 '{}'로 설정되었습니다.", label),
+            Language::Ja => format!("🔔 通知時間が「{}」に設定されました。", label),
+            _ => format!("🔔 Notification lead time set to '{}'.", label),
+        };
+        self.set_status(msg);
+    }
+
+    pub fn toggle_notification_sound(&mut self) {
+        self.notification_config.sound = !self.notification_config.sound;
+        let _ = self.notification_config.save_to_db(&self.db);
+        let msg = match self.lang {
+            Language::Ko => {
+                if self.notification_config.sound {
+                    "🔊 알림 소리 켜짐"
+                } else {
+                    "🔇 알림 소리 꺼짐 (무음)"
+                }
+            }
+            Language::Ja => {
+                if self.notification_config.sound {
+                    "🔊 通知音オン"
+                } else {
+                    "🔇 通知音オフ"
+                }
+            }
+            _ => {
+                if self.notification_config.sound {
+                    "🔊 Notification sound: ON"
+                } else {
+                    "🔇 Notification sound: OFF"
+                }
+            }
+        };
+        self.set_status(msg);
+    }
+
+    pub fn send_test_notification(&mut self) {
+        match send_test_notification(self.lang, self.notification_config.sound) {
+            Ok(_) => {
+                let msg = match self.lang {
+                    Language::Ko => "🔔 바탕화면 테스트 알림을 발송했습니다.",
+                    Language::Ja => "🔔 デスクトップテスト通知を送信しました。",
+                    _ => "🔔 Desktop test notification sent.",
+                };
+                self.set_status(msg);
+            }
+            Err(e) => {
+                let msg = match self.lang {
+                    Language::Ko => format!("⚠ 알림 발송 실패: {}", e),
+                    Language::Ja => format!("⚠ 通知送信失敗: {}", e),
+                    _ => format!("⚠ Notification failed: {}", e),
+                };
+                self.set_status(msg);
+            }
+        }
+    }
+
+    pub fn check_upcoming_notifications(&mut self) -> Result<Vec<(Event, String)>> {
+        let notified = check_and_notify_upcoming(&self.db, &self.notification_config, Local::now(), self.lang)?;
+        if let Some((ev, _)) = notified.first() {
+            let msg = match self.lang {
+                Language::Ko => format!("🔔 알림 발송: {}", ev.title),
+                Language::Ja => format!("🔔 通知送信: {}", ev.title),
+                _ => format!("🔔 Notification sent: {}", ev.title),
+            };
+            self.set_status(msg);
+        }
+        Ok(notified)
+    }
+
     pub fn set_theme(&mut self, mode: ThemeMode) {
         let mut theme = Theme::from_mode(mode);
         self.theme_config.apply_to(&mut theme);
@@ -628,6 +748,22 @@ impl App {
 
                 HitTarget::ModalSettingWeekStart(day) => {
                     self.set_week_start_day(day);
+                }
+
+                HitTarget::ModalSettingNotificationToggle => {
+                    self.toggle_notifications();
+                }
+
+                HitTarget::ModalSettingNotificationLead(mins) => {
+                    self.set_notification_lead_minutes(mins);
+                }
+
+                HitTarget::ModalSettingNotificationSound => {
+                    self.toggle_notification_sound();
+                }
+
+                HitTarget::ModalSettingNotificationTest => {
+                    self.send_test_notification();
                 }
 
                 HitTarget::ModalSettingTheme(mode) => {

@@ -87,7 +87,7 @@
 ## <a id="-ui-views"></a>🖥️ 畫面預覽
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -267,7 +267,7 @@ rcal
 - [x] **階段 2：CalDAV 同步引擎**：Apple iCloud 與 Naver 行事曆雙向同步、Tokio 背景工作執行緒、帳號管理介面。
 - [x] **階段 3：多雲端整合與體驗優化**：Google Calendar API、Microsoft Graph 模組、輸入法透明對應、7 款主題與週首日設定。
 - [ ] **階段 4：生態系擴充與開放協定**：
-    - [ ] 支援 AI Agent 串接的 MCP (Model Context Protocol) 伺服器
+    - [x] 支援 AI Agent 串接的 MCP (Model Context Protocol) 伺服器
     - [ ] 外部訂閱用 WebCal / iCalendar (`.ics`) HTTP 匯出服務
     - [ ] 週期性循環活動規則（RFC 5545 RRULE）
     - [ ] 自然語言快速建立行程（例如 `rcal add "明天上午 10 點團隊週會"`）

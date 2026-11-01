@@ -77,7 +77,7 @@
 ## <a id="-ui-views"></a>🖥️ Weergaven
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -257,7 +257,7 @@ rcal
 - [x] **Fase 2**: CalDAV-engine (Apple iCloud & Naver), Tokio-achtergrondtaak, account-UI.
 - [x] **Fase 3**: Google Calendar, MS Graph, Samsung, 7 thema's, instelling eerste dag van de week.
 - [ ] **Fase 4**: Ecosysteem & open protocollen:
-    - [ ] MCP (Model Context Protocol) server voor AI-agents
+    - [x] MCP (Model Context Protocol) server voor AI-agents
     - [ ] WebCal / iCalendar (`.ics`) HTTP-abonnementserver
     - [ ] Herhalende afspraken (RFC 5545 RRULE)
     - [ ] Afspraken toevoegen met natuurlijke taal

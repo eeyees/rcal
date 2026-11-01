@@ -77,7 +77,7 @@
 ## <a id="-ui-views"></a>🖥️ Tampilan UI
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -257,7 +257,7 @@ rcal
 - [x] **Fase 2: Mesin CalDAV**: Sinkronisasi Apple iCloud & Naver, pekerja latar Tokio, UI akun.
 - [x] **Fase 3: Multi-Cloud**: Google Calendar, MS Graph, Samsung, pemetaan IME, 7 tema, hari awal minggu.
 - [ ] **Fase 4: Ekosistem & Protokol Terbuka**:
-    - [ ] Server MCP (Model Context Protocol) untuk agen AI
+    - [x] Server MCP (Model Context Protocol) untuk agen AI
     - [ ] Server langganan HTTP WebCal / iCalendar (`.ics`)
     - [ ] Aturan acara berulang (RFC 5545 RRULE)
     - [ ] Penambahan acara bahasa alami

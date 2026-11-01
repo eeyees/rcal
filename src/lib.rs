@@ -1,8 +1,10 @@
 pub mod app;
 pub mod events;
 pub mod i18n;
+pub mod mcp;
 pub mod model;
 pub mod mouse;
+pub mod notification;
 pub mod storage;
 pub mod sync;
 pub mod ui;

@@ -77,7 +77,7 @@
 ## <a id="-ui-views"></a>🖥️ Vyer
 
 ```
-┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
+┌── rcal v2026.11.01.2 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
 │ [ 1:Month ] [ 2:Week ] [ 3:Day ] [ 4:Agenda ]    [ < ] [ Today ] [ > ]  2026-11-01 (Sun)   [ ⟳ Sync ]  │
 ├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
 │ Calendars          │                             November 2026                                         │
@@ -257,7 +257,7 @@ rcal
 - [x] **Fas 2**: CalDAV-motor (Apple iCloud & Naver), Tokio-bakgrundstråd, konto-UI.
 - [x] **Fas 3**: Google Calendar, MS Graph, Samsung, 7 teman, val av startdag.
 - [ ] **Fas 4**: Ekosystem & öppna protokoll:
-    - [ ] MCP (Model Context Protocol) server för AI-agenter
+    - [x] MCP (Model Context Protocol) server för AI-agenter
     - [ ] WebCal / iCalendar (`.ics`) HTTP-prenumerationsserver
     - [ ] Återkommande händelser (RFC 5545 RRULE)
     - [ ] Skapa händelser med naturligt språk
