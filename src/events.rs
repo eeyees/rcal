@@ -13,8 +13,17 @@ use crate::model::{CalDavAccount, ProviderType};
 fn normalize_key_event(key: KeyEvent) -> KeyCode {
     match key.code {
         KeyCode::Char(c) => {
+            // 한글 키보드에서 'L' 자리는 모음 'ㅣ'(U+3163, U+1175).
+            // 한글 입력기 상태에서 L 버튼을 누르면 Shift 여부와 무관하게 'ㅣ'가 들어오며,
+            // macOS/Linux IME는 'ㅣ'에 대해 Shift modifier를 터미널로 전달하지 않고 삼킵니다.
+            // 또한 이전 타이핑으로 '이'(U+C774) 음절이 들어올 수 있으므로,
+            // 'ㅣ' 및 '이'는 언어 선택 모달 단축키인 대문자 'L'로 매핑합니다.
+            if c == 'ㅣ' || c == '\u{1175}' || c == '이' {
+                return KeyCode::Char('L');
+            }
+
             let mut mapped = hangul_to_qwerty(c);
-            if key.modifiers.contains(KeyModifiers::SHIFT) {
+            if key.modifiers.contains(KeyModifiers::SHIFT) || c.is_ascii_uppercase() {
                 mapped = mapped.to_ascii_uppercase();
             }
             KeyCode::Char(mapped)
@@ -569,7 +578,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         state.selected_idx = all_len - 1;
                     }
                 }
-                KeyCode::Right | KeyCode::Char('l') => {
+                KeyCode::Right | KeyCode::Char('l') | KeyCode::Char('L') => {
                     if state.selected_idx + 1 < all_len {
                         state.selected_idx += 1;
                     } else {
@@ -647,7 +656,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                     }
                 }
-                KeyCode::Right | KeyCode::Char('l') => {
+                KeyCode::Right | KeyCode::Char('l') | KeyCode::Char('L') => {
                     if count > 0 {
                         if state.selected_idx + 1 < count {
                             state.selected_idx += 1;

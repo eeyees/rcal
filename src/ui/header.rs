@@ -16,7 +16,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(24), // Title & Month display
             Constraint::Length(20), // Navigation buttons (<, Today, >)
             Constraint::Min(24),    // View tabs (Month, Week, Day, Agenda)
-            Constraint::Length(80), // Action buttons (+ New, ⟳ Sync, Accounts, Settings, Theme, L:Lang, ? Help)
+            Constraint::Length(82), // Action buttons (+ New, ⟳ Sync, ☁ Accounts, Settings, Theme, L:Lang, ? Help)
         ])
         .split(area);
 
@@ -109,7 +109,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         app.hit_map.register(rect, hit);
     }
 
-    // 4. Action buttons: [+ New Event], [⟳ Sync], [Accounts], [⚙ Settings], [🎨 Theme], [L: Language], [? Help]
+    // 4. Action buttons: [+ New Event], [⟳ Sync], [☁ Accounts], [⚙ Settings], [🎨 Theme], [L: Language], [? Help]
     let action_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -117,7 +117,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(1),
             Constraint::Length(14), // [⟳  동기화] / [⟳  동기화중]
             Constraint::Length(1),
-            Constraint::Length(10), // [계정연동]
+            Constraint::Length(12), // [☁ 계정연동]
             Constraint::Length(1),
             Constraint::Length(10), // [⚙ 설정]
             Constraint::Length(1),
