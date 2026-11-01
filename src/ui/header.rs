@@ -13,10 +13,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(24), // Title & Month display
-            Constraint::Length(20), // Navigation buttons (<, Today, >)
-            Constraint::Min(24),    // View tabs (Month, Week, Day, Agenda)
-            Constraint::Length(82), // Action buttons (+ New, ⟳ Sync, ☁ Accounts, Settings, Theme, L:Lang, ? Help)
+            Constraint::Length(22), // Title & Month display
+            Constraint::Length(18), // Navigation buttons (<, Today, >)
+            Constraint::Length(40), // View tabs (Month, Week, Day, Agenda: 9+1+9+1+9+1+9 = 39)
+            Constraint::Min(60),    // Action buttons (+ New, ⟳ Sync, ☁ Accounts, Settings, Theme, L:Lang, ? Help)
         ])
         .split(area);
 

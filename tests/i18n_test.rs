@@ -278,7 +278,15 @@ mod tests {
         assert_eq!(app.lang, Language::Ja);
         assert_eq!(app.modal, ActiveModal::None);
 
-        // Shift + 'ㅣ' (Korean IME) also normalizes to 'L': opens Language modal
+        // 'ㅣ' (Korean IME without Shift) normalizes to 'L': opens Language modal
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('ㅣ'), KeyModifiers::NONE)),
+        )?;
+        assert!(matches!(app.modal, ActiveModal::Language(_)));
+        app.close_modal();
+
+        // Shift + 'ㅣ' (Korean IME with Shift) also normalizes to 'L': opens Language modal
         handle_crossterm_event(
             &mut app,
             CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('ㅣ'), KeyModifiers::SHIFT)),

@@ -19,17 +19,13 @@ fn test_hangul_vim_navigation() -> anyhow::Result<()> {
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅗ'), KeyModifiers::NONE))?;
     assert_eq!(app.selected_date, start_date - Duration::days(1));
 
-    // 'ㅣ' is 'l' (Right) -> 1 day forward
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅣ'), KeyModifiers::NONE))?;
-    assert_eq!(app.selected_date, start_date);
-
     // 'ㅓ' is 'j' (Down) -> 7 days forward in Month view
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅓ'), KeyModifiers::NONE))?;
-    assert_eq!(app.selected_date, start_date + Duration::days(7));
+    assert_eq!(app.selected_date, start_date - Duration::days(1) + Duration::days(7));
 
     // 'ㅏ' is 'k' (Up) -> 7 days back in Month view
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅏ'), KeyModifiers::NONE))?;
-    assert_eq!(app.selected_date, start_date);
+    assert_eq!(app.selected_date, start_date - Duration::days(1));
 
     Ok(())
 }
@@ -84,6 +80,11 @@ fn test_hangul_action_shortcuts() -> anyhow::Result<()> {
     assert!(matches!(app.modal, ActiveModal::Settings));
     app.close_modal();
 
+    // 'ㄴ' is 's' -> Settings modal
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㄴ'), KeyModifiers::NONE))?;
+    assert!(matches!(app.modal, ActiveModal::Settings));
+    app.close_modal();
+
     // 'ㅂ' is 'q' -> Quit app
     assert!(app.running);
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅂ'), KeyModifiers::NONE))?;
@@ -96,6 +97,16 @@ fn test_hangul_action_shortcuts() -> anyhow::Result<()> {
 fn test_hangul_shift_shortcuts() -> anyhow::Result<()> {
     let db = Database::in_memory()?;
     let mut app = App::new(db)?;
+
+    // Korean 'L' key: 'ㅣ' (without shift) -> Opens Language Selection modal
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅣ'), KeyModifiers::NONE))?;
+    assert!(matches!(app.modal, ActiveModal::Language(_)));
+    app.close_modal();
+
+    // Korean 'L' key: '이' (syllable with 'ㅣ') -> Opens Language Selection modal
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('이'), KeyModifiers::NONE))?;
+    assert!(matches!(app.modal, ActiveModal::Language(_)));
+    app.close_modal();
 
     // Shift + 'ㅣ' is 'L' -> Opens Language Selection modal
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅣ'), KeyModifiers::SHIFT))?;
