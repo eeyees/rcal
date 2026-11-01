@@ -1,12 +1,68 @@
+# ==========================================
+# Rust & Cargo
+# ==========================================
 /target/
 Cargo.lock
 **/*.rs.bk
+*.bk
+
+# ==========================================
+# Local SQLite Database & Storage
+# ==========================================
 *.sqlite
+*.sqlite3
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+rcal.db*
+
+# ==========================================
+# Logs & Crash Reports
+# ==========================================
 *.log
+*.panic
+
+# ==========================================
+# Secrets, OAuth Credentials & Tokens
+# ==========================================
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+tokens.json
+*.pem
+*.key
+
+# ==========================================
+# Operating System Files
+# ==========================================
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
 
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Added by cargo
-
-/target
+# ==========================================
+# Editor & IDE Directories
+# ==========================================
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.swp
+*.swo
+*~
+.helix/
