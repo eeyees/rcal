@@ -1,4 +1,5 @@
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono_tz::Tz;
 
 use crate::model::{Event, SyncStatus};
 
@@ -89,13 +90,22 @@ pub fn ics_to_events(
         if line.eq_ignore_ascii_case("END:VEVENT") {
             if in_vevent {
                 if let (Some((start_time, all_day)), Some(u)) = (dtstart, uid.take()) {
-                    let end_time = dtend.unwrap_or_else(|| {
-                        if all_day {
-                            start_time
-                        } else {
-                            start_time + chrono::Duration::hours(1)
+                    let end_time = match dtend {
+                        Some(e) => {
+                            if all_day && e > start_time {
+                                e - chrono::Duration::days(1)
+                            } else {
+                                e
+                            }
                         }
-                    });
+                        None => {
+                            if all_day {
+                                start_time
+                            } else {
+                                start_time + chrono::Duration::hours(1)
+                            }
+                        }
+                    };
 
                     let title = summary.take().unwrap_or_else(|| "(No title)".to_string());
                     let ev = Event {
@@ -124,7 +134,7 @@ pub fn ics_to_events(
             continue;
         }
 
-        if let Some((key, val)) = parse_property_line(line) {
+        if let Some((key, val, key_part)) = parse_property_line(line) {
             let upper_key = key.to_ascii_uppercase();
             if upper_key == "UID" {
                 uid = Some(val.to_string());
@@ -135,11 +145,11 @@ pub fn ics_to_events(
             } else if upper_key == "LOCATION" {
                 location = Some(unescape_ics_text(val));
             } else if upper_key.starts_with("DTSTART") {
-                if let Some(parsed) = parse_ics_datetime(val) {
+                if let Some(parsed) = parse_ics_datetime(key_part, val) {
                     dtstart = Some(parsed);
                 }
             } else if upper_key.starts_with("DTEND") {
-                if let Some((parsed, _)) = parse_ics_datetime(val) {
+                if let Some((parsed, _)) = parse_ics_datetime(key_part, val) {
                     dtend = Some(parsed);
                 }
             } else if upper_key == "RRULE" {
@@ -165,24 +175,64 @@ fn unfold_ics_lines(input: &str) -> Vec<String> {
     unfolded
 }
 
-fn parse_property_line(line: &str) -> Option<(&str, &str)> {
+pub fn parse_property_line(line: &str) -> Option<(&str, &str, &str)> {
     let idx = line.find(':')?;
     let key_part = &line[..idx];
     let val_part = &line[idx + 1..];
     let key = key_part.split(';').next().unwrap_or(key_part);
-    Some((key, val_part))
+    Some((key, val_part, key_part))
 }
 
-fn parse_ics_datetime(val: &str) -> Option<(DateTime<Local>, bool)> {
+pub fn parse_tzid(raw_tzid: &str) -> Option<Tz> {
+    let tzid = raw_tzid.trim().trim_matches('"').trim_matches('\'');
+    if let Ok(tz) = tzid.parse::<Tz>() {
+        return Some(tz);
+    }
+
+    // Try stripping leading path (e.g. "/mozilla.org/20050126_1/Asia/Seoul" -> "Asia/Seoul")
+    if tzid.contains('/') {
+        let parts: Vec<&str> = tzid.split('/').filter(|s| !s.is_empty()).collect();
+        if parts.len() >= 2 {
+            let last_two = format!("{}/{}", parts[parts.len() - 2], parts[parts.len() - 1]);
+            if let Ok(tz) = last_two.parse::<Tz>() {
+                return Some(tz);
+            }
+        }
+        if let Some(last) = parts.last() {
+            if let Ok(tz) = last.parse::<Tz>() {
+                return Some(tz);
+            }
+        }
+    }
+
+    // Common abbreviations / aliases
+    match tzid.to_ascii_uppercase().as_str() {
+        "KST" => "Asia/Seoul".parse::<Tz>().ok(),
+        "JST" => "Asia/Tokyo".parse::<Tz>().ok(),
+        "UTC" | "GMT" => "UTC".parse::<Tz>().ok(),
+        "EST" | "EDT" => "America/New_York".parse::<Tz>().ok(),
+        "CST" | "CDT" => "America/Chicago".parse::<Tz>().ok(),
+        "MST" | "MDT" => "America/Denver".parse::<Tz>().ok(),
+        "PST" | "PDT" => "America/Los_Angeles".parse::<Tz>().ok(),
+        _ => None,
+    }
+}
+
+pub fn parse_ics_datetime(key_part: &str, val: &str) -> Option<(DateTime<Local>, bool)> {
     let val = val.trim();
-    // 1. All-day date only: YYYYMMDD (8 chars)
-    if val.len() == 8 && val.chars().all(|c| c.is_ascii_digit()) {
-        let year = val[0..4].parse::<i32>().ok()?;
-        let month = val[4..6].parse::<u32>().ok()?;
-        let day = val[6..8].parse::<u32>().ok()?;
-        let naive_date = NaiveDate::from_ymd_opt(year, month, day)?;
-        let dt = Local.from_local_datetime(&naive_date.and_hms_opt(0, 0, 0)?).single()?;
-        return Some((dt, true));
+    let upper_key = key_part.to_ascii_uppercase();
+
+    // 1. All-day date only: YYYYMMDD (8 chars) or VALUE=DATE
+    if (val.len() == 8 && val.chars().all(|c| c.is_ascii_digit())) || upper_key.contains("VALUE=DATE") {
+        let date_str = if val.len() >= 8 { &val[0..8] } else { val };
+        if date_str.len() == 8 && date_str.chars().all(|c| c.is_ascii_digit()) {
+            let year = date_str[0..4].parse::<i32>().ok()?;
+            let month = date_str[4..6].parse::<u32>().ok()?;
+            let day = date_str[6..8].parse::<u32>().ok()?;
+            let naive_date = NaiveDate::from_ymd_opt(year, month, day)?;
+            let dt = Local.from_local_datetime(&naive_date.and_hms_opt(0, 0, 0)?).single()?;
+            return Some((dt, true));
+        }
     }
 
     // 2. UTC Date Time: YYYYMMDDTHHMMSSZ
@@ -193,10 +243,33 @@ fn parse_ics_datetime(val: &str) -> Option<(DateTime<Local>, bool)> {
         return Some((utc_dt.with_timezone(&Local), false));
     }
 
-    // 3. Local/Floating Date Time: YYYYMMDDTHHMMSS
+    // 3. Timezone specified in parameters (e.g. DTSTART;TZID=Asia/Seoul:20261031T090000)
+    let mut tzid_param: Option<&str> = None;
+    for param in key_part.split(';') {
+        let p = param.trim();
+        if let Some(rest) = p.strip_prefix("TZID=") {
+            tzid_param = Some(rest.trim());
+        } else if let Some(rest) = p.strip_prefix("tzid=") {
+            tzid_param = Some(rest.trim());
+        }
+    }
+
+    if let Some(tzid_str) = tzid_param {
+        if let Some(tz) = parse_tzid(tzid_str) {
+            if val.contains('T') {
+                if let Ok(naive) = NaiveDateTime::parse_from_str(val, "%Y%m%dT%H%M%S") {
+                    if let Some(tz_dt) = tz.from_local_datetime(&naive).single().or_else(|| tz.from_local_datetime(&naive).earliest()) {
+                        return Some((tz_dt.with_timezone(&Local), false));
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Local/Floating Date Time: YYYYMMDDTHHMMSS
     if val.contains('T') {
         if let Ok(naive) = NaiveDateTime::parse_from_str(val, "%Y%m%dT%H%M%S") {
-            if let Some(dt) = Local.from_local_datetime(&naive).single() {
+            if let Some(dt) = Local.from_local_datetime(&naive).single().or_else(|| Local.from_local_datetime(&naive).earliest()) {
                 return Some((dt, false));
             }
         }

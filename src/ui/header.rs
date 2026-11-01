@@ -8,7 +8,6 @@ use ratatui::{
 
 use crate::app::{App, ViewMode};
 use crate::mouse::HitTarget;
-use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
@@ -22,6 +21,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .split(area);
 
     let lang = app.lang;
+    let theme = &app.theme;
 
     // 1. Title & Month Year display
     let month_year_str = format!(" {} ", lang.format_month_year(app.selected_date));
@@ -30,14 +30,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             " rcal ",
             Style::default()
                 .fg(Color::Black)
-                .bg(Theme::PRIMARY)
+                .bg(theme.primary)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" "),
         Span::styled(
             month_year_str,
             Style::default()
-                .fg(Theme::TEXT_HIGHLIGHT)
+                .fg(theme.text_highlight)
                 .add_modifier(Modifier::BOLD),
         ),
     ]);
@@ -57,19 +57,19 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .split(chunks[1]);
 
     let btn_prev = Paragraph::new(Line::from(vec![Span::raw(" < ")]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_prev, nav_chunks[0]);
     app.hit_map.register(nav_chunks[0], HitTarget::NavPrev);
 
     let btn_today = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_today()))]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_today, nav_chunks[2]);
     app.hit_map.register(nav_chunks[2], HitTarget::NavToday);
 
     let btn_next = Paragraph::new(Line::from(vec![Span::raw(" > ")]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_next, nav_chunks[4]);
     app.hit_map.register(nav_chunks[4], HitTarget::NavNext);
@@ -98,9 +98,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     for (mode, label, rect, hit) in views {
         let style = if app.current_view == mode {
-            Theme::header_tab_active()
+            theme.header_tab_active()
         } else {
-            Theme::header_tab_inactive()
+            theme.header_tab_inactive()
         };
         let p = Paragraph::new(Line::from(vec![Span::raw(label)]))
             .style(style)
@@ -132,7 +132,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .style(
             Style::default()
                 .fg(Color::Black)
-                .bg(Theme::SECONDARY)
+                .bg(theme.secondary)
                 .add_modifier(Modifier::BOLD),
         )
         .alignment(Alignment::Center);
@@ -144,7 +144,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         lang.btn_sync()
     };
-    let sync_bg = if app.is_syncing { Theme::ACCENT } else { Color::Rgb(45, 90, 160) };
+    let sync_bg = if app.is_syncing { theme.accent } else { Color::Rgb(45, 90, 160) };
     let btn_sync = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", sync_label))]))
         .style(
             Style::default()
@@ -157,31 +157,28 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     app.hit_map.register(action_chunks[2], HitTarget::BtnSync);
 
     let btn_acc = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_accounts()))]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_acc, action_chunks[4]);
     app.hit_map.register(action_chunks[4], HitTarget::BtnAccounts);
 
     // Settings button: [ ⚙ 설정 ]
     let btn_settings = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_settings()))]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_settings, action_chunks[6]);
     app.hit_map.register(action_chunks[6], HitTarget::BtnSettings);
 
-    // Language toggle button: [ L: 한/EN ]
-    let lang_btn_text = match lang {
-        crate::i18n::Language::Ko => " L: 한 ",
-        crate::i18n::Language::En => " L: EN ",
-    };
+    // Language toggle button: [ L: 한/EN/日 ]
+    let lang_btn_text = format!(" L: {} ", lang.short_label());
     let btn_lang = Paragraph::new(Line::from(vec![Span::raw(lang_btn_text)]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_lang, action_chunks[8]);
     app.hit_map.register(action_chunks[8], HitTarget::BtnLanguage);
 
     let btn_help = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_help()))]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_help, action_chunks[10]);
     app.hit_map.register(action_chunks[10], HitTarget::BtnHelp);

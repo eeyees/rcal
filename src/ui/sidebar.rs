@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
@@ -8,12 +8,12 @@ use ratatui::{
 
 use crate::app::App;
 use crate::mouse::HitTarget;
-use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
+    let theme = &app.theme;
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Theme::BORDER))
+        .border_style(Style::default().fg(theme.border))
         .title(app.lang.sidebar_calendars());
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -23,7 +23,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .constraints([
             Constraint::Length(app.calendars.len() as u16 + 4), // Calendar list + manage button
             Constraint::Length(1),                              // Divider
-            Constraint::Min(6),                                 // Shortcuts hint
+            Constraint::Min(4),                                 // Shortcuts hint
+            Constraint::Length(1),                              // Hide sidebar button
         ])
         .split(inner);
 
@@ -31,7 +32,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let mut cal_lines = Vec::new();
     for (idx, cal) in app.calendars.iter().enumerate() {
         let check_box = if cal.enabled { "[x] " } else { "[ ] " };
-        let check_color = if cal.enabled { Theme::SECONDARY } else { Theme::TEXT_DIM };
+        let check_color = if cal.enabled { theme.secondary } else { theme.text_dim };
         let cal_color = cal.ratatui_color();
 
         let max_name_len = (chunks[0].width as usize).saturating_sub(16);
@@ -45,10 +46,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let line = Line::from(vec![
             Span::styled(check_box, Style::default().fg(check_color).add_modifier(Modifier::BOLD)),
             Span::styled("● ", Style::default().fg(cal_color)),
-            Span::styled(display_name, Style::default().fg(if cal.enabled { Theme::TEXT_NORMAL } else { Theme::TEXT_MUTED })),
+            Span::styled(display_name, Style::default().fg(if cal.enabled { theme.text_normal } else { theme.text_muted })),
             Span::styled(
                 format!(" ({})", cal.provider.as_str()),
-                Style::default().fg(Theme::TEXT_DIM),
+                Style::default().fg(theme.text_dim),
             ),
         ]);
         cal_lines.push(line);
@@ -66,15 +67,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     }
 
     // Add "[ + 관리/추가 (C) ]" button under calendars
-    let manage_label = match app.lang {
-        crate::i18n::Language::Ko => " + 캘린더 관리/추가 (C) ",
-        crate::i18n::Language::En => " + Manage Calendars (C) ",
-    };
+    let manage_label = app.lang.sidebar_manage();
     cal_lines.push(Line::from(""));
     cal_lines.push(Line::from(vec![
         Span::styled(
             manage_label,
-            Style::default().fg(Theme::PRIMARY).add_modifier(Modifier::BOLD),
+            Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
         ),
     ]));
 
@@ -90,16 +88,28 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     // 2. Localized Quick Tips in sidebar
     let mut tips = Vec::new();
-    tips.push(Line::from(Span::styled(app.lang.sidebar_quick_nav(), Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD))));
+    tips.push(Line::from(Span::styled(app.lang.sidebar_quick_nav(), Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))));
     for t in app.lang.sidebar_tips() {
-        tips.push(Line::from(Span::styled(t, Style::default().fg(Theme::TEXT_MUTED))));
+        tips.push(Line::from(Span::styled(t, Style::default().fg(theme.text_muted))));
     }
 
     tips.push(Line::from(""));
-    tips.push(Line::from(Span::styled(app.lang.sidebar_keys(), Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD))));
+    tips.push(Line::from(Span::styled(app.lang.sidebar_keys(), Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))));
     for k in app.lang.sidebar_key_tips() {
-        tips.push(Line::from(Span::styled(k, Style::default().fg(Theme::TEXT_MUTED))));
+        tips.push(Line::from(Span::styled(k, Style::default().fg(theme.text_muted))));
     }
 
     f.render_widget(Paragraph::new(tips), chunks[2]);
+
+    // 3. Hide Sidebar Button / Shortcut Hint
+    let hide_label = app.lang.sidebar_hide();
+    let hide_btn = Paragraph::new(Line::from(vec![
+        Span::styled(
+            hide_label,
+            Style::default().fg(theme.text_muted),
+        ),
+    ]))
+    .alignment(Alignment::Center);
+    f.render_widget(hide_btn, chunks[3]);
+    app.hit_map.register(chunks[3], HitTarget::BtnToggleSidebar);
 }

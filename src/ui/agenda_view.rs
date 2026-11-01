@@ -9,19 +9,19 @@ use ratatui::{
 
 use crate::app::App;
 use crate::mouse::HitTarget;
-use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
+    let theme = &app.theme;
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Theme::BORDER))
+        .border_style(Style::default().fg(theme.border))
         .title(" Agenda / Upcoming Events ");
     let inner = block.inner(area);
     f.render_widget(block, area);
 
     if app.events_cache.is_empty() {
         let p = Paragraph::new("No upcoming events found. Press 'n' or click '+ New' to create one.")
-            .style(Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC));
+            .style(Style::default().fg(theme.text_muted).add_modifier(Modifier::ITALIC));
         f.render_widget(p, inner);
         return;
     }
@@ -55,7 +55,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             let date_header = Paragraph::new(Line::from(vec![
                 Span::styled(
                     format!("── {} ────────────────────────────", date_label),
-                    Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD),
+                    Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
                 ),
             ]));
             f.render_widget(date_header, Rect {
@@ -87,12 +87,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Span::styled("● ", Style::default().fg(cal_color)),
             Span::styled(
                 format!("{:14} ", ev.time_str()),
-                Style::default().fg(Theme::TEXT_MUTED),
+                Style::default().fg(theme.text_muted),
             ),
             Span::styled(
                 &ev.title,
                 Style::default()
-                    .fg(if is_selected { Theme::TEXT_HIGHLIGHT } else { Theme::TEXT_NORMAL })
+                    .fg(if is_selected { theme.text_highlight } else { theme.text_normal })
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("  "),
@@ -101,14 +101,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 Style::default().fg(cal_color),
             ),
             if let Some(loc) = &ev.location {
-                Span::styled(format!(" @ {}", loc), Style::default().fg(Theme::TEXT_DIM))
+                Span::styled(format!(" @ {}", loc), Style::default().fg(theme.text_dim))
             } else {
                 Span::raw("")
             },
         ]);
 
         let row_style = if is_selected {
-            Style::default().bg(Color::Rgb(40, 50, 75))
+            Style::default().bg(theme.selected_bg)
         } else {
             Style::default()
         };

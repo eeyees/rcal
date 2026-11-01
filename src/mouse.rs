@@ -22,14 +22,19 @@ pub enum HitTarget {
 
     // Sidebar
     CalendarToggle(String /* calendar_id */),
+    BtnToggleSidebar,
 
     // Views
     MonthDay(NaiveDate),
     WeekSlot(NaiveDate, u32 /* hour */),
+    WeekAllDaySlot(NaiveDate),
     DaySlot(u32 /* hour */, u32 /* minute */),
+    DayAllDaySlot(NaiveDate),
     EventItem(String /* event_id */),
 
     // Modals
+    ModalBackdrop,
+    ModalConsume,
     ModalField(usize),
     ModalSave,
     ModalCancel,
@@ -47,6 +52,37 @@ pub enum HitTarget {
     ModalCalDelete(String),
     ModalCalNew,
     ModalSettingWeekStart(WeekStartDay),
+    ModalSettingTheme(crate::ui::theme::ThemeMode),
+    ModalSelectLanguage(crate::i18n::Language),
+}
+
+impl HitTarget {
+    pub fn is_modal(&self) -> bool {
+        matches!(
+            self,
+            HitTarget::ModalBackdrop
+                | HitTarget::ModalConsume
+                | HitTarget::ModalField(_)
+                | HitTarget::ModalSave
+                | HitTarget::ModalCancel
+                | HitTarget::ModalEdit
+                | HitTarget::ModalDelete
+                | HitTarget::ModalClose
+                | HitTarget::ModalAccountField(_)
+                | HitTarget::ModalAccountConnect
+                | HitTarget::ModalAccountDelete(_)
+                | HitTarget::ModalAccountAdd
+                | HitTarget::ModalAccountPreset(_)
+                | HitTarget::ModalCalNameField
+                | HitTarget::ModalCalColor(_)
+                | HitTarget::ModalCalSave
+                | HitTarget::ModalCalDelete(_)
+                | HitTarget::ModalCalNew
+                | HitTarget::ModalSettingWeekStart(_)
+                | HitTarget::ModalSettingTheme(_)
+                | HitTarget::ModalSelectLanguage(_)
+        )
+    }
 }
 
 #[derive(Default, Debug, Clone)]
@@ -78,12 +114,16 @@ impl HitMap {
     /// Finds the top-most target that contains the given coordinate (x, y)
     /// (Iterates in reverse so that modals and topmost elements take priority)
     pub fn check(&self, x: u16, y: u16) -> Option<HitTarget> {
+        let has_modal = self.targets.iter().any(|(_, t)| t.is_modal());
         for (rect, target) in self.targets.iter().rev() {
             if x >= rect.x
                 && x < rect.x.saturating_add(rect.width)
                 && y >= rect.y
                 && y < rect.y.saturating_add(rect.height)
             {
+                if has_modal && !target.is_modal() {
+                    return None;
+                }
                 return Some(target.clone());
             }
         }

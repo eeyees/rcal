@@ -121,6 +121,12 @@ impl Database {
         let _ = conn.execute("ALTER TABLE accounts ADD COLUMN refresh_token TEXT", []);
         let _ = conn.execute("ALTER TABLE accounts ADD COLUMN token_expires_at TEXT", []);
 
+        // Clean up any existing duplicate accounts
+        let _ = conn.execute(
+            "DELETE FROM accounts WHERE rowid NOT IN (SELECT min(rowid) FROM accounts GROUP BY provider, username)",
+            [],
+        );
+
         Ok(())
     }
 
@@ -309,6 +315,35 @@ impl Database {
     }
 
     // Account management
+    fn row_to_account(row: &rusqlite::Row) -> rusqlite::Result<CalDavAccount> {
+        let provider_str: String = row.get(2)?;
+        let auth_type_str: String = row.get::<_, Option<String>>(6)?.unwrap_or_else(|| "basic".to_string());
+        let expires_str: Option<String> = row.get(10)?;
+        let token_expires_at = expires_str.and_then(|s| {
+            DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
+        });
+
+        let last_sync_str: Option<String> = row.get(11)?;
+        let last_synced_at = last_sync_str.and_then(|s| {
+            DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
+        });
+
+        Ok(CalDavAccount {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            provider: ProviderType::from_str(&provider_str),
+            url: row.get(3)?,
+            username: row.get(4)?,
+            password: row.get(5)?,
+            auth_type: AuthType::from_str(&auth_type_str),
+            client_id: row.get(7)?,
+            access_token: row.get(8)?,
+            refresh_token: row.get(9)?,
+            token_expires_at,
+            last_synced_at,
+        })
+    }
+
     pub fn get_accounts(&self) -> Result<Vec<CalDavAccount>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
@@ -319,34 +354,7 @@ impl Database {
             "#,
         )?;
 
-        let iter = stmt.query_map([], |row| {
-            let provider_str: String = row.get(2)?;
-            let auth_type_str: String = row.get::<_, Option<String>>(6)?.unwrap_or_else(|| "basic".to_string());
-            let expires_str: Option<String> = row.get(10)?;
-            let token_expires_at = expires_str.and_then(|s| {
-                DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
-            });
-
-            let last_sync_str: Option<String> = row.get(11)?;
-            let last_synced_at = last_sync_str.and_then(|s| {
-                DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))
-            });
-
-            Ok(CalDavAccount {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                provider: ProviderType::from_str(&provider_str),
-                url: row.get(3)?,
-                username: row.get(4)?,
-                password: row.get(5)?,
-                auth_type: AuthType::from_str(&auth_type_str),
-                client_id: row.get(7)?,
-                access_token: row.get(8)?,
-                refresh_token: row.get(9)?,
-                token_expires_at,
-                last_synced_at,
-            })
-        })?;
+        let iter = stmt.query_map([], |row| Self::row_to_account(row))?;
 
         let mut list = Vec::new();
         for item in iter {
@@ -355,7 +363,65 @@ impl Database {
         Ok(list)
     }
 
+    pub fn find_account_by_provider_and_username(
+        &self,
+        provider: &ProviderType,
+        username: &str,
+    ) -> Result<Option<CalDavAccount>> {
+        let trimmed_user = username.trim();
+        let clean_user = trimmed_user.strip_suffix("@naver.com").unwrap_or(trimmed_user).trim();
+        let full_user = format!("{}@naver.com", clean_user);
+
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT id, name, provider, url, username, password,
+                   auth_type, client_id, access_token, refresh_token, token_expires_at, last_synced_at
+            FROM accounts
+            WHERE (provider = ?1 OR LOWER(provider) = LOWER(?1)) AND (
+                username = ?2
+                OR username = ?3
+                OR (LOWER(?1) = 'naver' AND (username = ?4 OR username = ?5))
+            )
+            ORDER BY rowid ASC
+            LIMIT 1
+            "#,
+        )?;
+
+        let account = stmt.query_row(
+            params![
+                provider.as_str(),
+                trimmed_user,
+                username,
+                clean_user,
+                full_user
+            ],
+            |row| Self::row_to_account(row),
+        ).optional()?;
+
+        Ok(account)
+    }
+
     pub fn save_account(&self, acc: &CalDavAccount) -> Result<()> {
+        // Check if an account with matching (provider, username) or (url, username) already exists.
+        // If found with a different id, UPDATE that existing account (preserve the existing ID)
+        let existing = self.find_account_by_provider_and_username(&acc.provider, &acc.username)?;
+        let target_id = if let Some(found) = existing {
+            found.id
+        } else {
+            let existing_by_url: Option<String> = if !acc.url.trim().is_empty() {
+                let conn = self.conn.lock().unwrap();
+                conn.query_row(
+                    "SELECT id FROM accounts WHERE url = ?1 AND username = ?2 LIMIT 1",
+                    params![acc.url.trim(), acc.username.trim()],
+                    |row| row.get(0),
+                ).optional()?
+            } else {
+                None
+            };
+            existing_by_url.unwrap_or_else(|| acc.id.clone())
+        };
+
         let last_sync_str = acc.last_synced_at.map(|t| t.to_rfc3339());
         let expires_str = acc.token_expires_at.map(|t| t.to_rfc3339());
         let conn = self.conn.lock().unwrap();
@@ -380,7 +446,7 @@ impl Database {
                 last_synced_at = excluded.last_synced_at
             "#,
             params![
-                acc.id,
+                target_id,
                 acc.name,
                 acc.provider.as_str(),
                 acc.url,

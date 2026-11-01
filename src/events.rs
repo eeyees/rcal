@@ -59,27 +59,59 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 form_action_close = true;
             }
             KeyCode::Tab | KeyCode::Down => {
-                form.active_field = (form.active_field + 1) % (EventFormState::TOTAL_FIELDS + 1);
+                form.active_field = (form.active_field + 1) % 10;
             }
             KeyCode::BackTab | KeyCode::Up => {
                 if form.active_field == 0 {
-                    form.active_field = EventFormState::TOTAL_FIELDS;
+                    form.active_field = 9;
                 } else {
                     form.active_field -= 1;
                 }
             }
+            KeyCode::Left => {
+                if form.active_field == 1 {
+                    let current_idx = app.calendars.iter().position(|c| c.id == form.calendar_id).unwrap_or(0);
+                    let prev_idx = if current_idx == 0 { app.calendars.len().saturating_sub(1) } else { current_idx - 1 };
+                    if let Some(c) = app.calendars.get(prev_idx) {
+                        form.calendar_id = c.id.clone();
+                    }
+                } else if form.active_field == 9 {
+                    form.active_field = 8;
+                }
+            }
+            KeyCode::Right => {
+                if form.active_field == 1 {
+                    let current_idx = app.calendars.iter().position(|c| c.id == form.calendar_id).unwrap_or(0);
+                    let next_idx = (current_idx + 1) % app.calendars.len().max(1);
+                    if let Some(c) = app.calendars.get(next_idx) {
+                        form.calendar_id = c.id.clone();
+                    }
+                } else if form.active_field == 8 {
+                    form.active_field = 9;
+                }
+            }
             KeyCode::Enter => {
-                form_action_save = Some(form.clone());
+                if form.active_field == 9 {
+                    form_action_close = true;
+                } else {
+                    form_action_save = Some(form.clone());
+                }
             }
             KeyCode::Char(' ') if form.active_field == 1 => {
                 let current_idx = app.calendars.iter().position(|c| c.id == form.calendar_id).unwrap_or(0);
-                let next_idx = (current_idx + 1) % app.calendars.len();
+                let next_idx = (current_idx + 1) % app.calendars.len().max(1);
                 if let Some(next_cal) = app.calendars.get(next_idx) {
                     form.calendar_id = next_cal.id.clone();
                 }
             }
             KeyCode::Char(' ') if form.active_field == 5 => {
                 form.all_day = !form.all_day;
+            }
+            KeyCode::Char(' ') if form.active_field == 8 => {
+                form_action_save = Some(form.clone());
+            }
+            KeyCode::Char(' ') if form.active_field == 9 => {
+                form_action_close = true;
             }
             KeyCode::Backspace => {
                 match form.active_field {
@@ -113,32 +145,28 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
     } else if let Some(form) = form_action_save {
         app.save_event_from_form(form)?;
         return Ok(());
+    } else if matches!(app.modal, ActiveModal::EventForm(_)) {
+        return Ok(());
     }
 
     // 2. Handle Accounts modal
     let mut acc_action_close = false;
     let mut acc_action_sync = false;
     let mut acc_action_save: Option<CalDavAccount> = None;
+    let mut acc_action_delete_idx: Option<usize> = None;
 
     if let ActiveModal::Accounts(ref mut state) = app.modal {
         if !state.is_adding {
             let norm_code = normalize_key_event(key);
             match norm_code {
                 KeyCode::Esc | KeyCode::Char('q') => acc_action_close = true,
-                KeyCode::Char('a') | KeyCode::Char('n') | KeyCode::Enter => state.is_adding = true,
+                KeyCode::Char('a') | KeyCode::Char('n') | KeyCode::Char('c') | KeyCode::Enter => {
+                    state.is_adding = true;
+                    state.active_field = 0;
+                }
                 KeyCode::Char('r') => acc_action_sync = true,
-                KeyCode::Char('d') | KeyCode::Char('D') => {
-                    let accounts = app.db.get_accounts().unwrap_or_default();
-                    if let Some(acc) = accounts.get(state.selected_account_idx) {
-                        let _ = app.db.delete_account(&acc.id);
-                        let _ = app.reload_calendars();
-                        let _ = app.reload_events();
-                        let msg = match app.lang {
-                            crate::i18n::Language::Ko => "계정이 삭제되었습니다.",
-                            crate::i18n::Language::En => "Account removed.",
-                        };
-                        app.set_status(msg);
-                    }
+                KeyCode::Char('d') | KeyCode::Char('D') | KeyCode::Delete | KeyCode::Backspace => {
+                    acc_action_delete_idx = Some(state.selected_account_idx);
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
                     let count = app.db.get_accounts().unwrap_or_default().len();
@@ -162,40 +190,94 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             match key.code {
                 KeyCode::Esc => state.is_adding = false,
                 KeyCode::Tab | KeyCode::Down => {
-                    state.active_field = (state.active_field + 1) % 5;
+                    state.active_field = (state.active_field + 1) % 7;
                 }
                 KeyCode::BackTab | KeyCode::Up => {
                     if state.active_field == 0 {
-                        state.active_field = 4;
+                        state.active_field = 6;
                     } else {
                         state.active_field -= 1;
                     }
                 }
-                KeyCode::Enter => {
-                    let (provider, auth_type) = match state.provider_idx {
-                        0 => (ProviderType::Naver, crate::model::AuthType::Basic),
-                        1 => (ProviderType::Apple, crate::model::AuthType::Basic),
-                        2 => (ProviderType::Google, crate::model::AuthType::OAuth2),
-                        3 => (ProviderType::Microsoft, crate::model::AuthType::OAuth2),
-                        4 => (ProviderType::Samsung, crate::model::AuthType::Basic),
-                        _ => (ProviderType::Local, crate::model::AuthType::Basic),
-                    };
-                    let mut new_acc = CalDavAccount::new(
-                        state.name.clone(),
-                        provider,
-                        state.url.clone(),
-                        state.username.clone(),
-                        state.password.clone(),
-                    );
-                    new_acc.auth_type = auth_type;
-                    if auth_type == crate::model::AuthType::OAuth2 {
-                        new_acc.access_token = Some(state.password.clone());
+                KeyCode::Left => {
+                    if state.active_field == 0 {
+                        let prev_idx = if state.provider_idx == 0 { 5 } else { state.provider_idx - 1 };
+                        state.set_preset(prev_idx);
+                    } else if state.active_field == 6 {
+                        state.active_field = 5;
                     }
-                    acc_action_save = Some(new_acc);
+                }
+                KeyCode::Right => {
+                    if state.active_field == 0 {
+                        let next_idx = (state.provider_idx + 1) % 6;
+                        state.set_preset(next_idx);
+                    } else if state.active_field == 5 {
+                        state.active_field = 6;
+                    }
+                }
+                KeyCode::Enter => {
+                    if state.active_field == 6 {
+                        state.is_adding = false;
+                    } else if state.active_field == 5 || state.active_field == 4 {
+                        if state.username.trim().is_empty() {
+                            app.set_status(app.lang.msg_account_username_empty());
+                        } else {
+                            let (provider, auth_type) = match state.provider_idx {
+                                0 => (ProviderType::Naver, crate::model::AuthType::Basic),
+                                1 => (ProviderType::Apple, crate::model::AuthType::Basic),
+                                2 => (ProviderType::Google, crate::model::AuthType::OAuth2),
+                                3 => (ProviderType::Microsoft, crate::model::AuthType::OAuth2),
+                                4 => (ProviderType::Samsung, crate::model::AuthType::Basic),
+                                _ => (ProviderType::Local, crate::model::AuthType::Basic),
+                            };
+                            let mut new_acc = CalDavAccount::new(
+                                state.name.clone(),
+                                provider,
+                                state.url.clone(),
+                                state.username.clone(),
+                                state.password.clone(),
+                            );
+                            new_acc.auth_type = auth_type;
+                            if auth_type == crate::model::AuthType::OAuth2 {
+                                new_acc.access_token = Some(state.password.clone());
+                            }
+                            acc_action_save = Some(new_acc);
+                        }
+                    } else {
+                        // Advance to next field
+                        state.active_field = (state.active_field + 1) % 7;
+                    }
                 }
                 KeyCode::Char(' ') if state.active_field == 0 => {
                     let next_idx = (state.provider_idx + 1) % 6;
                     state.set_preset(next_idx);
+                }
+                KeyCode::Char(' ') if state.active_field == 5 => {
+                    if !state.username.trim().is_empty() {
+                        let (provider, auth_type) = match state.provider_idx {
+                            0 => (ProviderType::Naver, crate::model::AuthType::Basic),
+                            1 => (ProviderType::Apple, crate::model::AuthType::Basic),
+                            2 => (ProviderType::Google, crate::model::AuthType::OAuth2),
+                            3 => (ProviderType::Microsoft, crate::model::AuthType::OAuth2),
+                            4 => (ProviderType::Samsung, crate::model::AuthType::Basic),
+                            _ => (ProviderType::Local, crate::model::AuthType::Basic),
+                        };
+                        let mut new_acc = CalDavAccount::new(
+                            state.name.clone(),
+                            provider,
+                            state.url.clone(),
+                            state.username.clone(),
+                            state.password.clone(),
+                        );
+                        new_acc.auth_type = auth_type;
+                        if auth_type == crate::model::AuthType::OAuth2 {
+                            new_acc.access_token = Some(state.password.clone());
+                        }
+                        acc_action_save = Some(new_acc);
+                    }
+                }
+                KeyCode::Char(' ') if state.active_field == 6 => {
+                    state.is_adding = false;
                 }
                 KeyCode::Backspace => {
                     match state.active_field {
@@ -226,61 +308,183 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
     } else if acc_action_sync {
         app.trigger_sync();
         return Ok(());
+    } else if let Some(idx) = acc_action_delete_idx {
+        let accounts = app.db.get_accounts().unwrap_or_default();
+        if let Some(acc) = accounts.get(idx) {
+            let _ = app.db.delete_account(&acc.id);
+            let _ = app.reload_calendars();
+            let _ = app.reload_events();
+            app.set_status(app.lang.msg_account_removed());
+            if let ActiveModal::Accounts(ref mut s) = app.modal {
+                let remaining = app.db.get_accounts().unwrap_or_default().len();
+                if s.selected_account_idx >= remaining && remaining > 0 {
+                    s.selected_account_idx = remaining - 1;
+                }
+            }
+        }
+        return Ok(());
     } else if let Some(new_acc) = acc_action_save {
+        let is_update = app.db.find_account_by_provider_and_username(&new_acc.provider, &new_acc.username)?.is_some();
         app.db.save_account(&new_acc)?;
-        app.set_status(format!("Added account '{}'", new_acc.name));
+        let status_msg = if is_update {
+            app.lang.msg_account_updated(&new_acc.name)
+        } else {
+            app.lang.msg_account_added(&new_acc.name)
+        };
+        app.set_status(status_msg);
         app.trigger_sync();
         app.close_modal();
         return Ok(());
+    } else if matches!(app.modal, ActiveModal::Accounts(_)) {
+        return Ok(());
     }
 
-    // 3. Handle Other modals
-    match &mut app.modal {
-        ActiveModal::CalendarManager(ref mut cal_state) => {
-            if !cal_state.is_creating {
-                let norm_code = normalize_key_event(key);
-                match norm_code {
-                    KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
-                    KeyCode::Char('n') | KeyCode::Char('c') | KeyCode::Enter => cal_state.is_creating = true,
-                    _ => {}
+    // 3. Handle CalendarManager modal
+    let mut cal_action_close = false;
+    let mut cal_action_delete_idx: Option<usize> = None;
+    let mut cal_action_save: Option<(String, String)> = None;
+
+    if let ActiveModal::CalendarManager(ref mut cal_state) = app.modal {
+        if !cal_state.is_creating {
+            let norm_code = normalize_key_event(key);
+            match norm_code {
+                KeyCode::Esc | KeyCode::Char('q') => cal_action_close = true,
+                KeyCode::Char('n') | KeyCode::Char('c') | KeyCode::Enter => {
+                    cal_state.is_creating = true;
+                    cal_state.active_field = 0;
+                    cal_state.name.clear();
                 }
-            } else {
-                match key.code {
-                    KeyCode::Esc => cal_state.is_creating = false,
-                    KeyCode::Tab | KeyCode::Char(' ') => {
-                        cal_state.color_idx = (cal_state.color_idx + 1) % 7;
+                KeyCode::Char('d') | KeyCode::Char('D') | KeyCode::Delete | KeyCode::Backspace => {
+                    cal_action_delete_idx = Some(cal_state.selected_calendar_idx);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    let count = app.calendars.len();
+                    if count > 0 {
+                        cal_state.selected_calendar_idx = (cal_state.selected_calendar_idx + 1) % count;
                     }
-                    KeyCode::Enter => {
-                        if !cal_state.name.trim().is_empty() {
-                            let color = crate::app::CalendarModalState::PALETTE[cal_state.color_idx % 7];
-                            let new_cal = crate::model::Calendar {
-                                id: format!("cal_custom_{}", uuid::Uuid::new_v4()),
-                                account_id: None,
-                                name: cal_state.name.clone(),
-                                color_code: color.to_string(),
-                                provider: ProviderType::Local,
-                                enabled: true,
-                                is_default: false,
-                                remote_url: None,
-                                ctag: None,
-                            };
-                            let _ = app.db.save_calendar(&new_cal);
-                            let _ = app.reload_calendars();
-                            app.set_status(format!("Created calendar '{}'", new_cal.name));
-                            app.close_modal();
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    let count = app.calendars.len();
+                    if count > 0 {
+                        if cal_state.selected_calendar_idx == 0 {
+                            cal_state.selected_calendar_idx = count - 1;
+                        } else {
+                            cal_state.selected_calendar_idx -= 1;
                         }
                     }
-                    KeyCode::Backspace => {
+                }
+                _ => {}
+            }
+        } else {
+            match key.code {
+                KeyCode::Esc => cal_state.is_creating = false,
+                KeyCode::Tab | KeyCode::Down => {
+                    cal_state.active_field = (cal_state.active_field + 1) % 4;
+                }
+                KeyCode::BackTab | KeyCode::Up => {
+                    if cal_state.active_field == 0 {
+                        cal_state.active_field = 3;
+                    } else {
+                        cal_state.active_field -= 1;
+                    }
+                }
+                KeyCode::Left => {
+                    if cal_state.active_field == 1 {
+                        if cal_state.color_idx == 0 {
+                            cal_state.color_idx = 6;
+                        } else {
+                            cal_state.color_idx -= 1;
+                        }
+                    } else if cal_state.active_field == 3 {
+                        cal_state.active_field = 2;
+                    }
+                }
+                KeyCode::Right => {
+                    if cal_state.active_field == 1 {
+                        cal_state.color_idx = (cal_state.color_idx + 1) % 7;
+                    } else if cal_state.active_field == 2 {
+                        cal_state.active_field = 3;
+                    }
+                }
+                KeyCode::Char(' ') if cal_state.active_field == 1 => {
+                    cal_state.color_idx = (cal_state.color_idx + 1) % 7;
+                }
+                KeyCode::Char(' ') if cal_state.active_field == 2 => {
+                    if !cal_state.name.trim().is_empty() {
+                        let color = crate::app::CalendarModalState::PALETTE[cal_state.color_idx % 7];
+                        cal_action_save = Some((cal_state.name.clone(), color.to_string()));
+                    }
+                }
+                KeyCode::Char(' ') if cal_state.active_field == 3 => {
+                    cal_state.is_creating = false;
+                }
+                KeyCode::Enter => {
+                    if cal_state.active_field == 3 {
+                        cal_state.is_creating = false;
+                    } else if !cal_state.name.trim().is_empty() {
+                        let color = crate::app::CalendarModalState::PALETTE[cal_state.color_idx % 7];
+                        cal_action_save = Some((cal_state.name.clone(), color.to_string()));
+                    }
+                }
+                KeyCode::Backspace => {
+                    if cal_state.active_field == 0 {
                         cal_state.name.pop();
                     }
-                    KeyCode::Char(c) => {
+                }
+                KeyCode::Char(c) => {
+                    if cal_state.active_field == 0 {
                         cal_state.name.push(c);
                     }
-                    _ => {}
+                }
+                _ => {}
+            }
+        }
+    }
+
+    if cal_action_close {
+        app.close_modal();
+        return Ok(());
+    } else if let Some(idx) = cal_action_delete_idx {
+        if let Some(cal) = app.calendars.get(idx) {
+            if !cal.is_default {
+                let cal_id = cal.id.clone();
+                let cal_name = cal.name.clone();
+                let _ = app.db.delete_calendar(&cal_id);
+                let _ = app.reload_calendars();
+                let _ = app.reload_events();
+                app.set_status(app.lang.msg_calendar_deleted_name(&cal_name));
+                if let ActiveModal::CalendarManager(ref mut s) = app.modal {
+                    let count = app.calendars.len();
+                    if s.selected_calendar_idx >= count && count > 0 {
+                        s.selected_calendar_idx = count - 1;
+                    }
                 }
             }
-            return Ok(());
         }
+        return Ok(());
+    } else if let Some((name, color)) = cal_action_save {
+        let new_cal = crate::model::Calendar {
+            id: format!("cal_custom_{}", uuid::Uuid::new_v4()),
+            account_id: None,
+            name: name.clone(),
+            color_code: color,
+            provider: ProviderType::Local,
+            enabled: true,
+            is_default: false,
+            remote_url: None,
+            ctag: None,
+        };
+        let _ = app.db.save_calendar(&new_cal);
+        let _ = app.reload_calendars();
+        app.set_status(format!("Created calendar '{}'", new_cal.name));
+        app.close_modal();
+        return Ok(());
+    } else if matches!(app.modal, ActiveModal::CalendarManager(_)) {
+        return Ok(());
+    }
+
+    // 4. Handle other modals
+    match &mut app.modal {
         ActiveModal::EventDetail(ref id) => {
             let id_clone = id.clone();
             let norm_code = normalize_key_event(key);
@@ -291,7 +495,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char('d') | KeyCode::Char('D') => {
                     app.delete_event(&id_clone)?;
                 }
-                KeyCode::Esc | KeyCode::Char('q') => {
+                KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => {
                     app.close_modal();
                 }
                 _ => {}
@@ -315,8 +519,11 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char('2') | KeyCode::Char('m') | KeyCode::Char('M') => {
                     app.set_week_start_day(crate::model::WeekStartDay::Monday);
                 }
-                KeyCode::Char('3') | KeyCode::Char('t') | KeyCode::Char('T') => {
+                KeyCode::Char('3') | KeyCode::Char('t') => {
                     app.set_week_start_day(crate::model::WeekStartDay::Saturday);
+                }
+                KeyCode::Char('T') | KeyCode::Char('c') | KeyCode::Char('C') => {
+                    app.cycle_theme();
                 }
                 KeyCode::Tab | KeyCode::Right | KeyCode::Down => {
                     let next = match app.week_start_day {
@@ -354,7 +561,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             return Ok(());
         }
-        ActiveModal::EventForm(_) | ActiveModal::Accounts(_) => return Ok(()),
+        ActiveModal::EventForm(_) | ActiveModal::Accounts(_) | ActiveModal::CalendarManager(_) => return Ok(()),
         ActiveModal::None => {}
     }
 
@@ -415,12 +622,14 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('t') => app.nav_today(),
 
         // Actions
+        KeyCode::Char('b') | KeyCode::Char('B') => app.toggle_sidebar(),
         KeyCode::Char('c') | KeyCode::Char('n') => app.open_new_event_modal(None),
         KeyCode::Char('C') => app.open_calendar_modal(),
         KeyCode::Char('r') => app.trigger_sync(),
         KeyCode::Char('A') => app.open_accounts_modal(),
         KeyCode::Char('o') | KeyCode::Char('O') | KeyCode::Char('S') => app.open_settings_modal(),
         KeyCode::Char('L') => app.toggle_language(),
+        KeyCode::Char('T') => app.cycle_theme(),
         KeyCode::Char('?') => app.open_help_modal(),
 
         // Inspect/Select

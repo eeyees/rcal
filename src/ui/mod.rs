@@ -14,6 +14,7 @@ use ratatui::{
 };
 
 use crate::app::{ActiveModal, App, ViewMode};
+use crate::mouse::HitTarget;
 
 pub fn render(f: &mut Frame, app: &mut App) {
     // Clear hit map before rendering this frame
@@ -36,25 +37,30 @@ pub fn render(f: &mut Frame, app: &mut App) {
     header::render(f, app, chunks[0]);
 
     // 2. Main Workspace (Sidebar + View)
-    let sidebar_width = if size.width >= 120 {
-        34
-    } else if size.width >= 100 {
-        32
+    let view_area = if app.show_sidebar {
+        let sidebar_width = if size.width >= 120 {
+            34
+        } else if size.width >= 100 {
+            32
+        } else {
+            28
+        };
+
+        let main_workspace = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(sidebar_width), // Adaptive sidebar width to prevent any clipping
+                Constraint::Min(50),               // Active View
+            ])
+            .split(chunks[2]);
+
+        sidebar::render(f, app, main_workspace[0]);
+        main_workspace[1]
     } else {
-        28
+        // When sidebar is hidden, active view gets the full width (100% of chunks[2])
+        chunks[2]
     };
 
-    let main_workspace = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Length(sidebar_width), // Adaptive sidebar width to prevent any clipping
-            Constraint::Min(50),               // Active View
-        ])
-        .split(chunks[2]);
-
-    sidebar::render(f, app, main_workspace[0]);
-
-    let view_area = main_workspace[1];
     match app.current_view {
         ViewMode::Month => month_view::render(f, app, view_area),
         ViewMode::Week => week_view::render(f, app, view_area),
@@ -66,6 +72,11 @@ pub fn render(f: &mut Frame, app: &mut App) {
     footer::render(f, app, chunks[3]);
 
     // 4. Modals (Overlays on top)
+    if !matches!(app.modal, ActiveModal::None) {
+        // Register full-screen backdrop so mouse clicks outside dialog cannot click background
+        app.hit_map.register(size, HitTarget::ModalBackdrop);
+    }
+
     match &app.modal {
         ActiveModal::EventForm(form) => {
             let form_clone = form.clone();

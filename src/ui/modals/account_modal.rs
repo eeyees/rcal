@@ -8,7 +8,6 @@ use ratatui::{
 
 use crate::app::{AccountModalState, App};
 use crate::mouse::HitTarget;
-use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rect) {
     let popup_width = 78.min(area.width.saturating_sub(4));
@@ -22,24 +21,20 @@ pub fn render(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rec
     };
 
     f.render_widget(Clear, popup_rect);
+    app.hit_map.register(popup_rect, HitTarget::ModalConsume);
 
     let lang = app.lang;
+    let theme = &app.theme;
     let title = if state.is_adding {
-        match lang {
-            crate::i18n::Language::Ko => " 캘린더 계정 연동 (Google / MS 365 / Samsung / Naver / Apple) ",
-            crate::i18n::Language::En => " Add Calendar Account (Google / MS 365 / Samsung / Naver / Apple) ",
-        }
+        lang.t().modal_account_add_title
     } else {
-        match lang {
-            crate::i18n::Language::Ko => " 캘린더 계정 & 클라우드 실시간 동기화 ",
-            crate::i18n::Language::En => " Calendar Accounts & Multi-Cloud Sync ",
-        }
+        lang.t().modal_account_manage_title
     };
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Theme::PRIMARY))
-        .title(Span::styled(title, Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD)));
+        .border_style(Style::default().fg(theme.primary))
+        .title(Span::styled(title, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -64,6 +59,8 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
             Constraint::Length(1), // Action Buttons
         ])
         .split(area);
+
+    let theme = &app.theme;
 
     // 6 Provider Presets: Naver, Apple, Google, Microsoft, Samsung, Generic CalDAV
     let preset_chunks = Layout::default()
@@ -95,26 +92,34 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
 
     for (idx, label, rect) in presets {
         let is_selected = state.provider_idx == idx;
-        let style = if is_selected {
-            Theme::header_tab_active()
+        let is_row_focused = state.active_field == 0;
+        let style = if is_selected && is_row_focused {
+            Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        } else if is_selected {
+            theme.header_tab_active()
         } else {
-            Theme::header_tab_inactive()
+            theme.header_tab_inactive()
         };
-        let p = Paragraph::new(Line::from(vec![Span::raw(label)]))
+        let text = if is_selected && is_row_focused {
+            format!("▶{}◀", label.trim())
+        } else {
+            label.to_string()
+        };
+        let p = Paragraph::new(Line::from(vec![Span::raw(text)]))
             .style(style)
             .alignment(Alignment::Center);
         f.render_widget(p, rect);
         app.hit_map.register(rect, HitTarget::ModalAccountPreset(idx));
     }
 
-    let active_style = Style::default().fg(Theme::TEXT_HIGHLIGHT).bg(Color::Rgb(40, 60, 100)).add_modifier(Modifier::BOLD);
-    let normal_style = Style::default().fg(Theme::TEXT_NORMAL);
+    let active_style = theme.active_input_style();
+    let normal_style = Style::default().fg(theme.text_normal);
 
     let is_oauth = state.provider_idx == 2 || state.provider_idx == 3;
 
     // Name
     let name_line = Line::from(vec![
-        Span::styled(" Name:      ", Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(" Name:      ", Style::default().fg(theme.text_muted)),
         Span::styled(
             if state.name.is_empty() { "(Account name)" } else { &state.name },
             if state.active_field == 1 { active_style } else { normal_style },
@@ -123,12 +128,16 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     f.render_widget(Paragraph::new(name_line), chunks[2]);
     app.hit_map.register(chunks[2], HitTarget::ModalAccountField(1));
 
-    // URL
-    let url_label = if is_oauth { " Endpoint:  " } else { " URL:       " };
+    // URL / Endpoint
+    let url_label = if is_oauth {
+        " Endpoint:  "
+    } else {
+        " CalDAV URL:"
+    };
     let url_line = Line::from(vec![
-        Span::styled(url_label, Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(url_label, Style::default().fg(theme.text_muted)),
         Span::styled(
-            &state.url,
+            if state.url.is_empty() { "(https://...)" } else { &state.url },
             if state.active_field == 2 { active_style } else { normal_style },
         ),
     ]);
@@ -136,14 +145,18 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     app.hit_map.register(chunks[3], HitTarget::ModalAccountField(2));
 
     // Username / Client ID
-    let user_label = if is_oauth { " Client ID: " } else { " User / ID: " };
-    let user_placeholder = if is_oauth {
-        "(OAuth Client ID or Account Email)"
+    let user_label = if is_oauth {
+        " Client ID: "
     } else {
-        "(e.g. ID or username@server.com)"
+        " Username:  "
+    };
+    let user_placeholder = if is_oauth {
+        "(Client ID / Key)"
+    } else {
+        "(User ID / Email)"
     };
     let user_line = Line::from(vec![
-        Span::styled(user_label, Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(user_label, Style::default().fg(theme.text_muted)),
         Span::styled(
             if state.username.is_empty() { user_placeholder } else { &state.username },
             if state.active_field == 3 { active_style } else { normal_style },
@@ -153,65 +166,122 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     app.hit_map.register(chunks[4], HitTarget::ModalAccountField(3));
 
     // Password / Token
-    let pw_label = if is_oauth { " Token/Key: " } else { " Password:  " };
-    let pw_placeholder = if is_oauth {
-        "(Access Token or API Secret)"
+    let pw_label = if is_oauth {
+        " Token/Sec: "
     } else {
-        "(App-specific password)"
+        " Password:  "
     };
-    let masked_pw = "•".repeat(state.password.len());
+    let pw_display = if state.password.is_empty() {
+        "(App-specific password / OAuth Token)".to_string()
+    } else {
+        "•".repeat(state.password.len().min(24))
+    };
     let pw_line = Line::from(vec![
-        Span::styled(pw_label, Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled(pw_label, Style::default().fg(theme.text_muted)),
         Span::styled(
-            if state.password.is_empty() { pw_placeholder } else { &masked_pw },
+            pw_display,
             if state.active_field == 4 { active_style } else { normal_style },
         ),
     ]);
     f.render_widget(Paragraph::new(pw_line), chunks[5]);
     app.hit_map.register(chunks[5], HitTarget::ModalAccountField(4));
 
-    // Help note
+    // Provider guide tip
     let tip_text = match state.provider_idx {
+        0 => " Naver: ID and 2-step verification App Password (애플리케이션 비밀번호).",
+        1 => " Apple iCloud: Apple ID email and iCloud App-Specific Password.",
         2 => " Google: Enter OAuth Bearer Token or API key for direct Google Calendar sync.",
         3 => " MS 365: Enter Microsoft Graph Access Token for Outlook calendar sync.",
-        4 => " Samsung: Syncs via Samsung Cloud CalDAV or Samsung-Outlook Exchange integration.",
-        0 => " Naver: Use your Naver ID and 2-step App Password.",
-        1 => " Apple: Use your Apple ID and App-Specific Password.",
-        _ => " CalDAV: Enter your custom CalDAV URL and server credentials.",
+        4 => " Samsung: Connect via Samsung Cloud CalDAV endpoint or Microsoft Graph exchange.",
+        _ => " CalDAV: Enter your own CalDAV server endpoint (Nextcloud, Baïkal, Radicale, etc).",
     };
-    let note = vec![
-        Line::from(Span::styled(tip_text, Style::default().fg(Theme::ACCENT).add_modifier(Modifier::ITALIC))),
-    ];
-    f.render_widget(Paragraph::new(note), chunks[6]);
+    let tip_line = Paragraph::new(vec![
+        Line::from(""),
+        Line::from(Span::styled(tip_text, Style::default().fg(theme.accent).add_modifier(Modifier::ITALIC))),
+    ]);
+    f.render_widget(tip_line, chunks[6]);
 
-    // Buttons
+    // Action Buttons: [ Connect & Sync ] [ Cancel ]
     let btn_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
             Constraint::Min(1),
-            Constraint::Length(18), // [ Connect & Sync ]
+            Constraint::Length(22), // [ Connect & Sync ]
             Constraint::Length(3),
-            Constraint::Length(12), // [ Cancel ]
+            Constraint::Length(14), // [ Cancel ]
             Constraint::Min(1),
         ])
         .split(chunks[7]);
 
-    let btn_conn = Paragraph::new(Line::from(vec![Span::raw(" [ Connect & Sync ] ")]))
-        .style(Style::default().fg(Color::Black).bg(Theme::SECONDARY).add_modifier(Modifier::BOLD))
+    let is_conn_focused = state.active_field == 5;
+    let conn_text = if is_conn_focused {
+        " ▶ [ Connect & Sync ] ◀ "
+    } else {
+        " [ Connect & Sync ] "
+    };
+    let conn_style = if is_conn_focused {
+        Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(Color::Black).bg(theme.secondary).add_modifier(Modifier::BOLD)
+    };
+    let btn_conn = Paragraph::new(Line::from(vec![Span::raw(conn_text)]))
+        .style(conn_style)
         .alignment(Alignment::Center);
     f.render_widget(btn_conn, btn_chunks[1]);
     app.hit_map.register(btn_chunks[1], HitTarget::ModalAccountConnect);
 
-    let btn_cancel = Paragraph::new(Line::from(vec![Span::raw(" [ Cancel ] ")]))
-        .style(Theme::button_style())
+    let is_cancel_focused = state.active_field == 6;
+    let cancel_text = if is_cancel_focused {
+        " ▶ [ Cancel ] ◀ "
+    } else {
+        " [ Cancel ] "
+    };
+    let cancel_style = if is_cancel_focused {
+        Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+    } else {
+        theme.button_style()
+    };
+    let btn_cancel = Paragraph::new(Line::from(vec![Span::raw(cancel_text)]))
+        .style(cancel_style)
         .alignment(Alignment::Center);
     f.render_widget(btn_cancel, btn_chunks[3]);
     app.hit_map.register(btn_chunks[3], HitTarget::ModalCancel);
+
+    // Terminal cursor positioning on active input field
+    let cursor_pos = match state.active_field {
+        0 => {
+            let active_rect = presets[state.provider_idx % 6].2;
+            (active_rect.x + active_rect.width / 2, active_rect.y)
+        }
+        1 => {
+            let val_w = Span::raw(&state.name).width() as u16;
+            (chunks[2].x + 12 + val_w, chunks[2].y)
+        }
+        2 => {
+            let val_w = Span::raw(&state.url).width() as u16;
+            (chunks[3].x + 12 + val_w, chunks[3].y)
+        }
+        3 => {
+            let val_w = Span::raw(&state.username).width() as u16;
+            (chunks[4].x + 12 + val_w, chunks[4].y)
+        }
+        4 => {
+            let val_w = state.password.len().min(24) as u16;
+            (chunks[5].x + 12 + val_w, chunks[5].y)
+        }
+        5 => (btn_chunks[1].x + btn_chunks[1].width / 2, btn_chunks[1].y),
+        6 => (btn_chunks[3].x + btn_chunks[3].width / 2, btn_chunks[3].y),
+        _ => (chunks[2].x, chunks[2].y),
+    };
+    let safe_x = cursor_pos.0.min(area.right().saturating_sub(2));
+    let safe_y = cursor_pos.1.min(area.bottom().saturating_sub(1));
+    f.set_cursor_position((safe_x, safe_y));
 }
 
 fn render_account_list(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rect) {
     let accounts = app.db.get_accounts().unwrap_or_default();
     let lang = app.lang;
+    let theme = &app.theme;
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -224,26 +294,20 @@ fn render_account_list(f: &mut Frame, app: &mut App, state: &AccountModalState, 
         ])
         .split(area);
 
-    let title_text = match lang {
-        crate::i18n::Language::Ko => " 📋 연동된 캘린더 계정 목록 (삭제하려면 [ 삭제 ] 버튼 클릭):",
-        crate::i18n::Language::En => " 📋 Configured Sync Accounts (Click [ Delete ] to remove):",
-    };
+    let title_text = lang.t().account_list_header;
     f.render_widget(
         Paragraph::new(Span::styled(
             title_text,
-            Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD),
+            Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD),
         )),
         chunks[0],
     );
 
     if accounts.is_empty() {
-        let empty_msg = match lang {
-            crate::i18n::Language::Ko => "  연동된 클라우드 계정이 없습니다. 아래의 '[ + 계정 추가 ]'를 클릭하여 Google, Microsoft, Samsung, Naver, Apple 캘린더를 연동하세요!",
-            crate::i18n::Language::En => "  No cloud accounts linked yet. Click '[ + Add Account ]' below to link Google, Microsoft, Samsung, Naver, or Apple calendars!",
-        };
+        let empty_msg = lang.t().account_empty_msg;
         let p = Paragraph::new(Span::styled(
             empty_msg,
-            Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC),
+            Style::default().fg(theme.text_muted).add_modifier(Modifier::ITALIC),
         ));
         f.render_widget(p, chunks[2]);
     } else {
@@ -270,40 +334,39 @@ fn render_account_list(f: &mut Frame, app: &mut App, state: &AccountModalState, 
 
             let last_sync = acc.last_synced_at
                 .map(|t| t.format("%Y-%m-%d %H:%M").to_string())
-                .unwrap_or_else(|| match lang {
-                    crate::i18n::Language::Ko => "동기화 이력 없음".to_string(),
-                    crate::i18n::Language::En => "Never".to_string(),
-                });
+                .unwrap_or_else(|| lang.t().account_never_synced.to_string());
 
             let provider_color = match acc.provider {
                 crate::model::ProviderType::Google => Color::Rgb(66, 133, 244),
                 crate::model::ProviderType::Microsoft => Color::Rgb(0, 120, 212),
                 crate::model::ProviderType::Samsung => Color::Rgb(3, 78, 162),
-                crate::model::ProviderType::Naver => Color::Rgb(3, 199, 90),
-                crate::model::ProviderType::Apple => Color::Rgb(90, 200, 250),
-                crate::model::ProviderType::Local => Color::Cyan,
+                crate::model::ProviderType::Naver => Color::Rgb(15, 157, 88),
+                crate::model::ProviderType::Apple => Color::Rgb(80, 160, 255),
+                _ => Color::Cyan,
             };
 
             let is_selected = idx == state.selected_account_idx;
             let bullet = if is_selected { " ▶ " } else { " • " };
 
             let info_line = Line::from(vec![
-                Span::styled(bullet, Style::default().fg(if is_selected { Theme::ACCENT } else { Theme::PRIMARY })),
-                Span::styled(&acc.name, Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD)),
+                Span::styled(bullet, Style::default().fg(if is_selected { theme.accent } else { theme.primary })),
+                Span::styled(&acc.name, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)),
                 Span::styled(format!(" [{}]", acc.provider.as_str()), Style::default().fg(provider_color)),
-                Span::styled(format!(" (ID: {})", acc.username), Style::default().fg(Theme::TEXT_NORMAL)),
-                Span::styled(format!(" | {}", last_sync), Style::default().fg(Theme::TEXT_MUTED)),
+                Span::styled(format!(" (ID: {})", acc.username), Style::default().fg(theme.text_normal)),
+                Span::styled(format!(" | {}", last_sync), Style::default().fg(theme.text_muted)),
             ]);
-            f.render_widget(Paragraph::new(info_line), row_parts[0]);
-
-            let del_label = match lang {
-                crate::i18n::Language::Ko => "[ 삭제 ]",
-                crate::i18n::Language::En => "[ Delete ]",
+            let row_style = if is_selected {
+                Style::default().bg(theme.selected_bg)
+            } else {
+                Style::default()
             };
+            f.render_widget(Paragraph::new(info_line).style(row_style), row_parts[0]);
+
+            let del_label = lang.btn_delete();
             let del_btn = Paragraph::new(Line::from(vec![Span::raw(del_label)]))
                 .style(
                     Style::default()
-                        .fg(Theme::DANGER)
+                        .fg(theme.danger)
                         .add_modifier(Modifier::BOLD),
                 )
                 .alignment(Alignment::Center);
@@ -324,33 +387,32 @@ fn render_account_list(f: &mut Frame, app: &mut App, state: &AccountModalState, 
         ])
         .split(chunks[4]);
 
-    let add_label = match lang {
-        crate::i18n::Language::Ko => " [ + 계정 추가 ] ",
-        crate::i18n::Language::En => " [ + Add Account ] ",
-    };
+    let add_label = lang.t().account_btn_add;
     let btn_add = Paragraph::new(Line::from(vec![Span::raw(add_label)]))
-        .style(Style::default().fg(Color::Black).bg(Theme::PRIMARY).add_modifier(Modifier::BOLD))
+        .style(Style::default().fg(Color::Black).bg(theme.primary).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center);
     f.render_widget(btn_add, btn_chunks[0]);
     app.hit_map.register(btn_chunks[0], HitTarget::ModalAccountAdd);
 
-    let sync_label = match lang {
-        crate::i18n::Language::Ko => " [ ⟳ 동기화 실행 ] ",
-        crate::i18n::Language::En => " [ ⟳ Sync Now ] ",
-    };
+    let sync_label = lang.t().account_btn_sync_now;
     let btn_sync = Paragraph::new(Line::from(vec![Span::raw(sync_label)]))
-        .style(Style::default().fg(Color::Black).bg(Theme::SECONDARY).add_modifier(Modifier::BOLD))
+        .style(Style::default().fg(Color::Black).bg(theme.secondary).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center);
     f.render_widget(btn_sync, btn_chunks[2]);
     app.hit_map.register(btn_chunks[2], HitTarget::BtnSync);
 
-    let close_label = match lang {
-        crate::i18n::Language::Ko => " [ 닫기 (q) ] ",
-        crate::i18n::Language::En => " [ Close (q) ] ",
-    };
+    let close_label = format!(" {} ", lang.btn_close());
     let btn_close = Paragraph::new(Line::from(vec![Span::raw(close_label)]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_close, btn_chunks[4]);
     app.hit_map.register(btn_chunks[4], HitTarget::ModalClose);
+
+    if accounts.is_empty() {
+        f.set_cursor_position((btn_chunks[0].x + btn_chunks[0].width / 2, btn_chunks[0].y));
+    } else {
+        let sel_idx = state.selected_account_idx.min(accounts.len().saturating_sub(1));
+        let cursor_y = chunks[2].y + sel_idx as u16;
+        f.set_cursor_position((chunks[2].x + 1, cursor_y));
+    }
 }

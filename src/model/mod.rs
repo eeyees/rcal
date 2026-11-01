@@ -88,37 +88,11 @@ impl WeekStartDay {
     }
 
     pub fn weekday_headers(&self, lang: crate::i18n::Language) -> Vec<&'static str> {
-        match self {
-            WeekStartDay::Sunday => match lang {
-                crate::i18n::Language::Ko => vec!["일", "월", "화", "수", "목", "금", "토"],
-                crate::i18n::Language::En => vec!["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"],
-            },
-            WeekStartDay::Monday => match lang {
-                crate::i18n::Language::Ko => vec!["월", "화", "수", "목", "금", "토", "일"],
-                crate::i18n::Language::En => vec!["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
-            },
-            WeekStartDay::Saturday => match lang {
-                crate::i18n::Language::Ko => vec!["토", "일", "월", "화", "수", "목", "금"],
-                crate::i18n::Language::En => vec!["SAT", "SUN", "MON", "TUE", "WED", "THU", "FRI"],
-            },
-        }
+        lang.weekday_headers_for(*self).to_vec()
     }
 
     pub fn label(&self, lang: crate::i18n::Language) -> &'static str {
-        match self {
-            WeekStartDay::Sunday => match lang {
-                crate::i18n::Language::Ko => "일요일 시작 (Sunday)",
-                crate::i18n::Language::En => "Sunday start",
-            },
-            WeekStartDay::Monday => match lang {
-                crate::i18n::Language::Ko => "월요일 시작 (Monday)",
-                crate::i18n::Language::En => "Monday start",
-            },
-            WeekStartDay::Saturday => match lang {
-                crate::i18n::Language::Ko => "토요일 시작 (Saturday)",
-                crate::i18n::Language::En => "Saturday start",
-            },
-        }
+        lang.week_start_label(*self)
     }
 }
 

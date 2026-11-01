@@ -149,24 +149,24 @@ impl SyncEngine {
             }
 
             // Pull events from Google
-            if let Ok(events) = client.list_events(&google_cal_id, &local_cal_id).await {
-                for g_ev in events {
-                    let all_events = db.get_all_events()?;
-                    let existing = all_events.iter().find(|e| {
-                        e.calendar_id == local_cal_id && e.remote_id == g_ev.remote_id
-                    });
+            let events = client.list_events(&google_cal_id, &local_cal_id).await
+                .with_context(|| format!("Failed to list events for Google calendar {}", google_cal_id))?;
+            for g_ev in events {
+                let all_events = db.get_all_events()?;
+                let existing = all_events.iter().find(|e| {
+                    e.calendar_id == local_cal_id && e.remote_id == g_ev.remote_id
+                });
 
-                    if let Some(existing_ev) = existing {
-                        if existing_ev.etag != g_ev.etag {
-                            let mut updated = g_ev;
-                            updated.id = existing_ev.id.clone();
-                            db.save_event(&updated)?;
-                            total_pulled += 1;
-                        }
-                    } else {
-                        db.save_event(&g_ev)?;
+                if let Some(existing_ev) = existing {
+                    if existing_ev.etag != g_ev.etag {
+                        let mut updated = g_ev;
+                        updated.id = existing_ev.id.clone();
+                        db.save_event(&updated)?;
                         total_pulled += 1;
                     }
+                } else {
+                    db.save_event(&g_ev)?;
+                    total_pulled += 1;
                 }
             }
         }
@@ -257,24 +257,24 @@ impl SyncEngine {
             }
 
             // Pull events from Microsoft
-            if let Ok(events) = client.list_events(&ms_cal_id, &local_cal_id).await {
-                for ms_ev in events {
-                    let all_events = db.get_all_events()?;
-                    let existing = all_events.iter().find(|e| {
-                        e.calendar_id == local_cal_id && e.remote_id == ms_ev.remote_id
-                    });
+            let events = client.list_events(&ms_cal_id, &local_cal_id).await
+                .with_context(|| format!("Failed to list events for Microsoft calendar {}", ms_cal_id))?;
+            for ms_ev in events {
+                let all_events = db.get_all_events()?;
+                let existing = all_events.iter().find(|e| {
+                    e.calendar_id == local_cal_id && e.remote_id == ms_ev.remote_id
+                });
 
-                    if let Some(existing_ev) = existing {
-                        if existing_ev.etag != ms_ev.etag {
-                            let mut updated = ms_ev;
-                            updated.id = existing_ev.id.clone();
-                            db.save_event(&updated)?;
-                            total_pulled += 1;
-                        }
-                    } else {
-                        db.save_event(&ms_ev)?;
+                if let Some(existing_ev) = existing {
+                    if existing_ev.etag != ms_ev.etag {
+                        let mut updated = ms_ev;
+                        updated.id = existing_ev.id.clone();
+                        db.save_event(&updated)?;
                         total_pulled += 1;
                     }
+                } else {
+                    db.save_event(&ms_ev)?;
+                    total_pulled += 1;
                 }
             }
         }
@@ -372,26 +372,27 @@ impl SyncEngine {
             }
 
             // Pull Remote Changes from Server
-            if let Ok(remote_events) = client.fetch_events(&remote_href).await {
-                for r_ev in remote_events {
-                    let parsed_events = ical::ics_to_events(&r_ev.ics_content, &local_cal_id, &r_ev.href, r_ev.etag.as_deref());
-                    for p_ev in parsed_events {
-                        let all_events = db.get_all_events()?;
-                        let existing = all_events.iter().find(|e| {
-                            e.calendar_id == local_cal_id && e.remote_id == p_ev.remote_id
-                        });
+            let remote_events = client.fetch_events(&remote_href).await
+                .with_context(|| format!("Failed to fetch events from {}", remote_href))?;
 
-                        if let Some(existing_ev) = existing {
-                            if existing_ev.etag != p_ev.etag {
-                                let mut updated = p_ev;
-                                updated.id = existing_ev.id.clone();
-                                db.save_event(&updated)?;
-                                total_pulled += 1;
-                            }
-                        } else {
-                            db.save_event(&p_ev)?;
+            for r_ev in remote_events {
+                let parsed_events = ical::ics_to_events(&r_ev.ics_content, &local_cal_id, &r_ev.href, r_ev.etag.as_deref());
+                for p_ev in parsed_events {
+                    let all_events = db.get_all_events()?;
+                    let existing = all_events.iter().find(|e| {
+                        e.calendar_id == local_cal_id && e.remote_id == p_ev.remote_id
+                    });
+
+                    if let Some(existing_ev) = existing {
+                        if existing_ev.etag != p_ev.etag {
+                            let mut updated = p_ev;
+                            updated.id = existing_ev.id.clone();
+                            db.save_event(&updated)?;
                             total_pulled += 1;
                         }
+                    } else {
+                        db.save_event(&p_ev)?;
+                        total_pulled += 1;
                     }
                 }
             }

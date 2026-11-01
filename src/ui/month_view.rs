@@ -9,12 +9,12 @@ use ratatui::{
 
 use crate::app::App;
 use crate::mouse::HitTarget;
-use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let selected_year = app.selected_date.year();
     let selected_month = app.selected_date.month();
     let today = Local::now().date_naive();
+    let theme = &app.theme;
 
     let first_day = NaiveDate::from_ymd_opt(selected_year, selected_month, 1).unwrap();
 
@@ -50,9 +50,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let weekday = col_date.weekday();
         let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
         let style = if is_weekend {
-            Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)
+            Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::BOLD)
+            Style::default().fg(theme.text_muted).add_modifier(Modifier::BOLD)
         };
         let p = Paragraph::new(Line::from(vec![Span::raw(*dow)]))
             .style(style)
@@ -78,11 +78,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
             // Day cell border & styling
             let border_color = if is_selected {
-                Theme::PRIMARY
+                theme.primary
             } else if is_today {
-                Theme::SECONDARY
+                theme.secondary
             } else {
-                Theme::BORDER
+                theme.border
             };
 
             let block = Block::default()
@@ -98,23 +98,24 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             // Content inside cell: Day number header + events
             let mut cell_lines = Vec::new();
 
-            // Day Number
+            // Day Number - consistent format across all states so text never shifts on focus/selection change
             let day_num_str = format!("{}", current_cell_date.day());
+            let day_text = format!(" {} ", day_num_str);
             let day_span = if is_today {
                 Span::styled(
-                    format!(" {} ", day_num_str),
-                    Theme::today_style(),
+                    day_text,
+                    theme.today_style(),
                 )
             } else if is_selected {
                 Span::styled(
-                    format!(" {} ", day_num_str),
-                    Theme::selected_day_style(),
+                    day_text,
+                    theme.selected_day_style(),
                 )
             } else if is_current_month {
-                let color = if col == 0 || col == 6 { Theme::ACCENT } else { Theme::TEXT_NORMAL };
-                Span::styled(day_num_str, Style::default().fg(color).add_modifier(Modifier::BOLD))
+                let color = if col == 0 || col == 6 { theme.accent } else { theme.text_normal };
+                Span::styled(day_text, Style::default().fg(color).add_modifier(Modifier::BOLD))
             } else {
-                Span::styled(day_num_str, Style::default().fg(Theme::TEXT_DIM))
+                Span::styled(day_text, Style::default().fg(theme.text_dim))
             };
             cell_lines.push(Line::from(vec![day_span]));
 
@@ -149,21 +150,18 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     Span::styled(prefix, Style::default().fg(cal_color)),
                     Span::styled(
                         time_or_title,
-                        Style::default().fg(Theme::TEXT_NORMAL),
+                        Style::default().fg(theme.text_normal),
                     ),
                 ]));
             }
 
             if events_for_day.len() > max_displayable {
                 let more_count = events_for_day.len() - max_displayable;
-                let more_label = match app.lang {
-                    crate::i18n::Language::Ko => format!(" +{}개 더보기", more_count),
-                    crate::i18n::Language::En => format!(" +{} more", more_count),
-                };
+                let more_label = app.lang.more_events(more_count);
                 cell_lines.push(Line::from(vec![
                     Span::styled(
                         more_label,
-                        Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC),
+                        Style::default().fg(theme.text_muted).add_modifier(Modifier::ITALIC),
                     ),
                 ]));
             }

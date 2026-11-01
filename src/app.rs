@@ -6,6 +6,7 @@ use crate::i18n::Language;
 use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus, WeekStartDay};
 use crate::mouse::{HitMap, HitTarget};
 use crate::storage::Database;
+use crate::ui::theme::{Theme, ThemeMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewMode {
@@ -27,7 +28,7 @@ impl ViewMode {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EventFormState {
     pub is_new: bool,
     pub event_id: Option<String>,
@@ -43,7 +44,7 @@ pub struct EventFormState {
 }
 
 impl EventFormState {
-    pub const TOTAL_FIELDS: usize = 7;
+    pub const TOTAL_FIELDS: usize = 9;
 
     pub fn new_with_date(date: NaiveDate, default_cal_id: String, default_hour: Option<u32>) -> Self {
         let hour = default_hour.unwrap_or(9);
@@ -79,11 +80,13 @@ impl EventFormState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalendarModalState {
     pub is_creating: bool,
     pub name: String,
     pub color_idx: usize,
+    pub selected_calendar_idx: usize,
+    pub active_field: usize,
 }
 
 impl CalendarModalState {
@@ -102,11 +105,13 @@ impl CalendarModalState {
             is_creating: false,
             name: String::new(),
             color_idx: 0,
+            selected_calendar_idx: 0,
+            active_field: 0,
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AccountModalState {
     pub is_adding: bool,
     pub provider_idx: usize, // 0: Naver, 1: Apple iCloud, 2: CalDAV
@@ -114,7 +119,7 @@ pub struct AccountModalState {
     pub url: String,
     pub username: String,
     pub password: String,
-    pub active_field: usize, // 0..=4
+    pub active_field: usize, // 0..=6
     pub selected_account_idx: usize,
     pub error_msg: Option<String>,
 }
@@ -165,7 +170,7 @@ impl AccountModalState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ActiveModal {
     None,
     EventForm(EventFormState),
@@ -194,6 +199,8 @@ pub struct App {
     pub status_message: Option<(String, Instant)>,
     pub lang: Language,
     pub week_start_day: WeekStartDay,
+    pub theme: Theme,
+    pub show_sidebar: bool,
 
     // Synchronization state
     pub is_syncing: bool,
@@ -204,12 +211,22 @@ pub struct App {
 impl App {
     pub fn new(db: Database) -> Result<Self> {
         let today = Local::now().date_naive();
-        let lang = Language::detect();
+        let lang = db.get_setting("language")
+            .ok()
+            .flatten()
+            .and_then(|s| Language::from_code(&s))
+            .unwrap_or_else(Language::detect);
         let week_start_day = db.get_setting("week_start_day")
             .ok()
             .flatten()
             .map(|s| WeekStartDay::from_str(&s))
             .unwrap_or(WeekStartDay::Sunday);
+        let theme_mode = db.get_setting("theme")
+            .ok()
+            .flatten()
+            .map(|s| ThemeMode::from_str(&s))
+            .unwrap_or(ThemeMode::ModernDark);
+        let theme = Theme::from_mode(theme_mode);
 
         let mut app = Self {
             running: true,
@@ -225,6 +242,8 @@ impl App {
             status_message: Some((lang.msg_welcome().to_string(), Instant::now())),
             lang,
             week_start_day,
+            theme,
+            show_sidebar: true,
             is_syncing: false,
             last_sync_status: None,
             sync_tx: None,
@@ -258,9 +277,20 @@ impl App {
             })
     }
 
-    pub fn toggle_language(&mut self) {
-        self.lang = self.lang.toggle();
+    pub fn set_language(&mut self, lang: Language) {
+        self.lang = lang;
+        let _ = self.db.set_setting("language", lang.code());
         self.set_status(self.lang.msg_lang_changed());
+    }
+
+    pub fn toggle_language(&mut self) {
+        self.set_language(self.lang.toggle());
+    }
+
+    pub fn toggle_sidebar(&mut self) {
+        self.show_sidebar = !self.show_sidebar;
+        let msg = self.lang.msg_sidebar_toggle(self.show_sidebar);
+        self.set_status(msg);
     }
 
     pub fn set_status(&mut self, msg: impl Into<String>) {
@@ -347,6 +377,20 @@ impl App {
         ));
     }
 
+    pub fn open_new_all_day_event_modal(&mut self, date: Option<NaiveDate>) {
+        if let Some(d) = date {
+            self.selected_date = d;
+        }
+        let cal_id = self.default_calendar_id();
+        let mut form = EventFormState::new_with_date(
+            self.selected_date,
+            cal_id,
+            None,
+        );
+        form.all_day = true;
+        self.modal = ActiveModal::EventForm(form);
+    }
+
     pub fn open_edit_event_modal(&mut self, event_id: &str) {
         if let Ok(Some(ev)) = self.db.get_event_by_id(event_id) {
             self.modal = ActiveModal::EventForm(EventFormState::from_event(&ev));
@@ -377,11 +421,25 @@ impl App {
         self.week_start_day = day;
         let _ = self.db.set_setting("week_start_day", day.as_str());
         let label = day.label(self.lang);
+        let msg = self.lang.msg_week_start_changed(label);
+        self.set_status(msg);
+    }
+
+    pub fn set_theme(&mut self, mode: ThemeMode) {
+        self.theme = Theme::from_mode(mode);
+        let _ = self.db.set_setting("theme", mode.as_str());
+        let label = mode.label(self.lang);
         let msg = match self.lang {
-            Language::Ko => format!("주간 시작 요일이 '{}'로 설정되었습니다.", label),
-            Language::En => format!("Week start day set to '{}'.", label),
+            Language::Ko => format!("테마가 '{}'로 변경되었습니다.", label),
+            Language::Ja => format!("テーマが「{}」に変更されました。", label),
+            _ => format!("Theme changed to '{}'.", label),
         };
         self.set_status(msg);
+    }
+
+    pub fn cycle_theme(&mut self) {
+        let next_mode = self.theme.mode.next();
+        self.set_theme(next_mode);
     }
 
     pub fn trigger_sync(&mut self) {
@@ -474,6 +532,11 @@ impl App {
     // Process mouse click
     pub fn handle_mouse_click(&mut self, x: u16, y: u16) -> Result<()> {
         if let Some(target) = self.hit_map.check(x, y) {
+            // When a modal is active, clicks on background targets must NEVER execute!
+            if !matches!(self.modal, ActiveModal::None) && !target.is_modal() {
+                return Ok(());
+            }
+
             match target {
                 HitTarget::TabMonth => self.current_view = ViewMode::Month,
                 HitTarget::TabWeek => self.current_view = ViewMode::Week,
@@ -489,9 +552,20 @@ impl App {
                 HitTarget::BtnLanguage => self.toggle_language(),
                 HitTarget::BtnManageCalendars => self.open_calendar_modal(),
                 HitTarget::BtnSettings => self.open_settings_modal(),
+                HitTarget::BtnToggleSidebar => self.toggle_sidebar(),
+                HitTarget::ModalBackdrop => self.close_modal(),
+                HitTarget::ModalConsume => {}
 
                 HitTarget::ModalSettingWeekStart(day) => {
                     self.set_week_start_day(day);
+                }
+
+                HitTarget::ModalSettingTheme(mode) => {
+                    self.set_theme(mode);
+                }
+
+                HitTarget::ModalSelectLanguage(l) => {
+                    self.set_language(l);
                 }
 
                 HitTarget::ModalCalNameField => {}
@@ -524,7 +598,7 @@ impl App {
                             };
                             self.db.save_calendar(&new_cal)?;
                             self.reload_calendars()?;
-                            self.set_status(format!("Created calendar '{}'", new_cal.name));
+                            self.set_status(self.lang.msg_calendar_created(&new_cal.name));
                             self.close_modal();
                         }
                     }
@@ -534,7 +608,7 @@ impl App {
                     self.db.delete_calendar(&id)?;
                     self.reload_calendars()?;
                     self.reload_events()?;
-                    self.set_status("Calendar deleted");
+                    self.set_status(self.lang.msg_calendar_deleted());
                     if let ActiveModal::CalendarManager(ref mut cal_state) = self.modal {
                         cal_state.is_creating = false;
                     }
@@ -560,6 +634,11 @@ impl App {
 
                 HitTarget::ModalAccountConnect => {
                     if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
+                        if acc_state.username.trim().is_empty() {
+                            self.set_status(self.lang.msg_account_username_empty());
+                            return Ok(());
+                        }
+
                         let (provider, auth_type) = match acc_state.provider_idx {
                             0 => (ProviderType::Naver, crate::model::AuthType::Basic),
                             1 => (ProviderType::Apple, crate::model::AuthType::Basic),
@@ -568,6 +647,11 @@ impl App {
                             4 => (ProviderType::Samsung, crate::model::AuthType::Basic),
                             _ => (ProviderType::Local, crate::model::AuthType::Basic),
                         };
+
+                        let existing = self.db.find_account_by_provider_and_username(&provider, &acc_state.username)?;
+                        let is_update = existing.is_some();
+                        let account_id = existing.map(|a| a.id).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+
                         let mut new_acc = CalDavAccount::new(
                             acc_state.name.clone(),
                             provider,
@@ -575,13 +659,19 @@ impl App {
                             acc_state.username.clone(),
                             acc_state.password.clone(),
                         );
+                        new_acc.id = account_id;
                         new_acc.auth_type = auth_type;
                         if auth_type == crate::model::AuthType::OAuth2 {
                             new_acc.access_token = Some(acc_state.password.clone());
                         }
 
                         self.db.save_account(&new_acc)?;
-                        self.set_status(format!("Added account '{}'", new_acc.name));
+                        let status_msg = if is_update {
+                            self.lang.msg_account_updated(&new_acc.name)
+                        } else {
+                            self.lang.msg_account_added(&new_acc.name)
+                        };
+                        self.set_status(status_msg);
                         self.trigger_sync();
                         self.close_modal();
                     }
@@ -591,11 +681,7 @@ impl App {
                     self.db.delete_account(&id)?;
                     self.reload_calendars()?;
                     self.reload_events()?;
-                    let msg = match self.lang {
-                        crate::i18n::Language::Ko => "계정이 삭제되었습니다.",
-                        crate::i18n::Language::En => "Account removed.",
-                    };
-                    self.set_status(msg);
+                    self.set_status(self.lang.msg_account_removed());
                     if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
                         acc_state.is_adding = false;
                         acc_state.selected_account_idx = 0;
@@ -621,9 +707,17 @@ impl App {
                     self.open_new_event_modal(Some(hour));
                 }
 
+                HitTarget::WeekAllDaySlot(date) => {
+                    self.open_new_all_day_event_modal(Some(date));
+                }
+
                 HitTarget::DaySlot(hour, _) => {
                     self.selected_hour = hour;
                     self.open_new_event_modal(Some(hour));
+                }
+
+                HitTarget::DayAllDaySlot(date) => {
+                    self.open_new_all_day_event_modal(Some(date));
                 }
 
                 HitTarget::EventItem(id) => {

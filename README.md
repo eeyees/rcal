@@ -124,7 +124,8 @@
 
 | Keybinding | Mouse Action | Description |
 | :--- | :--- | :--- |
-| `L` | Click `[ L: 한/EN ]` | Toggle language between Korean and English |
+| `T` | Click theme in `[ ⚙ Settings ]` | Cycle color theme (Modern Dark, Nord, Dracula, Forest, Sunset, Monokai, Solarized) |
+| `L` | Click `[ L: 한/EN/日 ]` | Cycle language (Korean ↔ English ↔ Japanese) |
 | `s` | Click `[ ⚙ Settings ]` | Open Settings Modal (Week start day, themes, language) |
 | `a` | Click Accounts in sidebar | Open Cloud Accounts Manager Modal |
 | `b` | Click sidebar toggle | Toggle sidebar visibility |
@@ -163,7 +164,7 @@ To configure your accounts, press `a` inside `rcal` or select the **Accounts** m
 
 ## 🎨 Themes & Customization
 
-Press `s` to enter the **Settings Modal** to personalize your environment:
+Cycle themes quickly anytime by pressing **`T`** (`Shift+T`), or press **`s`** to open the **Settings Modal** to click and select:
 
 ### Built-in Color Palettes
 - 🌙 **Modern Dark** (Default clean terminal look)
@@ -173,6 +174,8 @@ Press `s` to enter the **Settings Modal** to personalize your environment:
 - 🌆 **Sunset** (Vibrant cyberpunk purple & orange)
 - 🎨 **Monokai** (Classic code editor contrast)
 - ☀️ **Solarized** (Precision tuned low-contrast dark)
+
+Selected themes are immediately persisted to the SQLite database and restored on startup.
 
 ### Week Start Preference
 Choose whether your week starts on **Sunday**, **Monday**, or **Saturday** based on your cultural or regional workflow.

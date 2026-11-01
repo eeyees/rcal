@@ -9,11 +9,11 @@ use ratatui::{
 
 use crate::app::App;
 use crate::mouse::HitTarget;
-use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let today = Local::now().date_naive();
     let selected_date = app.selected_date;
+    let theme = &app.theme;
 
     // Determine week start based on week_start_day setting
     let week_start = app.week_start_day.week_start_date(selected_date);
@@ -40,7 +40,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let num_hours = end_hour - start_hour + 1;
 
     let time_row_constraints = vec![
-        Constraint::Length(2); 1 // Header row for Date
+        Constraint::Length(2), // Header row for Date
+        Constraint::Length(1), // All-Day row
     ];
     let mut all_time_constraints = time_row_constraints;
     all_time_constraints.extend(vec![Constraint::Ratio(1, num_hours as u32); num_hours as usize]);
@@ -50,13 +51,22 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .constraints(all_time_constraints)
         .split(time_area);
 
+    // All-day label
+    let all_day_lbl = app.lang.t().all_day_short;
+    let p_all = Paragraph::new(Line::from(vec![Span::styled(
+        all_day_lbl,
+        Style::default().fg(theme.accent).add_modifier(Modifier::BOLD),
+    )]))
+    .alignment(Alignment::Right);
+    f.render_widget(p_all, time_rows[1]);
+
     // Render Time column labels
     for h in start_hour..=end_hour {
-        let idx = (h - start_hour + 1) as usize;
+        let idx = (h - start_hour + 2) as usize;
         let time_str = format!("{:02}:00", h);
         let p = Paragraph::new(Line::from(vec![Span::styled(
             time_str,
-            Style::default().fg(Theme::TEXT_MUTED),
+            Style::default().fg(theme.text_muted),
         )]))
         .alignment(Alignment::Right);
         f.render_widget(p, time_rows[idx]);
@@ -74,6 +84,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(2), // Date Header
+                Constraint::Length(1), // All-Day Events Slot
                 Constraint::Min(10),   // Timeline Body
             ])
             .split(col_rect);
@@ -84,13 +95,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let date_header_text = format!("{} {:02}/{:02}", dow_str, current_date.month(), current_date.day());
         let is_weekend = current_date.weekday() == chrono::Weekday::Sat || current_date.weekday() == chrono::Weekday::Sun;
         let header_style = if is_today {
-            Theme::today_style()
+            theme.today_style()
         } else if is_selected {
-            Theme::selected_day_style()
+            theme.selected_day_style()
         } else if is_weekend {
-            Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)
+            Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Theme::TEXT_NORMAL).add_modifier(Modifier::BOLD)
+            Style::default().fg(theme.text_normal).add_modifier(Modifier::BOLD)
         };
 
         let p_head = Paragraph::new(Line::from(vec![Span::raw(date_header_text)]))
@@ -101,12 +112,41 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         // Register hit for day header
         app.hit_map.register(col_chunks[0], HitTarget::MonthDay(current_date));
 
+        // Render All-day events row
+        let all_day_events_on_day: Vec<&_> = app.events_cache.iter()
+            .filter(|ev| ev.all_day && ev.occurs_on(current_date))
+            .collect();
+
+        if let Some(first_ev) = all_day_events_on_day.first() {
+            let ev_cal = app.calendars.iter().find(|c| c.id == first_ev.calendar_id);
+            let cal_color = ev_cal.map(|c| c.ratatui_color()).unwrap_or(Color::Cyan);
+            let count_suffix = if all_day_events_on_day.len() > 1 {
+                format!(" +{}", all_day_events_on_day.len() - 1)
+            } else {
+                String::new()
+            };
+            let all_day_p = Paragraph::new(Line::from(vec![
+                Span::styled(
+                    format!(" ■ {}{}", first_ev.title, count_suffix),
+                    Style::default().fg(Color::Black).bg(cal_color).add_modifier(Modifier::BOLD),
+                )
+            ]));
+            f.render_widget(all_day_p, col_chunks[1]);
+            app.hit_map.register(col_chunks[1], HitTarget::EventItem(first_ev.id.clone()));
+        } else {
+            let empty_block = Block::default()
+                .borders(Borders::BOTTOM)
+                .border_style(Style::default().fg(theme.border));
+            f.render_widget(empty_block, col_chunks[1]);
+            app.hit_map.register(col_chunks[1], HitTarget::WeekAllDaySlot(current_date));
+        }
+
         // Timeline Body with borders
         let block = Block::default()
             .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
-            .border_style(Style::default().fg(if is_selected { Theme::PRIMARY } else { Theme::BORDER }));
-        let body_inner = block.inner(col_chunks[1]);
-        f.render_widget(block, col_chunks[1]);
+            .border_style(Style::default().fg(if is_selected { theme.primary } else { theme.border }));
+        let body_inner = block.inner(col_chunks[2]);
+        f.render_widget(block, col_chunks[2]);
 
         let hour_chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -120,12 +160,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             app.hit_map.register(slot_rect, HitTarget::WeekSlot(current_date, h));
         }
 
-        // Render Events that fall on this day
-        let events_on_day: Vec<&_> = app.events_cache.iter()
-            .filter(|ev| ev.occurs_on(current_date))
+        // Render Timed Events that fall on this day
+        let timed_events_on_day: Vec<&_> = app.events_cache.iter()
+            .filter(|ev| !ev.all_day && ev.occurs_on(current_date))
             .collect();
 
-        for ev in events_on_day {
+        for ev in timed_events_on_day {
             let ev_cal = app.calendars.iter().find(|c| c.id == ev.calendar_id);
             let cal_color = ev_cal.map(|c| c.ratatui_color()).unwrap_or(Color::Cyan);
 

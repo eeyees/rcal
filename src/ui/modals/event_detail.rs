@@ -8,7 +8,6 @@ use ratatui::{
 
 use crate::app::App;
 use crate::mouse::HitTarget;
-use crate::ui::theme::Theme;
 
 pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     let popup_width = 58.min(area.width.saturating_sub(4));
@@ -22,6 +21,7 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     };
 
     f.render_widget(Clear, popup_rect);
+    app.hit_map.register(popup_rect, HitTarget::ModalConsume);
 
     let event = match app.events_cache.iter().find(|e| e.id == event_id) {
         Some(ev) => ev,
@@ -29,6 +29,7 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     };
 
     let lang = app.lang;
+    let theme = &app.theme;
     let cal = app.calendars.iter().find(|c| c.id == event.calendar_id);
     let cal_color = cal.map(|c| c.ratatui_color()).unwrap_or(Color::Cyan);
     let cal_name = cal.map(|c| c.name.as_str()).unwrap_or("Default");
@@ -36,7 +37,7 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(cal_color))
-        .title(Span::styled(lang.modal_event_details(), Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(lang.modal_event_details(), Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)));
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
@@ -55,7 +56,7 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
 
     // Title
     let title_line = Line::from(vec![
-        Span::styled(&event.title, Style::default().fg(Theme::TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD)),
+        Span::styled(&event.title, Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)),
     ]);
     f.render_widget(Paragraph::new(title_line), chunks[0]);
 
@@ -63,36 +64,30 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     let cal_line = Line::from(vec![
         Span::styled("● ", Style::default().fg(cal_color)),
         Span::styled(cal_name, Style::default().fg(cal_color).add_modifier(Modifier::BOLD)),
-        Span::styled(format!(" ({})", event.sync_status.as_str()), Style::default().fg(Theme::TEXT_DIM)),
+        Span::styled(format!(" ({})", event.sync_status.as_str()), Style::default().fg(theme.text_dim)),
     ]);
     f.render_widget(Paragraph::new(cal_line), chunks[1]);
 
     // Time
     let date_str = lang.format_date_long(event.start_time.date_naive());
     let time_line = Line::from(vec![
-        Span::styled("📅 ", Style::default().fg(Theme::ACCENT)),
-        Span::styled(format!("{}, {}", date_str, event.time_str()), Style::default().fg(Theme::TEXT_NORMAL)),
+        Span::styled("📅 ", Style::default().fg(theme.accent)),
+        Span::styled(format!("{}, {}", date_str, event.time_str()), Style::default().fg(theme.text_normal)),
     ]);
     f.render_widget(Paragraph::new(time_line), chunks[2]);
 
     // Location
-    let loc_text = event.location.as_deref().unwrap_or(match lang {
-        crate::i18n::Language::Ko => "장소 미지정",
-        crate::i18n::Language::En => "No location specified",
-    });
+    let loc_text = event.location.as_deref().unwrap_or(lang.t().no_location);
     let loc_line = Line::from(vec![
-        Span::styled("📍 ", Style::default().fg(Theme::SECONDARY)),
-        Span::styled(loc_text, Style::default().fg(Theme::TEXT_MUTED)),
+        Span::styled("📍 ", Style::default().fg(theme.secondary)),
+        Span::styled(loc_text, Style::default().fg(theme.text_muted)),
     ]);
     f.render_widget(Paragraph::new(loc_line), chunks[3]);
 
     // Description
-    let desc_text = event.description.as_deref().unwrap_or(match lang {
-        crate::i18n::Language::Ko => "메모 없음",
-        crate::i18n::Language::En => "No description",
-    });
+    let desc_text = event.description.as_deref().unwrap_or(lang.t().no_description);
     let desc_p = Paragraph::new(desc_text)
-        .style(Style::default().fg(Theme::TEXT_MUTED).add_modifier(Modifier::ITALIC));
+        .style(Style::default().fg(theme.text_muted).add_modifier(Modifier::ITALIC));
     f.render_widget(desc_p, chunks[4]);
 
     // Buttons: [ Edit (e) ] [ Delete (d) ] [ Close (Esc) ]
@@ -108,20 +103,23 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
         .split(chunks[6]);
 
     let btn_edit = Paragraph::new(Line::from(vec![Span::raw(lang.btn_edit())]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_edit, btn_chunks[0]);
     app.hit_map.register(btn_chunks[0], HitTarget::ModalEdit);
 
     let btn_del = Paragraph::new(Line::from(vec![Span::raw(lang.btn_delete())]))
-        .style(Style::default().fg(Color::White).bg(Theme::DANGER).add_modifier(Modifier::BOLD))
+        .style(Style::default().fg(Color::White).bg(theme.danger).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center);
     f.render_widget(btn_del, btn_chunks[2]);
     app.hit_map.register(btn_chunks[2], HitTarget::ModalDelete);
 
     let btn_close = Paragraph::new(Line::from(vec![Span::raw(lang.btn_close())]))
-        .style(Theme::button_style())
+        .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_close, btn_chunks[4]);
     app.hit_map.register(btn_chunks[4], HitTarget::ModalClose);
+
+    // Terminal cursor on Close button
+    f.set_cursor_position((btn_chunks[4].x + btn_chunks[4].width / 2, btn_chunks[4].y));
 }
