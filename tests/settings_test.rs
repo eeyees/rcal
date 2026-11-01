@@ -293,9 +293,10 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
     let db = Database::in_memory()?;
     let mut app = App::new(db)?;
 
-    // November 2026: Nov 1 is Sunday, Nov 2 is Monday, Nov 7 is Saturday, Nov 8 is Sunday
-    // Select Wednesday Nov 4, 2026 so it's not today and not selected on Nov 2 / Nov 7 / Nov 8
-    app.selected_date = NaiveDate::from_ymd_opt(2026, 11, 4).unwrap();
+    // March 2099: Mar 1 is Sunday, Mar 2 is Monday, Mar 7 is Saturday, Mar 8 is Sunday
+    // Use a far-future date so that "today" highlighting never interferes with assertions.
+    // Select Wednesday Mar 4, 2099 so it's not selected on Mar 2 / Mar 7 / Mar 8
+    app.selected_date = NaiveDate::from_ymd_opt(2099, 3, 4).unwrap();
     app.current_view = rcal::app::ViewMode::Month;
 
     let backend = TestBackend::new(140, 40);
@@ -323,33 +324,33 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
         cell.fg
     };
 
-    // Nov 2, 2026 is Monday: should be normal text, NOT weekend accent
+    // Mar 2, 2099 is Monday: should be normal text, NOT weekend accent
     let mon_fg = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 2).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 2).unwrap(),
     );
     assert_eq!(
         mon_fg, text_normal,
         "Monday in Monday-start mode must NOT be colored with weekend accent"
     );
 
-    // Nov 7, 2026 is Saturday: should be weekend accent
+    // Mar 7, 2099 is Saturday: should be weekend accent
     let sat_fg = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 7).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 7).unwrap(),
     );
     assert_eq!(
         sat_fg, accent,
         "Saturday in Monday-start mode must be colored with weekend accent"
     );
 
-    // Nov 8, 2026 is Sunday: should be weekend accent
+    // Mar 8, 2099 is Sunday: should be weekend accent
     let sun_fg = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 8).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 8).unwrap(),
     );
     assert_eq!(
         sun_fg, accent,
@@ -363,7 +364,7 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
     let mon_fg_sun = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 2).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 2).unwrap(),
     );
     assert_eq!(
         mon_fg_sun, text_normal,
@@ -373,7 +374,7 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
     let sat_fg_sun = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 7).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 7).unwrap(),
     );
     assert_eq!(
         sat_fg_sun, accent,
@@ -383,7 +384,7 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
     let sun_fg_sun = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 8).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 8).unwrap(),
     );
     assert_eq!(
         sun_fg_sun, accent,
@@ -397,7 +398,7 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
     let sat_fg_sat = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 7).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 7).unwrap(),
     );
     assert_eq!(
         sat_fg_sat, accent,
@@ -407,7 +408,7 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
     let sun_fg_sat = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 8).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 8).unwrap(),
     );
     assert_eq!(
         sun_fg_sat, accent,
@@ -417,7 +418,7 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
     let mon_fg_sat = find_date_fg(
         &app,
         &terminal,
-        NaiveDate::from_ymd_opt(2026, 11, 9).unwrap(),
+        NaiveDate::from_ymd_opt(2099, 3, 9).unwrap(),
     );
     assert_eq!(
         mon_fg_sat, text_normal,

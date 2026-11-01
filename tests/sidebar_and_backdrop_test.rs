@@ -15,6 +15,7 @@ mod tests {
     fn test_sidebar_toggle_and_shortcuts() {
         let db = Database::in_memory().unwrap();
         let mut app = App::new(db).unwrap();
+        app.lang = rcal::i18n::Language::Ko;
 
         // 1. Initial state: sidebar is shown
         assert!(app.show_sidebar);
