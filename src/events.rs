@@ -717,13 +717,13 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
     let norm_code = normalize_key_event(key);
     match norm_code {
         // App termination
-        KeyCode::Char('q') => app.running = false,
+        KeyCode::Char('q') | KeyCode::Char('Q') => app.running = false,
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.running = false,
 
         // View switching
-        KeyCode::Char('1') | KeyCode::Char('m') => app.current_view = ViewMode::Month,
-        KeyCode::Char('2') | KeyCode::Char('w') => app.current_view = ViewMode::Week,
-        KeyCode::Char('3') | KeyCode::Char('d') => app.current_view = ViewMode::Day,
+        KeyCode::Char('1') | KeyCode::Char('m') | KeyCode::Char('M') => app.current_view = ViewMode::Month,
+        KeyCode::Char('2') | KeyCode::Char('w') | KeyCode::Char('W') => app.current_view = ViewMode::Week,
+        KeyCode::Char('3') | KeyCode::Char('d') | KeyCode::Char('D') => app.current_view = ViewMode::Day,
         KeyCode::Char('4') | KeyCode::Char('a') => app.current_view = ViewMode::Agenda,
 
         // Navigation
@@ -773,9 +773,9 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('b') | KeyCode::Char('B') => app.toggle_sidebar(),
         KeyCode::Char('c') | KeyCode::Char('n') => app.open_new_event_modal(None),
         KeyCode::Char('C') => app.open_calendar_modal(),
-        KeyCode::Char('r') => app.trigger_sync(),
+        KeyCode::Char('r') | KeyCode::Char('R') => app.trigger_sync(),
         KeyCode::Char('A') => app.open_accounts_modal(),
-        KeyCode::Char('o') | KeyCode::Char('O') | KeyCode::Char('S') => app.open_settings_modal(),
+        KeyCode::Char('s') | KeyCode::Char('S') | KeyCode::Char('o') | KeyCode::Char('O') => app.open_settings_modal(),
         KeyCode::Char('L') => app.open_language_modal(),
         KeyCode::Char('T') => app.open_theme_modal(),
         KeyCode::Char('?') => app.open_help_modal(),
