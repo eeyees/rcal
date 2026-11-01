@@ -66,90 +66,148 @@ impl Language {
         Language::Sv,
     ];
 
+    /// Detects the system language.
+    /// If no language is explicitly configured, follows the OS system language setting.
+    /// If the system language is unsupported or cannot be determined, defaults to English (Language::En).
     pub fn detect() -> Self {
+        // 1. Explicit override via RCAL_LANG environment variable
         if let Ok(val) = std::env::var("RCAL_LANG") {
             if let Some(l) = Self::from_code(&val) {
                 return l;
             }
         }
-        let lang_env = std::env::var("LANG").unwrap_or_default().to_lowercase();
-        let lc_all = std::env::var("LC_ALL").unwrap_or_default().to_lowercase();
-        let lc_messages = std::env::var("LC_MESSAGES").unwrap_or_default().to_lowercase();
-        let env_str = format!("{} {} {}", lang_env, lc_all, lc_messages);
 
-        if env_str.contains("ko") {
-            Language::Ko
-        } else if env_str.contains("ja") {
-            Language::Ja
-        } else if env_str.contains("zh_tw") || env_str.contains("zh-tw") || env_str.contains("zh_hk") || env_str.contains("zh-hk") {
-            Language::ZhTw
-        } else if env_str.contains("zh") {
-            Language::ZhCn
-        } else if env_str.contains("mn") {
-            Language::Mn
-        } else if env_str.contains("es") {
-            Language::Es
-        } else if env_str.contains("fr") {
-            Language::Fr
-        } else if env_str.contains("de") {
-            Language::De
-        } else if env_str.contains("ru") {
-            Language::Ru
-        } else if env_str.contains("pt") {
-            Language::Pt
-        } else if env_str.contains("it") {
-            Language::It
-        } else if env_str.contains("vi") {
-            Language::Vi
-        } else if env_str.contains("id") {
-            Language::Id
-        } else if env_str.contains("th") {
-            Language::Th
-        } else if env_str.contains("ar") {
-            Language::Ar
-        } else if env_str.contains("hi") {
-            Language::Hi
-        } else if env_str.contains("tr") {
-            Language::Tr
-        } else if env_str.contains("nl") {
-            Language::Nl
-        } else if env_str.contains("pl") {
-            Language::Pl
-        } else if env_str.contains("sv") {
-            Language::Sv
-        } else {
-            // Default to Korean (primary locale for rcal), toggleable via 'L' or Settings anytime
-            Language::Ko
+        // 2. Explicit override via LC_ALL (standard POSIX highest priority locale override)
+        if let Ok(val) = std::env::var("LC_ALL") {
+            if !val.trim().is_empty() {
+                if let Some(l) = Self::from_code(&val) {
+                    return l;
+                }
+            }
         }
+
+        // 3. System locale detection across OS platforms (macOS CFLocale, Windows API, Linux env)
+        let locales: Vec<String> = sys_locale::get_locales().collect();
+        if !locales.is_empty() {
+            for loc in &locales {
+                if let Some(l) = Self::from_code(loc) {
+                    return l;
+                }
+            }
+            // System language was detected from the OS, but is not in our supported list: default to English
+            return Language::En;
+        }
+
+        // 4. POSIX environment variables fallback (LC_MESSAGES, LANG, LANGUAGE)
+        for var in ["LC_MESSAGES", "LANG", "LANGUAGE"] {
+            if let Ok(val) = std::env::var(var) {
+                if !val.trim().is_empty() {
+                    for part in val.split(':') {
+                        if let Some(l) = Self::from_code(part) {
+                            return l;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Default fallback to English if unsupported or undetermined
+        Language::En
+    }
+
+    /// Helper to detect supported language from an iterator of locale identifier strings.
+    /// Returns the first supported language, or defaults to English if none are supported.
+    pub fn detect_from_locales<I, S>(locales: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        for loc in locales {
+            let s = loc.as_ref();
+            if let Some(l) = Self::from_code(s) {
+                return l;
+            }
+        }
+        Language::En
     }
 
     pub fn from_code(code: &str) -> Option<Self> {
-        let lower = code.to_lowercase();
-        let s = lower.trim();
-        match s {
-            "ko" | "ko_kr" | "ko-kr" | "korean" => Some(Language::Ko),
-            "en" | "en_us" | "en-us" | "english" => Some(Language::En),
-            "ja" | "ja_jp" | "ja-jp" | "japanese" => Some(Language::Ja),
-            "zh-cn" | "zh_cn" | "zh" | "chinese" | "chinese-simplified" => Some(Language::ZhCn),
-            "zh-tw" | "zh_tw" | "zh-hk" | "zh_hk" | "chinese-traditional" => Some(Language::ZhTw),
-            "mn" | "mn_mn" | "mn-mn" | "mongolian" => Some(Language::Mn),
-            "es" | "es_es" | "es-es" | "spanish" => Some(Language::Es),
-            "fr" | "fr_fr" | "fr-fr" | "french" => Some(Language::Fr),
-            "de" | "de_de" | "de-de" | "german" => Some(Language::De),
-            "ru" | "ru_ru" | "ru-ru" | "russian" => Some(Language::Ru),
-            "pt" | "pt_br" | "pt-br" | "pt_pt" | "portuguese" => Some(Language::Pt),
-            "it" | "it_it" | "it-it" | "italian" => Some(Language::It),
-            "vi" | "vi_vn" | "vi-vn" | "vietnamese" => Some(Language::Vi),
-            "id" | "id_id" | "id-id" | "indonesian" => Some(Language::Id),
-            "th" | "th_th" | "th-th" | "thai" => Some(Language::Th),
-            "ar" | "ar_sa" | "ar-sa" | "arabic" => Some(Language::Ar),
-            "hi" | "hi_in" | "hi-in" | "hindi" => Some(Language::Hi),
-            "tr" | "tr_tr" | "tr-tr" | "turkish" => Some(Language::Tr),
-            "nl" | "nl_nl" | "nl-nl" | "dutch" => Some(Language::Nl),
-            "pl" | "pl_pl" | "pl-pl" | "polish" => Some(Language::Pl),
-            "sv" | "sv_se" | "sv-se" | "swedish" => Some(Language::Sv),
-            _ => None,
+        let clean = code.trim();
+        if clean.is_empty() {
+            return None;
         }
+
+        // Strip character encoding (.UTF-8) and POSIX modifiers (@euro)
+        let base: String = clean
+            .chars()
+            .take_while(|&c| c != '.' && c != '@')
+            .collect();
+        let lower = base.to_lowercase().replace('_', "-");
+        let s = lower.trim();
+
+        // 1. Direct match on code, BCP 47 tags, or language names
+        match s {
+            "ko" | "ko-kr" | "ko-kp" | "korean" => return Some(Language::Ko),
+            "en" | "en-us" | "en-gb" | "en-ca" | "en-au" | "en-nz" | "en-ie" | "en-za" | "english" => return Some(Language::En),
+            "ja" | "ja-jp" | "japanese" => return Some(Language::Ja),
+            "zh-cn" | "zh-sg" | "zh-hans" | "zh-hans-cn" | "zh-hans-sg" | "zh" | "chinese" | "chinese-simplified" => return Some(Language::ZhCn),
+            "zh-tw" | "zh-hk" | "zh-mo" | "zh-hant" | "zh-hant-tw" | "zh-hant-hk" | "zh-hant-mo" | "chinese-traditional" => return Some(Language::ZhTw),
+            "mn" | "mn-mn" | "mongolian" => return Some(Language::Mn),
+            "es" | "es-es" | "es-mx" | "es-419" | "es-ar" | "spanish" => return Some(Language::Es),
+            "fr" | "fr-fr" | "fr-ca" | "fr-be" | "fr-ch" | "french" => return Some(Language::Fr),
+            "de" | "de-de" | "de-at" | "de-ch" | "german" => return Some(Language::De),
+            "ru" | "ru-ru" | "ru-by" | "ru-kz" | "russian" => return Some(Language::Ru),
+            "pt" | "pt-br" | "pt-pt" | "portuguese" => return Some(Language::Pt),
+            "it" | "it-it" | "it-ch" | "italian" => return Some(Language::It),
+            "vi" | "vi-vn" | "vietnamese" => return Some(Language::Vi),
+            "id" | "id-id" | "indonesian" => return Some(Language::Id),
+            "th" | "th-th" | "thai" => return Some(Language::Th),
+            "ar" | "ar-sa" | "ar-ae" | "ar-eg" | "arabic" => return Some(Language::Ar),
+            "hi" | "hi-in" | "hindi" => return Some(Language::Hi),
+            "tr" | "tr-tr" | "turkish" => return Some(Language::Tr),
+            "nl" | "nl-nl" | "nl-be" | "dutch" => return Some(Language::Nl),
+            "pl" | "pl-pl" | "polish" => return Some(Language::Pl),
+            "sv" | "sv-se" | "sv-fi" | "swedish" => return Some(Language::Sv),
+            _ => {}
+        }
+
+        // 2. Chinese variants matching
+        if s.starts_with("zh-hant") || s.starts_with("zh-tw") || s.starts_with("zh-hk") || s.starts_with("zh-mo") {
+            return Some(Language::ZhTw);
+        }
+        if s.starts_with("zh-hans") || s.starts_with("zh-cn") || s.starts_with("zh-sg") || s == "zh" {
+            return Some(Language::ZhCn);
+        }
+
+        // 3. Primary language subtag prefix matching (e.g. "en-PH" -> "en", "es-CO" -> "es")
+        if let Some(prefix) = s.split('-').next() {
+            if prefix != s {
+                match prefix {
+                    "ko" => return Some(Language::Ko),
+                    "en" => return Some(Language::En),
+                    "ja" => return Some(Language::Ja),
+                    "mn" => return Some(Language::Mn),
+                    "es" => return Some(Language::Es),
+                    "fr" => return Some(Language::Fr),
+                    "de" => return Some(Language::De),
+                    "ru" => return Some(Language::Ru),
+                    "pt" => return Some(Language::Pt),
+                    "it" => return Some(Language::It),
+                    "vi" => return Some(Language::Vi),
+                    "id" => return Some(Language::Id),
+                    "th" => return Some(Language::Th),
+                    "ar" => return Some(Language::Ar),
+                    "hi" => return Some(Language::Hi),
+                    "tr" => return Some(Language::Tr),
+                    "nl" => return Some(Language::Nl),
+                    "pl" => return Some(Language::Pl),
+                    "sv" => return Some(Language::Sv),
+                    _ => {}
+                }
+            }
+        }
+
+        None
     }
 
     pub fn toggle(&self) -> Self {
@@ -246,21 +304,21 @@ impl Language {
 
     pub fn btn_theme(&self) -> &'static str {
         match self {
-            Language::Ko => "🎨 테마",
-            Language::Ja => "🎨 テーマ",
-            Language::ZhCn => "🎨 主题",
-            Language::ZhTw => "🎨 主題",
-            _ => "🎨 Theme",
+            Language::Ko => "🎨  테마",
+            Language::Ja => "🎨  テーマ",
+            Language::ZhCn => "🎨  主题",
+            Language::ZhTw => "🎨  主題",
+            _ => "🎨  Theme",
         }
     }
 
     pub fn modal_theme_title(&self) -> &'static str {
         match self {
-            Language::Ko => " 🎨 컬러 테마 선택 (Select Theme) ",
-            Language::Ja => " 🎨 テーマの選択 (Select Theme) ",
-            Language::ZhCn => " 🎨 主题选择 (Select Theme) ",
-            Language::ZhTw => " 🎨 主題選擇 (Select Theme) ",
-            _ => " 🎨 Select Color Theme ",
+            Language::Ko => " 🎨  컬러 테마 선택 (Select Theme) ",
+            Language::Ja => " 🎨  テーマの選択 (Select Theme) ",
+            Language::ZhCn => " 🎨  主题选择 (Select Theme) ",
+            Language::ZhTw => " 🎨  主題選擇 (Select Theme) ",
+            _ => " 🎨  Select Color Theme ",
         }
     }
 

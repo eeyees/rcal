@@ -46,6 +46,11 @@ pub fn render(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rec
 }
 
 fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rect) {
+    if state.is_oauth_waiting {
+        render_oauth_waiting(f, app, area);
+        return;
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -187,65 +192,152 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     app.hit_map.register(chunks[5], HitTarget::ModalAccountField(4));
 
     // Provider guide tip
-    let tip_text = match state.provider_idx {
-        0 => " Naver: ID and 2-step verification App Password (애플리케이션 비밀번호).",
-        1 => " Apple iCloud: Apple ID email and iCloud App-Specific Password.",
-        2 => " Google: Enter OAuth Bearer Token or API key for direct Google Calendar sync.",
-        3 => " MS 365: Enter Microsoft Graph Access Token for Outlook calendar sync.",
-        4 => " Samsung: Connect via Samsung Cloud CalDAV endpoint or Microsoft Graph exchange.",
-        _ => " CalDAV: Enter your own CalDAV server endpoint (Nextcloud, Baïkal, Radicale, etc).",
+    let tip_text = if state.is_oauth_waiting {
+        match app.lang {
+            crate::i18n::Language::Ko => " ⏳ 브라우저에서 인증을 완료해주세요 (127.0.0.1:8088 대기 중)...",
+            crate::i18n::Language::Ja => " ⏳ ブラウザで認証を完了してください (127.0.0.1:8088 待機中)...",
+            _ => " ⏳ Waiting for browser authentication on http://127.0.0.1:8088...",
+        }
+    } else {
+        match state.provider_idx {
+            0 => " Naver: ID and 2-step verification App Password (애플리케이션 비밀번호).",
+            1 => " Apple iCloud: Apple ID email and iCloud App-Specific Password.",
+            2 => " Google: Click [ 🌐 1-Click Login ] for browser sign-in (or enter manual token).",
+            3 => " MS 365: Click [ 🌐 1-Click Login ] for browser sign-in (or enter manual token).",
+            4 => " Samsung: Connect via Samsung Cloud CalDAV endpoint or Microsoft Graph exchange.",
+            _ => " CalDAV: Enter your own CalDAV server endpoint (Nextcloud, Baïkal, Radicale, etc).",
+        }
+    };
+    let tip_style = if state.is_oauth_waiting {
+        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.accent).add_modifier(Modifier::ITALIC)
     };
     let tip_line = Paragraph::new(vec![
         Line::from(""),
-        Line::from(Span::styled(tip_text, Style::default().fg(theme.accent).add_modifier(Modifier::ITALIC))),
+        Line::from(Span::styled(tip_text, tip_style)),
     ]);
     f.render_widget(tip_line, chunks[6]);
 
-    // Action Buttons: [ Connect & Sync ] [ Cancel ]
-    let btn_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Min(1),
-            Constraint::Length(22), // [ Connect & Sync ]
-            Constraint::Length(3),
-            Constraint::Length(14), // [ Cancel ]
-            Constraint::Min(1),
-        ])
-        .split(chunks[7]);
+    let is_oauth = state.provider_idx == 2 || state.provider_idx == 3;
 
-    let is_conn_focused = state.active_field == 5;
-    let conn_text = if is_conn_focused {
-        " ▶ [ Connect & Sync ] ◀ "
-    } else {
-        " [ Connect & Sync ] "
-    };
-    let conn_style = if is_conn_focused {
-        Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
-    } else {
-        Style::default().fg(Color::Black).bg(theme.secondary).add_modifier(Modifier::BOLD)
-    };
-    let btn_conn = Paragraph::new(Line::from(vec![Span::raw(conn_text)]))
-        .style(conn_style)
-        .alignment(Alignment::Center);
-    f.render_widget(btn_conn, btn_chunks[1]);
-    app.hit_map.register(btn_chunks[1], HitTarget::ModalAccountConnect);
+    if is_oauth {
+        // 3 Buttons for OAuth (Google & MS 365): [ 🌐 1-Click Login ] [ Manual Save ] [ Cancel ]
+        let btn_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Min(1),
+                Constraint::Length(22), // [ 🌐 1-Click Login ]
+                Constraint::Length(2),
+                Constraint::Length(18), // [ Manual Save ]
+                Constraint::Length(2),
+                Constraint::Length(12), // [ Cancel ]
+                Constraint::Min(1),
+            ])
+            .split(chunks[7]);
 
-    let is_cancel_focused = state.active_field == 6;
-    let cancel_text = if is_cancel_focused {
-        " ▶ [ Cancel ] ◀ "
+        let is_oauth_focused = state.active_field == 5;
+        let oauth_text = if is_oauth_focused {
+            " ▶ 🌐 1-Click Login ◀ "
+        } else {
+            " 🌐 1-Click Login "
+        };
+        let btn_color = if state.provider_idx == 3 {
+            Color::Rgb(0, 120, 212) // Microsoft Blue
+        } else {
+            Color::Rgb(66, 133, 244) // Google Blue
+        };
+        let oauth_style = if is_oauth_focused {
+            Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White).bg(btn_color).add_modifier(Modifier::BOLD)
+        };
+        let btn_oauth = Paragraph::new(Line::from(vec![Span::raw(oauth_text)]))
+            .style(oauth_style)
+            .alignment(Alignment::Center);
+        f.render_widget(btn_oauth, btn_chunks[1]);
+        app.hit_map.register(btn_chunks[1], HitTarget::ModalAccountOAuthLogin);
+
+        let is_manual_focused = state.active_field == 6;
+        let manual_text = if is_manual_focused {
+            " ▶ Manual Save ◀ "
+        } else {
+            " Manual Save "
+        };
+        let manual_style = if is_manual_focused {
+            Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        } else {
+            theme.button_style()
+        };
+        let btn_manual = Paragraph::new(Line::from(vec![Span::raw(manual_text)]))
+            .style(manual_style)
+            .alignment(Alignment::Center);
+        f.render_widget(btn_manual, btn_chunks[3]);
+        app.hit_map.register(btn_chunks[3], HitTarget::ModalAccountConnect);
+
+        let is_cancel_focused = state.active_field == 7;
+        let cancel_text = if is_cancel_focused {
+            " ▶ Cancel ◀ "
+        } else {
+            " Cancel "
+        };
+        let cancel_style = if is_cancel_focused {
+            Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        } else {
+            theme.button_style()
+        };
+        let btn_cancel = Paragraph::new(Line::from(vec![Span::raw(cancel_text)]))
+            .style(cancel_style)
+            .alignment(Alignment::Center);
+        f.render_widget(btn_cancel, btn_chunks[5]);
+        app.hit_map.register(btn_chunks[5], HitTarget::ModalCancel);
     } else {
-        " [ Cancel ] "
-    };
-    let cancel_style = if is_cancel_focused {
-        Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
-    } else {
-        theme.button_style()
-    };
-    let btn_cancel = Paragraph::new(Line::from(vec![Span::raw(cancel_text)]))
-        .style(cancel_style)
-        .alignment(Alignment::Center);
-    f.render_widget(btn_cancel, btn_chunks[3]);
-    app.hit_map.register(btn_chunks[3], HitTarget::ModalCancel);
+        // Standard 2 Buttons: [ Connect & Sync ] [ Cancel ]
+        let btn_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Min(1),
+                Constraint::Length(22), // [ Connect & Sync ]
+                Constraint::Length(3),
+                Constraint::Length(14), // [ Cancel ]
+                Constraint::Min(1),
+            ])
+            .split(chunks[7]);
+
+        let is_conn_focused = state.active_field == 5;
+        let conn_text = if is_conn_focused {
+            " ▶ [ Connect & Sync ] ◀ "
+        } else {
+            " [ Connect & Sync ] "
+        };
+        let conn_style = if is_conn_focused {
+            Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::Black).bg(theme.secondary).add_modifier(Modifier::BOLD)
+        };
+        let btn_conn = Paragraph::new(Line::from(vec![Span::raw(conn_text)]))
+            .style(conn_style)
+            .alignment(Alignment::Center);
+        f.render_widget(btn_conn, btn_chunks[1]);
+        app.hit_map.register(btn_chunks[1], HitTarget::ModalAccountConnect);
+
+        let is_cancel_focused = state.active_field == 6;
+        let cancel_text = if is_cancel_focused {
+            " ▶ [ Cancel ] ◀ "
+        } else {
+            " [ Cancel ] "
+        };
+        let cancel_style = if is_cancel_focused {
+            Style::default().fg(Color::Black).bg(theme.text_highlight).add_modifier(Modifier::BOLD)
+        } else {
+            theme.button_style()
+        };
+        let btn_cancel = Paragraph::new(Line::from(vec![Span::raw(cancel_text)]))
+            .style(cancel_style)
+            .alignment(Alignment::Center);
+        f.render_widget(btn_cancel, btn_chunks[3]);
+        app.hit_map.register(btn_chunks[3], HitTarget::ModalCancel);
+    }
 
     // Terminal cursor positioning on active input field
     let cursor_pos = match state.active_field {
@@ -269,8 +361,9 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
             let val_w = state.password.len().min(24) as u16;
             (chunks[5].x + 12 + val_w, chunks[5].y)
         }
-        5 => (btn_chunks[1].x + btn_chunks[1].width / 2, btn_chunks[1].y),
-        6 => (btn_chunks[3].x + btn_chunks[3].width / 2, btn_chunks[3].y),
+        5 => (chunks[7].x + chunks[7].width / 4, chunks[7].y),
+        6 => (chunks[7].x + chunks[7].width / 2, chunks[7].y),
+        7 => (chunks[7].x + (chunks[7].width * 3) / 4, chunks[7].y),
         _ => (chunks[2].x, chunks[2].y),
     };
     let safe_x = cursor_pos.0.min(area.right().saturating_sub(2));
@@ -415,4 +508,55 @@ fn render_account_list(f: &mut Frame, app: &mut App, state: &AccountModalState, 
         let cursor_y = chunks[2].y + sel_idx as u16;
         f.set_cursor_position((chunks[2].x + 1, cursor_y));
     }
+}
+
+fn render_oauth_waiting(f: &mut Frame, app: &mut App, area: Rect) {
+    let theme = &app.theme;
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1), // Spacer
+            Constraint::Length(2), // Title
+            Constraint::Length(1), // Spacer
+            Constraint::Length(2), // Browser status
+            Constraint::Length(2), // Local listener URL
+            Constraint::Min(4),    // Instructions
+            Constraint::Length(1), // Cancel button
+        ])
+        .split(area);
+
+    let title_line = Line::from(vec![
+        Span::styled(
+            " 🌐 Google Calendar 1-Click OAuth2 Authentication ",
+            Style::default().fg(Color::Rgb(66, 133, 244)).add_modifier(Modifier::BOLD),
+        ),
+    ]);
+    f.render_widget(Paragraph::new(title_line).alignment(Alignment::Center), chunks[1]);
+
+    let status_line = Line::from(vec![
+        Span::styled("⏳ Your default web browser has been opened...", Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)),
+    ]);
+    f.render_widget(Paragraph::new(status_line).alignment(Alignment::Center), chunks[3]);
+
+    let url_line = Paragraph::new(vec![
+        Line::from(vec![
+            Span::styled("Local callback listener: ", Style::default().fg(theme.text_muted)),
+            Span::styled("http://127.0.0.1:8088/oauth/callback", Style::default().fg(Color::Cyan).add_modifier(Modifier::UNDERLINED)),
+        ]),
+    ]).alignment(Alignment::Center);
+    f.render_widget(url_line, chunks[4]);
+
+    let info_lines = vec![
+        Line::from(Span::styled("1. Sign in with your Google account in the browser window.", Style::default().fg(theme.text_normal))),
+        Line::from(Span::styled("2. Grant calendar read/write access permissions to rcal.", Style::default().fg(theme.text_normal))),
+        Line::from(Span::styled("3. Once approved, rcal will sync automatically!", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))),
+    ];
+    f.render_widget(Paragraph::new(info_lines).alignment(Alignment::Center), chunks[5]);
+
+    // Cancel Button
+    let cancel_btn = Paragraph::new(Line::from(vec![Span::raw(" [ Cancel / Esc ] ")]))
+        .style(theme.button_style())
+        .alignment(Alignment::Center);
+    f.render_widget(cancel_btn, chunks[6]);
+    app.hit_map.register(chunks[6], HitTarget::ModalCancel);
 }

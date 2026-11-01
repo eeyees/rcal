@@ -66,7 +66,7 @@ async fn main() -> Result<()> {
             .ok()
             .flatten()
             .and_then(|s| rcal::i18n::Language::from_code(&s))
-            .unwrap_or(rcal::i18n::Language::En);
+            .unwrap_or_else(rcal::i18n::Language::detect);
 
         if args.iter().any(|a| a == "--test" || a == "-t") {
             println!("Sending test desktop notification...");
@@ -186,7 +186,7 @@ async fn main() -> Result<()> {
                 .ok()
                 .flatten()
                 .and_then(|s| rcal::i18n::Language::from_code(&s))
-                .unwrap_or(rcal::i18n::Language::En);
+                .unwrap_or_else(rcal::i18n::Language::detect);
 
             if let Ok(notified) = check_and_notify_upcoming(&worker_db, &config, chrono::Local::now(), lang) {
                 for (ev, _) in notified {
@@ -196,10 +196,14 @@ async fn main() -> Result<()> {
         }
     });
 
-    // 6. Main Event Loop
-    let res = run_app(&mut terminal, &mut app, &mut sync_result_rx, &mut notif_rx).await;
+    // 6. OAuth Result Channel Setup
+    let (oauth_result_tx, mut oauth_result_rx) = mpsc::channel::<Result<rcal::model::CalDavAccount, String>>(2);
+    app.oauth_result_tx = Some(oauth_result_tx);
 
-    // 7. Restore terminal
+    // 7. Main Event Loop
+    let res = run_app(&mut terminal, &mut app, &mut sync_result_rx, &mut notif_rx, &mut oauth_result_rx).await;
+
+    // 8. Restore terminal
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     terminal.show_cursor()?;
@@ -216,6 +220,7 @@ async fn run_app<B: ratatui::backend::Backend>(
     app: &mut App,
     sync_result_rx: &mut mpsc::Receiver<SyncResult>,
     notif_rx: &mut mpsc::Receiver<String>,
+    oauth_result_rx: &mut mpsc::Receiver<Result<rcal::model::CalDavAccount, String>>,
 ) -> Result<()> {
     while app.running {
         // Check for completed background syncs
@@ -226,21 +231,47 @@ async fn run_app<B: ratatui::backend::Backend>(
 
             if res.errors.is_empty() {
                 if res.events_pulled > 0 || res.events_pushed > 0 {
-                    app.set_status(format!("✓ Synced: +{} pushed, +{} pulled", res.events_pushed, res.events_pulled));
+                    app.set_status(format!("✓  Synced: +{} pushed, +{} pulled", res.events_pushed, res.events_pulled));
                 } else if res.accounts_synced > 0 {
-                    app.set_status("✓ All calendars up to date");
+                    app.set_status("✓  All calendars up to date");
                 }
             } else {
-                app.set_status(format!("⚠ Sync note: {}", res.errors.first().unwrap_or(&"Error".to_string())));
+                app.set_status(format!("⚠  Sync note: {}", res.errors.first().unwrap_or(&"Error".to_string())));
+            }
+        }
+
+        // Check for completed OAuth logins
+        if let Ok(oauth_res) = oauth_result_rx.try_recv() {
+            match oauth_res {
+                Ok(new_acc) => {
+                    let _ = app.db.save_account(&new_acc);
+                    let _ = app.reload_calendars();
+                    let _ = app.reload_events();
+                    let msg = match app.lang {
+                        rcal::i18n::Language::Ko => format!("✓  {} 계정 연동 성공! 동기화 중...", new_acc.name),
+                        rcal::i18n::Language::Ja => format!("✓  {} 連携完了! 同期中...", new_acc.name),
+                        _ => format!("✓  {} connected! Syncing...", new_acc.name),
+                    };
+                    app.set_status(msg);
+                    app.trigger_sync();
+                    app.close_modal();
+                }
+                Err(err) => {
+                    app.set_status(format!("⚠  OAuth: {}", err));
+                    if let rcal::app::ActiveModal::Accounts(ref mut acc_state) = app.modal {
+                        acc_state.is_oauth_waiting = false;
+                        acc_state.error_msg = Some(err);
+                    }
+                }
             }
         }
 
         // Check for notifications triggered by background worker
         if let Ok(title) = notif_rx.try_recv() {
             let msg = match app.lang {
-                rcal::i18n::Language::Ko => format!("🔔 알림 발송: {}", title),
-                rcal::i18n::Language::Ja => format!("🔔 通知送信: {}", title),
-                _ => format!("🔔 Notification sent: {}", title),
+                rcal::i18n::Language::Ko => format!("🔔  알림 발송: {}", title),
+                rcal::i18n::Language::Ja => format!("🔔  通知送信: {}", title),
+                _ => format!("🔔  Notification sent: {}", title),
             };
             app.set_status(msg);
         }

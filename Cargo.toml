@@ -1,6 +1,6 @@
 [package]
 name = "rcal"
-version = "2026.1101.2"
+version = "2026.1101.3"
 edition = "2021"
 authors = ["jungkh"]
 description = "Fast, mouse-interactive TUI Calendar in Rust with multi-cloud sync"
@@ -34,4 +34,5 @@ icalendar = "0.16"
 
 # Desktop notifications
 notify-rust = "4"
+sys-locale = "0.3.2"
 

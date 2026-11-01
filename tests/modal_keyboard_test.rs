@@ -363,6 +363,7 @@ mod tests {
 
         app.open_settings_modal();
         assert_eq!(app.modal, ActiveModal::Settings);
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::WeekStart);
 
         // 1: Sunday, 2: Monday, 3: Saturday
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('2'))).unwrap();
@@ -374,9 +375,33 @@ mod tests {
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('1'))).unwrap();
         assert_eq!(app.week_start_day, WeekStartDay::Sunday);
 
-        // Tab cycles
-        handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
+        // Right/Left arrows change week start day in WeekStart section
+        handle_crossterm_event(&mut app, make_key(KeyCode::Right)).unwrap();
         assert_eq!(app.week_start_day, WeekStartDay::Monday);
+
+        // Tab cycles across major sections in big steps (크게크게):
+        // WeekStart -> Notifications -> Theme -> Language -> Close -> WeekStart
+        handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::Notifications);
+
+        handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::Theme);
+
+        handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::Language);
+
+        handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::Close);
+
+        handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::WeekStart);
+
+        // BackTab (Shift+Tab) cycles backwards
+        handle_crossterm_event(&mut app, make_key(KeyCode::BackTab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::Close);
+
+        handle_crossterm_event(&mut app, make_key(KeyCode::BackTab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::Language);
 
         // Language modal with 'l'
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('l'))).unwrap();

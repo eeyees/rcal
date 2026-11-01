@@ -96,15 +96,15 @@ pub fn send_desktop_notification_safe(summary: &str, body: &str, sound: bool) ->
 pub fn send_test_notification(lang: Language, sound: bool) -> Result<()> {
     let (summary, body) = match lang {
         Language::Ko => (
-            "🔔 rcal 테스트 알림".to_string(),
+            "🔔  rcal 테스트 알림".to_string(),
             "rcal 바탕화면 알림이 성공적으로 설정되었습니다!\n다가오는 일정이 지정된 시간에 알림으로 안내됩니다.".to_string(),
         ),
         Language::Ja => (
-            "🔔 rcal テスト通知".to_string(),
+            "🔔  rcal テスト通知".to_string(),
             "rcal デスクトップ通知が正常に設定されました！\n今後の予定が指定された時間に通知されます。".to_string(),
         ),
         _ => (
-            "🔔 rcal Test Notification".to_string(),
+            "🔔  rcal Test Notification".to_string(),
             "rcal desktop notifications are working properly!\nUpcoming events will be notified at your configured lead time.".to_string(),
         ),
     };
@@ -122,30 +122,30 @@ pub fn format_event_notification(
 ) -> (String, String) {
     let summary = if event.all_day {
         match lang {
-            Language::Ko => format!("📅 [오늘 종일 일정] {}", event.title),
-            Language::Ja => format!("📅 [今日の終日予定] {}", event.title),
-            _ => format!("📅 [All-Day Event Today] {}", event.title),
+            Language::Ko => format!("📅  [오늘 종일 일정] {}", event.title),
+            Language::Ja => format!("📅  [今日の終日予定] {}", event.title),
+            _ => format!("📅  [All-Day Event Today] {}", event.title),
         }
     } else if minutes_remaining <= 0 {
         match lang {
-            Language::Ko => format!("⏰ [시작] {}", event.title),
-            Language::Ja => format!("⏰ [開始] {}", event.title),
-            _ => format!("⏰ [Starting Now] {}", event.title),
+            Language::Ko => format!("⏰  [시작] {}", event.title),
+            Language::Ja => format!("⏰  [開始] {}", event.title),
+            _ => format!("⏰  [Starting Now] {}", event.title),
         }
     } else {
         match lang {
-            Language::Ko => format!("🔔 [곧 시작] {} ({}분 전)", event.title, minutes_remaining),
-            Language::Ja => format!("🔔 [まもなく開始] {} ({}分前)", event.title, minutes_remaining),
-            _ => format!("🔔 [Upcoming] {} (in {}m)", event.title, minutes_remaining),
+            Language::Ko => format!("🔔  [곧 시작] {} ({}분 전)", event.title, minutes_remaining),
+            Language::Ja => format!("🔔  [まもなく開始] {} ({}分前)", event.title, minutes_remaining),
+            _ => format!("🔔  [Upcoming] {} (in {}m)", event.title, minutes_remaining),
         }
     };
 
     let mut body = String::new();
     if event.all_day {
-        body.push_str(&format!("📅 {}", event.start_time.format("%Y-%m-%d")));
+        body.push_str(&format!("📅  {}", event.start_time.format("%Y-%m-%d")));
     } else {
         body.push_str(&format!(
-            "⏰ {} - {}",
+            "⏰  {} - {}",
             event.start_time.format("%H:%M"),
             event.end_time.format("%H:%M")
         ));
@@ -154,12 +154,12 @@ pub fn format_event_notification(
     if let Some(loc) = &event.location {
         let trimmed = loc.trim();
         if !trimmed.is_empty() {
-            body.push_str(&format!("\n📍 {}", trimmed));
+            body.push_str(&format!("\n📍  {}", trimmed));
         }
     }
 
     if !calendar_name.trim().is_empty() {
-        body.push_str(&format!("\n📁 {}", calendar_name.trim()));
+        body.push_str(&format!("\n📁  {}", calendar_name.trim()));
     }
 
     if let Some(desc) = &event.description {
@@ -172,7 +172,7 @@ pub fn format_event_notification(
             } else {
                 first_line.to_string()
             };
-            body.push_str(&format!("\n📝 {}", truncated));
+            body.push_str(&format!("\n📝  {}", truncated));
         }
     }
 

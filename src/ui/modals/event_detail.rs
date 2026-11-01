@@ -71,7 +71,7 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     // Time
     let date_str = lang.format_date_long(event.start_time.date_naive());
     let time_line = Line::from(vec![
-        Span::styled("📅 ", Style::default().fg(theme.accent)),
+        Span::styled("📅  ", Style::default().fg(theme.accent)),
         Span::styled(format!("{}, {}", date_str, event.time_str()), Style::default().fg(theme.text_normal)),
     ]);
     f.render_widget(Paragraph::new(time_line), chunks[2]);
@@ -79,7 +79,7 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     // Location
     let loc_text = event.location.as_deref().unwrap_or(lang.t().no_location);
     let loc_line = Line::from(vec![
-        Span::styled("📍 ", Style::default().fg(theme.secondary)),
+        Span::styled("📍  ", Style::default().fg(theme.secondary)),
         Span::styled(loc_text, Style::default().fg(theme.text_muted)),
     ]);
     f.render_widget(Paragraph::new(loc_line), chunks[3]);

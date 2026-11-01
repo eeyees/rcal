@@ -349,9 +349,9 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
     // 3. Config file hint & Close Button
     // =========================================================================
     let cfg_hint = match lang {
-        crate::i18n::Language::Ko => "📁 설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 고대비 조절 가능)",
-        crate::i18n::Language::Ja => "📁 設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)",
-        _ => "📁 Config file: ~/.config/rcal/theme.toml (Color overrides & contrast options)",
+        crate::i18n::Language::Ko => "📁  설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 고대비 조절 가능)",
+        crate::i18n::Language::Ja => "📁  設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)",
+        _ => "📁  Config file: ~/.config/rcal/theme.toml (Color overrides & contrast options)",
     };
     f.render_widget(
         Paragraph::new(Span::styled(cfg_hint, Style::default().fg(theme.text_dim)))

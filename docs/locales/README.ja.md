@@ -276,12 +276,22 @@ rcal
 - [x] **フェーズ 1：ローカル TUI MVP**：月/週/日(重複判定)/アジェンダビュー、100% マウス当たり判定エンジン、SQLite WAL 保存、予定 CRUD。
 - [x] **フェーズ 2：CalDAV 同期エンジン**：Apple iCloud と Naver カレンダーの双方向同期、Tokio バックグラウンドワーカー、アカウント管理 UI。
 - [x] **フェーズ 3：マルチクラウド & ユーザビリティ向上**：Google Calendar API、Microsoft Graph、IME 透過マッピング、7 色テーマ、週開始日設定。
-- [ ] **フェーズ 4：エコシステム拡張 & オープンプロトコル**：
+- [ ] **フェーズ 4：東アジア地域特化型マルチクラウド同期**：
+    - **日本 (🇯🇵)**:
+      - [ ] **LINE WORKS**: CalDAV 双方向同期 (`caldav.worksmobile.com`) & プリセット対応
+      - [ ] **サイボウズ ガルーン (Garoon) / Office**: REST API & iCal スケジュール連携
+      - [ ] **TimeTree**: コミュニティ連携検討（iCal 購読 / 公開 API 動向注視）
+    - **中国 (🇨🇳)**:
+      - [ ] **QQ メールカレンダー (QQ邮箱)**: CalDAV 双方向同期 (`dav.qq.com`) 認証コードプリセット
+      - [ ] **Feishu / Lark (飞书)**: Open Platform REST API v4 アダプター
+      - [ ] **DingTalk (钉钉)**: OpenAPI v2.0 カレンダー同期
+      - [ ] **NetEase 163 企業メール**: CalDAV 同期 (`caldav.qiye.163.com`)
+- [ ] **フェーズ 5：エコシステム拡張 & オープンプロトコル**：
     - [x] AI エージェント連携用 MCP (Model Context Protocol) サーバー
     - [ ] 外部カレンダー連携用 WebCal / iCalendar (`.ics`) HTTP 配信サーバー
     - [ ] 定期的な繰り返し予定ルール（RFC 5545 RRULE）
     - [ ] 自然言語による予定追加（例: `rcal add "明日15時にミーティング"`）
-    - [ ] OS ネイティブデスクトップ通知
+    - [ ] OS ネ이ティブデスクトップ通知
 
 ---
 

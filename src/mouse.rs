@@ -44,6 +44,7 @@ pub enum HitTarget {
     ModalClose,
     ModalAccountField(usize),
     ModalAccountConnect,
+    ModalAccountOAuthLogin,
     ModalAccountDelete(String),
     ModalAccountAdd,
     ModalAccountPreset(usize),
@@ -80,6 +81,7 @@ impl HitTarget {
                 | HitTarget::ModalClose
                 | HitTarget::ModalAccountField(_)
                 | HitTarget::ModalAccountConnect
+                | HitTarget::ModalAccountOAuthLogin
                 | HitTarget::ModalAccountDelete(_)
                 | HitTarget::ModalAccountAdd
                 | HitTarget::ModalAccountPreset(_)

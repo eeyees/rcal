@@ -124,6 +124,7 @@ pub struct AccountModalState {
     pub active_field: usize, // 0..=6
     pub selected_account_idx: usize,
     pub error_msg: Option<String>,
+    pub is_oauth_waiting: bool,
 }
 
 impl AccountModalState {
@@ -138,6 +139,7 @@ impl AccountModalState {
             active_field: 0,
             selected_account_idx: 0,
             error_msg: None,
+            is_oauth_waiting: false,
         }
     }
 
@@ -194,6 +196,46 @@ impl ThemeModalState {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SettingsSection {
+    #[default]
+    WeekStart,
+    Notifications,
+    Theme,
+    Language,
+    Close,
+}
+
+impl SettingsSection {
+    pub const ALL: [SettingsSection; 5] = [
+        SettingsSection::WeekStart,
+        SettingsSection::Notifications,
+        SettingsSection::Theme,
+        SettingsSection::Language,
+        SettingsSection::Close,
+    ];
+
+    pub fn next(self) -> Self {
+        match self {
+            Self::WeekStart => Self::Notifications,
+            Self::Notifications => Self::Theme,
+            Self::Theme => Self::Language,
+            Self::Language => Self::Close,
+            Self::Close => Self::WeekStart,
+        }
+    }
+
+    pub fn prev(self) -> Self {
+        match self {
+            Self::WeekStart => Self::Close,
+            Self::Notifications => Self::WeekStart,
+            Self::Theme => Self::Notifications,
+            Self::Language => Self::Theme,
+            Self::Close => Self::Language,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ActiveModal {
     None,
@@ -230,11 +272,14 @@ pub struct App {
     pub theme_category: ThemeCategory,
     pub show_sidebar: bool,
     pub notification_config: NotificationConfig,
+    pub settings_section: SettingsSection,
+    pub settings_lang_idx: usize,
 
     // Synchronization state
     pub is_syncing: bool,
     pub last_sync_status: Option<String>,
     pub sync_tx: Option<tokio::sync::mpsc::Sender<()>>,
+    pub oauth_result_tx: Option<tokio::sync::mpsc::Sender<Result<crate::model::CalDavAccount, String>>>,
 }
 
 impl App {
@@ -281,9 +326,12 @@ impl App {
             theme_category,
             show_sidebar: true,
             notification_config,
+            settings_section: SettingsSection::WeekStart,
+            settings_lang_idx: 0,
             is_syncing: false,
             last_sync_status: None,
             sync_tx: None,
+            oauth_result_tx: None,
         };
 
         app.reload_calendars()?;
@@ -451,6 +499,8 @@ impl App {
     }
 
     pub fn open_settings_modal(&mut self) {
+        self.settings_section = SettingsSection::WeekStart;
+        self.settings_lang_idx = Language::ALL.iter().position(|l| *l == self.lang).unwrap_or(0);
         self.modal = ActiveModal::Settings;
     }
 
@@ -486,23 +536,23 @@ impl App {
         let msg = match self.lang {
             Language::Ko => {
                 if self.notification_config.enabled {
-                    format!("🔔 바탕화면 알림 활성화 ({}분 전 안내)", self.notification_config.lead_minutes)
+                    format!("🔔  바탕화면 알림 활성화 ({}분 전 안내)", self.notification_config.lead_minutes)
                 } else {
-                    "🔕 바탕화면 알림 비활성화".to_string()
+                    "🔕  바탕화면 알림 비활성화".to_string()
                 }
             }
             Language::Ja => {
                 if self.notification_config.enabled {
-                    format!("🔔 デスクトップ通知有効 ({}分前)", self.notification_config.lead_minutes)
+                    format!("🔔  デスクトップ通知有効 ({}分前)", self.notification_config.lead_minutes)
                 } else {
-                    "🔕 デスクトップ通知無効".to_string()
+                    "🔕  デスクトップ通知無効".to_string()
                 }
             }
             _ => {
                 if self.notification_config.enabled {
-                    format!("🔔 Desktop notifications enabled ({}m before)", self.notification_config.lead_minutes)
+                    format!("🔔  Desktop notifications enabled ({}m before)", self.notification_config.lead_minutes)
                 } else {
-                    "🔕 Desktop notifications disabled".to_string()
+                    "🔕  Desktop notifications disabled".to_string()
                 }
             }
         };
@@ -526,9 +576,9 @@ impl App {
             }
         };
         let msg = match self.lang {
-            Language::Ko => format!("🔔 알림 시간이 '{}'로 설정되었습니다.", label),
-            Language::Ja => format!("🔔 通知時間が「{}」に設定されました。", label),
-            _ => format!("🔔 Notification lead time set to '{}'.", label),
+            Language::Ko => format!("🔔  알림 시간이 '{}'로 설정되었습니다.", label),
+            Language::Ja => format!("🔔  通知時間が「{}」に設定されました。", label),
+            _ => format!("🔔  Notification lead time set to '{}'.", label),
         };
         self.set_status(msg);
     }
@@ -539,23 +589,23 @@ impl App {
         let msg = match self.lang {
             Language::Ko => {
                 if self.notification_config.sound {
-                    "🔊 알림 소리 켜짐"
+                    "🔊  알림 소리 켜짐"
                 } else {
-                    "🔇 알림 소리 꺼짐 (무음)"
+                    "🔇  알림 소리 꺼짐 (무음)"
                 }
             }
             Language::Ja => {
                 if self.notification_config.sound {
-                    "🔊 通知音オン"
+                    "🔊  通知音オン"
                 } else {
-                    "🔇 通知音オフ"
+                    "🔇  通知音オフ"
                 }
             }
             _ => {
                 if self.notification_config.sound {
-                    "🔊 Notification sound: ON"
+                    "🔊  Notification sound: ON"
                 } else {
-                    "🔇 Notification sound: OFF"
+                    "🔇  Notification sound: OFF"
                 }
             }
         };
@@ -566,17 +616,17 @@ impl App {
         match send_test_notification(self.lang, self.notification_config.sound) {
             Ok(_) => {
                 let msg = match self.lang {
-                    Language::Ko => "🔔 바탕화면 테스트 알림을 발송했습니다.",
-                    Language::Ja => "🔔 デスクトップテスト通知を送信しました。",
-                    _ => "🔔 Desktop test notification sent.",
+                    Language::Ko => "🔔  바탕화면 테스트 알림을 발송했습니다.",
+                    Language::Ja => "🔔  デスクトップテスト通知を送信しました。",
+                    _ => "🔔  Desktop test notification sent.",
                 };
                 self.set_status(msg);
             }
             Err(e) => {
                 let msg = match self.lang {
-                    Language::Ko => format!("⚠ 알림 발송 실패: {}", e),
-                    Language::Ja => format!("⚠ 通知送信失敗: {}", e),
-                    _ => format!("⚠ Notification failed: {}", e),
+                    Language::Ko => format!("⚠  알림 발송 실패: {}", e),
+                    Language::Ja => format!("⚠  通知送信失敗: {}", e),
+                    _ => format!("⚠  Notification failed: {}", e),
                 };
                 self.set_status(msg);
             }
@@ -587,9 +637,9 @@ impl App {
         let notified = check_and_notify_upcoming(&self.db, &self.notification_config, Local::now(), self.lang)?;
         if let Some((ev, _)) = notified.first() {
             let msg = match self.lang {
-                Language::Ko => format!("🔔 알림 발송: {}", ev.title),
-                Language::Ja => format!("🔔 通知送信: {}", ev.title),
-                _ => format!("🔔 Notification sent: {}", ev.title),
+                Language::Ko => format!("🔔  알림 발송: {}", ev.title),
+                Language::Ja => format!("🔔  通知送信: {}", ev.title),
+                _ => format!("🔔  Notification sent: {}", ev.title),
             };
             self.set_status(msg);
         }
@@ -606,9 +656,9 @@ impl App {
         let idx = all.iter().position(|m| *m == mode).unwrap_or(0) + 1;
         let label = mode.label(self.lang);
         let msg = match self.lang {
-            Language::Ko => format!("🎨 테마가 '{}' [{}/{}] 로 변경되었습니다.", label, idx, all.len()),
-            Language::Ja => format!("🎨 テーマが「{}」[{}/{}] に変更されました。", label, idx, all.len()),
-            _ => format!("🎨 Theme changed to '{}' [{}/{}].", label, idx, all.len()),
+            Language::Ko => format!("🎨  테마가 '{}' [{}/{}] 로 변경되었습니다.", label, idx, all.len()),
+            Language::Ja => format!("🎨  テーマが「{}」[{}/{}] に変更されました。", label, idx, all.len()),
+            _ => format!("🎨  Theme changed to '{}' [{}/{}].", label, idx, all.len()),
         };
         self.set_status(msg);
     }
@@ -636,9 +686,97 @@ impl App {
             return;
         }
         self.is_syncing = true;
-        self.set_status("⟳ Synchronizing with CalDAV servers...");
+        self.set_status("⟳  Synchronizing with CalDAV servers...");
         if let Some(ref tx) = self.sync_tx {
             let _ = tx.try_send(());
+        }
+    }
+
+    pub fn trigger_google_oauth_login(&mut self) {
+        if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
+            acc_state.is_oauth_waiting = true;
+            let user_id = if acc_state.username.trim().is_empty() {
+                None
+            } else {
+                Some(acc_state.username.trim().to_string())
+            };
+            let user_secret = if acc_state.password.trim().is_empty() {
+                None
+            } else {
+                Some(acc_state.password.trim().to_string())
+            };
+
+            let tx = self.oauth_result_tx.clone();
+            let msg = match self.lang {
+                Language::Ko => "🌐 브라우저에서 Google 인증을 완료해주세요... (대기: http://127.0.0.1:8088)",
+                Language::Ja => "🌐 ブラウザでGoogle認証を完了してください... (待機: http://127.0.0.1:8088)",
+                _ => "🌐 Waiting for Google browser authentication at http://127.0.0.1:8088...",
+            };
+            self.set_status(msg);
+
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                handle.spawn(async move {
+                    let res = crate::sync::oauth::execute_google_one_click_flow(
+                        user_id.as_deref(),
+                        user_secret.as_deref(),
+                    )
+                    .await
+                    .map_err(|e| e.to_string());
+
+                    if let Some(sender) = tx {
+                        let _ = sender.send(res).await;
+                    }
+                });
+            }
+        }
+    }
+
+    pub fn trigger_microsoft_oauth_login(&mut self) {
+        if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
+            acc_state.is_oauth_waiting = true;
+            let user_id = if acc_state.username.trim().is_empty() {
+                None
+            } else {
+                Some(acc_state.username.trim().to_string())
+            };
+            let user_secret = if acc_state.password.trim().is_empty() {
+                None
+            } else {
+                Some(acc_state.password.trim().to_string())
+            };
+
+            let tx = self.oauth_result_tx.clone();
+            let msg = match self.lang {
+                Language::Ko => "🌐 브라우저에서 Microsoft 365 인증을 완료해주세요... (대기: http://127.0.0.1:8088)",
+                Language::Ja => "🌐 ブラウザでMicrosoft 365認証を完了してください... (待機: http://127.0.0.1:8088)",
+                _ => "🌐 Waiting for Microsoft 365 browser authentication at http://127.0.0.1:8088...",
+            };
+            self.set_status(msg);
+
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                handle.spawn(async move {
+                    let res = crate::sync::oauth::execute_microsoft_one_click_flow(
+                        user_id.as_deref(),
+                        user_secret.as_deref(),
+                    )
+                    .await
+                    .map_err(|e| e.to_string());
+
+                    if let Some(sender) = tx {
+                        let _ = sender.send(res).await;
+                    }
+                });
+            }
+        }
+    }
+
+    pub fn trigger_oauth_login(&mut self) {
+        if let ActiveModal::Accounts(ref acc_state) = self.modal {
+            if acc_state.provider_idx == 3 {
+                self.trigger_microsoft_oauth_login();
+            } else {
+                self.trigger_google_oauth_login();
+            }
         }
     }
 
@@ -747,42 +885,55 @@ impl App {
                 HitTarget::ModalConsume => {}
 
                 HitTarget::ModalSettingWeekStart(day) => {
+                    self.settings_section = SettingsSection::WeekStart;
                     self.set_week_start_day(day);
                 }
 
                 HitTarget::ModalSettingNotificationToggle => {
+                    self.settings_section = SettingsSection::Notifications;
                     self.toggle_notifications();
                 }
 
                 HitTarget::ModalSettingNotificationLead(mins) => {
+                    self.settings_section = SettingsSection::Notifications;
                     self.set_notification_lead_minutes(mins);
                 }
 
                 HitTarget::ModalSettingNotificationSound => {
+                    self.settings_section = SettingsSection::Notifications;
                     self.toggle_notification_sound();
                 }
 
                 HitTarget::ModalSettingNotificationTest => {
+                    self.settings_section = SettingsSection::Notifications;
                     self.send_test_notification();
                 }
 
                 HitTarget::ModalSettingTheme(mode) => {
+                    self.settings_section = SettingsSection::Theme;
                     self.set_theme(mode);
                 }
 
                 HitTarget::ModalSettingThemeCategory(cat) => {
+                    self.settings_section = SettingsSection::Theme;
                     self.set_theme_category(cat);
                 }
 
                 HitTarget::ModalSettingThemePrev => {
+                    self.settings_section = SettingsSection::Theme;
                     self.cycle_theme_prev();
                 }
 
                 HitTarget::ModalSettingThemeNext => {
+                    self.settings_section = SettingsSection::Theme;
                     self.cycle_theme();
                 }
 
                 HitTarget::ModalSelectLanguage(l) => {
+                    self.settings_section = SettingsSection::Language;
+                    if let Some(idx) = Language::ALL.iter().position(|lang| *lang == l) {
+                        self.settings_lang_idx = idx;
+                    }
                     self.set_language(l);
                     if matches!(self.modal, ActiveModal::Language(_)) {
                         self.close_modal();
@@ -874,6 +1025,18 @@ impl App {
                 }
 
                 HitTarget::ModalAccountConnect => {
+                    let should_oauth = if let ActiveModal::Accounts(ref acc_state) = self.modal {
+                        let is_oauth = acc_state.provider_idx == 2 || acc_state.provider_idx == 3;
+                        is_oauth && acc_state.password.trim().is_empty()
+                    } else {
+                        false
+                    };
+
+                    if should_oauth {
+                        self.trigger_oauth_login();
+                        return Ok(());
+                    }
+
                     if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
                         if acc_state.username.trim().is_empty() {
                             self.set_status(self.lang.msg_account_username_empty());
@@ -916,6 +1079,10 @@ impl App {
                         self.trigger_sync();
                         self.close_modal();
                     }
+                }
+
+                HitTarget::ModalAccountOAuthLogin => {
+                    self.trigger_oauth_login();
                 }
 
                 HitTarget::ModalAccountDelete(id) => {

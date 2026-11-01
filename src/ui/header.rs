@@ -117,11 +117,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(1),
             Constraint::Length(14), // [⟳  동기화] / [⟳  동기화중]
             Constraint::Length(1),
-            Constraint::Length(12), // [☁ 계정연동]
+            Constraint::Length(13), // [☁  계정연동]
             Constraint::Length(1),
-            Constraint::Length(10), // [⚙ 설정]
+            Constraint::Length(11), // [⚙  설정]
             Constraint::Length(1),
-            Constraint::Length(10), // [🎨 테마]
+            Constraint::Length(11), // [🎨  테마]
             Constraint::Length(1),
             Constraint::Length(8),  // [L: 한/EN]
             Constraint::Length(1),
@@ -163,21 +163,39 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_sync, action_chunks[2]);
     app.hit_map.register(action_chunks[2], HitTarget::BtnSync);
 
-    let btn_acc = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_accounts()))]))
+    let acc_label = lang.btn_accounts();
+    let acc_text = if acc_label.starts_with("☁ ") && !acc_label.starts_with("☁  ") {
+        acc_label.replacen("☁ ", "☁  ", 1)
+    } else {
+        acc_label.to_string()
+    };
+    let btn_acc = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", acc_text))]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_acc, action_chunks[4]);
     app.hit_map.register(action_chunks[4], HitTarget::BtnAccounts);
 
-    // Settings button: [ ⚙ 설정 ]
-    let btn_settings = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_settings()))]))
+    // Settings button: [ ⚙  설정 ]
+    let settings_label = lang.btn_settings();
+    let settings_text = if settings_label.starts_with("⚙ ") && !settings_label.starts_with("⚙  ") {
+        settings_label.replacen("⚙ ", "⚙  ", 1)
+    } else {
+        settings_label.to_string()
+    };
+    let btn_settings = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", settings_text))]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_settings, action_chunks[6]);
     app.hit_map.register(action_chunks[6], HitTarget::BtnSettings);
 
-    // Theme button: [ 🎨 테마 ]
-    let btn_theme = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_theme()))]))
+    // Theme button: [ 🎨  테마 ]
+    let theme_label = lang.btn_theme();
+    let theme_text = if theme_label.starts_with("🎨 ") && !theme_label.starts_with("🎨  ") {
+        theme_label.replacen("🎨 ", "🎨  ", 1)
+    } else {
+        theme_label.to_string()
+    };
+    let btn_theme = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", theme_text))]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
     f.render_widget(btn_theme, action_chunks[8]);

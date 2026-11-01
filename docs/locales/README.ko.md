@@ -84,15 +84,15 @@
 - ☁️ **멀티 클라우드 & CalDAV 동기화 엔진**:
   - **Apple iCloud**: CalDAV 기반 안정적인 양방향 동기화 (앱 암호 연동).
   - **네이버 캘린더 (Naver)**: CalDAV 표준 자동 탐색 및 실시간 2-way 동기화 완비 (실제 일정 연동 검증 완료).
-  - **Google Calendar**: Google API v3 REST 어댑터 (현재 Bearer Access Token 수동 입력 지원; 브라우저 자동 원클릭 OAuth2 개발 중 🚧).
-  - **Microsoft 365 / Outlook**: Microsoft Graph API 어댑터 (현재 Access Token 수동 입력 지원; 브라우저 자동 원클릭 OAuth2 개발 중 🚧).
+  - **Google Calendar**: Google API v3 REST 어댑터 (원클릭 브라우저 OAuth2 루프백 인증 및 수동 토큰 지원).
+  - **Microsoft 365 / Outlook**: Microsoft Graph API 어댑터 (원클릭 브라우저 OAuth2 루프백 인증 및 수동 토큰 지원).
   - **삼성 캘린더 (Samsung)**: CalDAV 엔드포인트 또는 Microsoft Graph 계정 연동 브릿지 fallback.
   - **백그라운드 비동기 워커**: UI를 멈추지 않고 5분 주기 또는 수동 호출 시 백그라운드 Tokio 워커가 조용히 동기화 수행.
 - ⌨️ **Vim 키바인딩 & 투명 한글 IME 네비게이션**:
   - `h` / `j` / `k` / `l` 방향 이동, 숫자 뷰 전환, 간편한 단축키 제공.
   - **한글 입력 상태 투명 변환**: 한글 입력기(`ㅗ/ㅓ/ㅏ/ㅣ` 등)가 켜져 있어도 영문 단축키로 자동 매핑되어 터미널 경고음 없이 쾌적하게 조작 가능.
 - 🌐 **다국어(i18n) 시스템 지원**:
-  - 시스템 로케일(`LANG`, `LC_ALL`) 자동 감지.
+  - OS 시스템 언어 설정(macOS / Windows / Linux) 자동 감지 (미지원 언어일 경우 영어로 기본 적용).
   - `L` 키 또는 `[ L: 한/EN ]` 클릭으로 런타임 중 즉시 **한국어** ↔ **English** 전환.
   - 날짜 표기, 요일, 모달 안내, 상태 메시지 전체 다국어 처리.
 - 🎨 **다채로운 테마 및 개인화**:
@@ -201,6 +201,9 @@ flowchart LR
     C <--> F["Microsoft 365 (Graph API)"]
     C <--> G["네이버 캘린더 (CalDAV)"]
     C <--> H["삼성 캘린더"]
+    C -.-> I["LINE WORKS (🇯🇵 CalDAV)"]
+    C -.-> J["QQ 메일 캘린더 (🇨🇳 CalDAV)"]
+    C -.-> K["Feishu / Lark (🇨🇳 REST)"]
 ```
 
 ### 클라우드 제공자별 지원 현황
@@ -209,11 +212,19 @@ flowchart LR
 | :--- | :--- | :---: | :--- |
 | **네이버 캘린더** | CalDAV (RFC 4791) | ✅ **완전 지원** | CalDAV 자동 탐색 및 2단계 인증 애플리케이션 비밀번호로 양방향 동기화 완비 |
 | **Apple iCloud** | CalDAV (RFC 4791) | ✅ **완전 지원** | Apple ID 및 앱 암호(App-Specific Password) 기반 양방향 동기화 |
-| **Google Calendar** | Google Calendar API v3 | 🚧 **진행 중 (수동 토큰)** | REST API CRUD 클라이언트 완료; 현재 Bearer 토큰 수동 입력 방식 (원클릭 브라우저 OAuth2 플로우 개발 중) |
-| **Microsoft 365** | MS Graph REST API | 🚧 **진행 중 (수동 토큰)** | Graph API 클라이언트 완료; 현재 Access 토큰 수동 입력 방식 (원클릭 브라우저 OAuth2 플로우 개발 중) |
+| **Google Calendar** | Google Calendar API v3 | ✅ **완전 지원** | REST API CRUD 클라이언트 및 1-클릭 브라우저 OAuth2 루프백 인증 (`localhost:8088`) 지원 (수동 토큰 입력도 가능) |
+| **Microsoft 365** | MS Graph REST API | ✅ **완전 지원** | Graph API 클라이언트 및 1-클릭 브라우저 OAuth2 루프백 인증 (`localhost:8088`) 지원 (수동 토큰 입력도 가능) |
 | **삼성 캘린더** | CalDAV / MS 브릿지 | 🔄 **브릿지 Fallback** | 독자 클라우드 API 부재로 맞춤 CalDAV 엔드포인트 또는 MS Outlook 연동 기능 브릿지 사용 |
+| **LINE WORKS** (🇯🇵) | CalDAV (RFC 4791) | 📋 **예정 (우선 지원)** | 일본 1위 업무용 협업 캘린더 (`caldav.worksmobile.com`) |
+| **QQ 메일 캘린더** (🇨🇳) | CalDAV (RFC 4791) | 📋 **예정 (우선 지원)** | 텐센트 QQ 메일 기반 중국 최대 개인 캘린더 (`dav.qq.com`) 앱 인증코드 연동 |
+| **Feishu / Lark (飞书)** (🇨🇳/🌏) | REST API v4 | 📋 **예정** | 바이트댄스의 올인원 협업 플랫폼 오픈 API 캘린더 연동 |
+| **딩딩 (DingTalk / 钉钉)** (🇨🇳) | OpenAPI v2.0 | 📋 **예정** | 알리바바 엔터프라이즈 협업 플랫폼 일정 동기화 |
+| **넷이즈 163 기업메일** (🇨🇳) | CalDAV (RFC 4791) | 📋 **예정** | 163 기업메일 CalDAV 연동 (`caldav.qiye.163.com`) |
+| **사이보즈 가룬 (Cybozu)** (🇯🇵) | REST API / iCal | 📋 **예정** | 일본 엔터프라이즈 그룹웨어 1위 스케줄 연동 어댑터 |
+| **타임트리 (TimeTree)** (🇯🇵) | 커뮤니티 브릿지 | 🔍 **검토 중** | 일본 1위 공유 캘린더 (공식 개발자 API 서비스 종료에 따른 iCal/웹훅 대체 연동 검토) |
 
-`rcal` 실행 후 `a` 키를 누르거나 사이드바의 **계정** 항목을 클릭하여 손쉽게 계정을 등록할 수 있습니다.
+`rcal` 실행 후 `a` 키를 누르거나 사이드바의 **계정** 항목을 클릭하여 손쉽게 계정을 등록할 수 있습니다.  
+동아시아(일본 및 중국) 주요 캘린더 서비스의 상세 분석 및 연동 계획은 [동아시아 캘린더 연동 계획서](../cloud_integration_plan.md)를 참고하세요.
 
 ---
 
@@ -395,15 +406,25 @@ rcal mcp --db /path/to/custom_calendar.db
   - [x] 네이버 캘린더 양방향 동기화 (CalDAV 자동 탐색)
   - [x] Tokio 비동기 백그라운드 동기화 워커 (5분 주기 자동 갱신)
   - [x] 클라우드 계정 관리자 UI (`A` key / 마우스 클릭)
-- [ ] **3단계: 멀티 클라우드 어댑터 및 완성도 향상 (부분 완료 🚧)**
+- [x] **3단계: 멀티 클라우드 어댑터 및 완성도 향상 (완료 ✅)**
   - [x] 한글 IME 상태 투명 단축키 매핑 (`ㅗ/ㅓ/ㅏ/ㅣ` -> `h/j/k/l`)
   - [x] 37가지 테마 컬러 팔레트 및 실시간 테마 모달 (`T` 키)
   - [x] 주 시작 요일 설정 (일요일 / 월요일 / 토요일)
-  - [x] Google Calendar REST API 클라이언트 (Bearer 토큰 수동 입력 방식)
-  - [x] Microsoft 365 Graph API 어댑터 (Access 토큰 수동 입력 방식)
+  - [x] Google Calendar REST API 클라이언트 (원클릭 브라우저 OAuth2 및 토큰 수동 입력 지원)
+  - [x] Microsoft 365 Graph API 어댑터 (원클릭 브라우저 OAuth2 및 토큰 수동 입력 지원)
   - [x] 삼성 캘린더 CalDAV / MS 브릿지 연동
-  - [ ] **진행 중**: 브라우저 자동 팝업 원클릭 OAuth2 루프백 인증 서버 (`localhost:8088` PKCE 플로우)
-- [ ] **4단계: 확장 생태계 및 프로토콜 지원**
+  - [x] 브라우저 자동 팝업 원클릭 OAuth2 루프백 인증 서버 (`localhost:8088`) 지원 (Google & Microsoft 365)
+- [ ] **4단계: 동아시아 특화 멀티 클라우드 어댑터 (한/중/일)**
+  - **일본 (🇯🇵)**:
+    - [ ] **LINE WORKS**: CalDAV 2방향 실시간 동기화 (`caldav.worksmobile.com`) 프리셋 지원
+    - [ ] **Cybozu Garoon / Office**: REST API 및 iCal 스케줄 브릿지 연동
+    - [ ] **TimeTree**: 커뮤니티 연동 (iCal 구독 / 생태계 모니터링)
+  - **중국 (🇨🇳)**:
+    - [ ] **텐센트 QQ 메일 캘린더 (QQ邮箱)**: CalDAV 2방향 동기화 (`dav.qq.com`) 앱 인증코드 프리셋 지원
+    - [ ] **바이트댄스 Feishu / Lark (飞书)**: Open Platform Calendar REST API v4 어댑터 연동
+    - [ ] **알리바바 딩딩 (DingTalk / 钉钉)**: OpenAPI v2.0 기업 일정 어댑터
+    - [ ] **넷이즈 163 기업메일 (163企业邮箱)**: CalDAV 동기화 (`caldav.qiye.163.com`)
+- [ ] **5단계: 확장 생태계 및 프로토콜 지원**
   - [x] AI 에이전트를 위한 MCP(Model Context Protocol) 서버 모드 지원
   - [ ] 외부 캘린더용 WebCal / iCalendar(`.ics`) HTTP 구독 서버
   - [ ] 반복 일정 규칙(RFC 5545 RRULE) 지원

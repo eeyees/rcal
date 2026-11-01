@@ -266,7 +266,17 @@ rcal
 - [x] **第 1 阶段：本地 TUI MVP**：月/周/日(重叠检测)/日程视图、100% 鼠标点击引擎、SQLite WAL 存储、事件 CRUD。
 - [x] **第 2 阶段：CalDAV 同步引擎**：Apple iCloud 与 Naver 캘린더 双向同步、Tokio 后台工作线程、账户管理 UI。
 - [x] **第 3 阶段：多云适配器与交互完善**：Google Calendar API、Microsoft Graph 适配器、输入法透明映射、7 种主题与周起始日配置。
-- [ ] **第 4 阶段：生态扩展与开放协议**：
+- [ ] **第 4 阶段：东亚区域特化多云同步适配**：
+    - **日本 (🇯🇵)**:
+      - [ ] **LINE WORKS**: CalDAV 双向同步 (`caldav.worksmobile.com`) 预设
+      - [ ] **Cybozu Garoon / Office**: REST API 与 iCal 日程桥接
+      - [ ] **TimeTree**: 社区协同集成评估（iCal 订阅与生态关注）
+    - **中国 (🇨🇳)**:
+      - [ ] **腾讯 QQ 邮箱日历 (QQ邮箱)**: CalDAV 双向同步 (`dav.qq.com`) 授权码预设
+      - [ ] **字节跳动 飞书 / Lark (Feishu)**: 开放平台 REST API v4 适配器
+      - [ ] **阿里巴巴 钉钉 (DingTalk)**: OpenAPI v2.0 日程同步
+      - [ ] **网易 163 企业邮箱**: CalDAV 同步 (`caldav.qiye.163.com`)
+- [ ] **第 5 阶段：生态扩展与开放协议**：
     - [x] 支持 AI Agent 接入的 MCP (Model Context Protocol) 服务端
     - [ ] 外部订阅用 WebCal / iCalendar (`.ics`) HTTP 导出服务
     - [ ] 重复日程规则（RFC 5545 RRULE）

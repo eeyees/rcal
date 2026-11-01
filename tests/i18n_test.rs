@@ -73,6 +73,18 @@ mod tests {
         assert_eq!(lang_zh_cn.btn_sync(), "⟳ 同步");
         assert_eq!(lang_zh_tw.btn_sync(), "⟳ 同步");
         assert_eq!(lang_mn.btn_sync(), "⟳ Синк");
+
+        assert_eq!(lang_ko.btn_accounts(), "☁  계정연동");
+        assert_eq!(lang_en.btn_accounts(), "☁  Accounts");
+        assert_eq!(lang_ja.btn_accounts(), "☁  アカウント");
+
+        assert_eq!(lang_ko.btn_settings(), "⚙  설정");
+        assert_eq!(lang_en.btn_settings(), "⚙  Setup");
+        assert_eq!(lang_ja.btn_settings(), "⚙  設定");
+
+        assert_eq!(lang_ko.btn_theme(), "🎨  테마");
+        assert_eq!(lang_en.btn_theme(), "🎨  Theme");
+        assert_eq!(lang_ja.btn_theme(), "🎨  テーマ");
     }
 
     #[test]
@@ -152,31 +164,45 @@ mod tests {
         assert_eq!(Language::from_code("ko"), Some(Language::Ko));
         assert_eq!(Language::from_code("ko_kr"), Some(Language::Ko));
         assert_eq!(Language::from_code("KO-KR"), Some(Language::Ko));
+        assert_eq!(Language::from_code("ko_KR.UTF-8"), Some(Language::Ko));
         assert_eq!(Language::from_code("korean"), Some(Language::Ko));
 
         assert_eq!(Language::from_code("en"), Some(Language::En));
         assert_eq!(Language::from_code("en_us"), Some(Language::En));
         assert_eq!(Language::from_code("EN-US"), Some(Language::En));
+        assert_eq!(Language::from_code("en_US.UTF-8"), Some(Language::En));
+        assert_eq!(Language::from_code("en-gb"), Some(Language::En));
+        assert_eq!(Language::from_code("en-ca"), Some(Language::En));
+        assert_eq!(Language::from_code("en-au"), Some(Language::En));
         assert_eq!(Language::from_code("english"), Some(Language::En));
 
         assert_eq!(Language::from_code("ja"), Some(Language::Ja));
         assert_eq!(Language::from_code("ja_jp"), Some(Language::Ja));
         assert_eq!(Language::from_code("JA-JP"), Some(Language::Ja));
+        assert_eq!(Language::from_code("ja_JP.UTF-8"), Some(Language::Ja));
         assert_eq!(Language::from_code("japanese"), Some(Language::Ja));
 
         // Additional 18 languages
         assert_eq!(Language::from_code("zh-cn"), Some(Language::ZhCn));
         assert_eq!(Language::from_code("zh_cn"), Some(Language::ZhCn));
         assert_eq!(Language::from_code("zh"), Some(Language::ZhCn));
+        assert_eq!(Language::from_code("zh-Hans-CN"), Some(Language::ZhCn));
         assert_eq!(Language::from_code("zh-tw"), Some(Language::ZhTw));
         assert_eq!(Language::from_code("zh_tw"), Some(Language::ZhTw));
+        assert_eq!(Language::from_code("zh-Hant-TW"), Some(Language::ZhTw));
+        assert_eq!(Language::from_code("zh-HK"), Some(Language::ZhTw));
         assert_eq!(Language::from_code("mn"), Some(Language::Mn));
         assert_eq!(Language::from_code("es"), Some(Language::Es));
+        assert_eq!(Language::from_code("es-MX"), Some(Language::Es));
         assert_eq!(Language::from_code("fr"), Some(Language::Fr));
+        assert_eq!(Language::from_code("fr-CA"), Some(Language::Fr));
         assert_eq!(Language::from_code("de"), Some(Language::De));
+        assert_eq!(Language::from_code("de-AT"), Some(Language::De));
         assert_eq!(Language::from_code("ru"), Some(Language::Ru));
         assert_eq!(Language::from_code("pt"), Some(Language::Pt));
+        assert_eq!(Language::from_code("pt-BR"), Some(Language::Pt));
         assert_eq!(Language::from_code("it"), Some(Language::It));
+        assert_eq!(Language::from_code("it-CH"), Some(Language::It));
         assert_eq!(Language::from_code("vi"), Some(Language::Vi));
         assert_eq!(Language::from_code("id"), Some(Language::Id));
         assert_eq!(Language::from_code("th"), Some(Language::Th));
@@ -187,7 +213,61 @@ mod tests {
         assert_eq!(Language::from_code("pl"), Some(Language::Pl));
         assert_eq!(Language::from_code("sv"), Some(Language::Sv));
 
+        // Unsupported languages return None
+        assert_eq!(Language::from_code("fi"), None);
+        assert_eq!(Language::from_code("fi-FI"), None);
+        assert_eq!(Language::from_code("cs-CZ"), None);
+        assert_eq!(Language::from_code("da-DK"), None);
+        assert_eq!(Language::from_code("el-GR"), None);
+        assert_eq!(Language::from_code("C"), None);
+        assert_eq!(Language::from_code("POSIX"), None);
         assert_eq!(Language::from_code("invalid_xyz"), None);
+        assert_eq!(Language::from_code(""), None);
+    }
+
+    #[test]
+    fn test_system_language_detection_and_fallback() -> anyhow::Result<()> {
+        // Supported locales detected properly
+        assert_eq!(Language::detect_from_locales(["ko-KR"]), Language::Ko);
+        assert_eq!(Language::detect_from_locales(["en-US"]), Language::En);
+        assert_eq!(Language::detect_from_locales(["ja-JP"]), Language::Ja);
+        assert_eq!(Language::detect_from_locales(["zh-Hans-CN"]), Language::ZhCn);
+        assert_eq!(Language::detect_from_locales(["zh-Hant-TW"]), Language::ZhTw);
+        assert_eq!(Language::detect_from_locales(["es-MX"]), Language::Es);
+        assert_eq!(Language::detect_from_locales(["fr-FR"]), Language::Fr);
+        assert_eq!(Language::detect_from_locales(["de-DE"]), Language::De);
+
+        // Unsupported locales fallback to English
+        assert_eq!(Language::detect_from_locales(["fi-FI"]), Language::En);
+        assert_eq!(Language::detect_from_locales(["cs-CZ"]), Language::En);
+        assert_eq!(Language::detect_from_locales(["da-DK"]), Language::En);
+        assert_eq!(Language::detect_from_locales(["el-GR"]), Language::En);
+        assert_eq!(Language::detect_from_locales(["hu-HU"]), Language::En);
+        assert_eq!(Language::detect_from_locales(["invalid_lang_code"]), Language::En);
+        assert_eq!(Language::detect_from_locales(&[] as &[&str]), Language::En);
+
+        // Multiple preferred locales: skips unsupported and picks first supported
+        assert_eq!(
+            Language::detect_from_locales(["fi-FI", "de-DE"]),
+            Language::De
+        );
+        assert_eq!(
+            Language::detect_from_locales(["cs-CZ", "el-GR"]),
+            Language::En
+        );
+
+        // App startup with no DB setting follows system detection
+        let db = Database::in_memory()?;
+        let app = App::new(db)?;
+        assert_eq!(app.lang, Language::detect());
+
+        // App startup with DB setting follows DB setting, overriding system
+        let db_configured = Database::in_memory()?;
+        db_configured.set_setting("language", "ja")?;
+        let app_configured = App::new(db_configured)?;
+        assert_eq!(app_configured.lang, Language::Ja);
+
+        Ok(())
     }
 
     #[test]
@@ -195,8 +275,8 @@ mod tests {
         let db_path = std::env::temp_dir().join(format!("test_i18n_{}.db", uuid::Uuid::new_v4()));
         let db = Database::new(Some(&db_path))?;
         let mut app = App::new(db)?;
+        app.set_language(Language::Ko);
 
-        // Default language is Korean
         assert_eq!(app.lang, Language::Ko);
 
         // Toggle language: Ko -> En
@@ -242,6 +322,7 @@ mod tests {
 
         let db = Database::in_memory()?;
         let mut app = App::new(db)?;
+        app.set_language(Language::Ko);
         let initial_date = app.selected_date;
 
         // In normal mode:

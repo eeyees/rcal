@@ -85,15 +85,15 @@
 - ☁️ **Multi-Cloud & CalDAV Sync Engine**:
   - **Apple iCloud**: Native two-way CalDAV synchronization (via App-Specific Password).
   - **Naver Calendar**: Native CalDAV sync integration with auto-discovery (RFC 4791).
-  - **Google Calendar**: Google API v3 REST adapter (manual Bearer token entry; interactive 1-click browser OAuth2 loopback server in progress 🚧).
-  - **Microsoft 365 / Outlook**: Microsoft Graph API adapter (manual Access token entry; interactive 1-click browser OAuth2 loopback server in progress 🚧).
+  - **Google Calendar**: Google API v3 REST adapter with 1-click interactive browser OAuth2 login (loopback server) and manual token support.
+  - **Microsoft 365 / Outlook**: Microsoft Graph API adapter with 1-click interactive browser OAuth2 login (loopback server) and manual token support.
   - **Samsung Calendar**: Sync via CalDAV endpoint or Microsoft Graph exchange bridge.
   - **Background Worker**: Dedicated Tokio background task syncing silently every 5 minutes or on-demand without freezing the UI.
 - ⌨️ **Vim Navigation & Transparent Korean IME Handling**:
   - Classic `h` / `j` / `k` / `l` navigation, tab switching, and modal controls.
   - **Transparent IME Translation**: Use Vim shortcuts seamlessly even when typing with Korean (`ㅗ/ㅓ/ㅏ/ㅣ`) input mode active without annoying terminal beeps or missed keystrokes.
 - 🌐 **Native Multi-Language (i18n) Support**:
-  - Automatic system locale detection (`LANG` / `LC_ALL`).
+  - Automatic system language detection across macOS, Windows, and Linux (defaults to English if system language is unsupported).
   - Runtime 1-key language toggle between **한국어 (Korean)** and **English** with `L` or mouse click.
   - Localized dates, day names, modals, forms, and status notifications.
 - 🔔 **Native OS Desktop Notifications**:
@@ -209,6 +209,9 @@ flowchart LR
     C <--> F["Microsoft 365 (Graph API)"]
     C <--> G["Naver Calendar (CalDAV)"]
     C <--> H["Samsung Calendar"]
+    C -.-> I["LINE WORKS (🇯🇵 CalDAV)"]
+    C -.-> J["QQ Mail (🇨🇳 CalDAV)"]
+    C -.-> K["Feishu / Lark (🇨🇳 REST)"]
 ```
 
 ### Provider Support Status
@@ -217,11 +220,19 @@ flowchart LR
 | :--- | :--- | :---: | :--- |
 | **Naver Calendar** | CalDAV (RFC 4791) | ✅ **Full Support** | Native two-way sync with auto-discovery & 2-step verification app password |
 | **Apple iCloud** | CalDAV (RFC 4791) | ✅ **Full Support** | Native two-way sync with Apple ID & App-Specific Password |
-| **Google Calendar** | Google Calendar API v3 | 🚧 **In Progress** | Full REST API client & CRUD implemented; currently requires manual Bearer Token entry (1-click browser OAuth2 flow in development) |
-| **Microsoft 365** | MS Graph REST API | 🚧 **In Progress** | Full Graph API client & CRUD implemented; currently requires manual Access Token entry (1-click browser OAuth2 flow in development) |
+| **Google Calendar** | Google Calendar API v3 | ✅ **Full Support** | Full REST API client & CRUD with 1-click browser OAuth2 loopback authentication (`localhost:8088`) and manual token entry |
+| **Microsoft 365** | MS Graph REST API | ✅ **Full Support** | Full Graph API client & CRUD with 1-click browser OAuth2 loopback authentication (`localhost:8088`) and manual token entry |
 | **Samsung Calendar** | CalDAV / MS Bridge | 🔄 **Bridge Fallback** | Syncs via custom CalDAV endpoint or Microsoft Outlook/Exchange account bridge (no public standalone Samsung Cloud API exists) |
+| **LINE WORKS** (🇯🇵) | CalDAV (RFC 4791) | 📋 **Planned (Next)** | Japan's #1 workplace communication calendar (`caldav.worksmobile.com`) |
+| **QQ Mail Calendar** (🇨🇳) | CalDAV (RFC 4791) | 📋 **Planned (Next)** | China's top consumer calendar by Tencent (`dav.qq.com`) via authorization code |
+| **Feishu / Lark** (🇨🇳/🌏) | REST API v4 | 📋 **Planned** | ByteDance's modern collaborative workspace calendar via Open Platform REST API |
+| **DingTalk** (🇨🇳) | DingTalk OpenAPI | 📋 **Planned** | Alibaba DingTalk enterprise schedule sync via OpenAPI v2.0 |
+| **NetEase 163 Mail** (🇨🇳) | CalDAV (RFC 4791) | 📋 **Planned** | NetEase Enterprise Mail CalDAV sync (`caldav.qiye.163.com`) |
+| **Cybozu Garoon** (🇯🇵) | REST API / iCal | 📋 **Planned** | Japan's leading enterprise groupware schedule adapter |
+| **TimeTree** (🇯🇵) | Community / Bridge | 🔍 **Under Evaluation** | Japan's #1 shared calendar (public developer API currently closed; monitoring ecosystem) |
 
-To configure your accounts, press `a` inside `rcal` or select the **Accounts** menu in the sidebar.
+To configure your accounts, press `a` inside `rcal` or select the **Accounts** menu in the sidebar.  
+For in-depth analysis and roadmap on East Asian (Japan & China) providers, refer to the [East Asian Calendar Integration Plan](docs/cloud_integration_plan.md).
 
 ---
 
@@ -505,15 +516,25 @@ rcal mcp --db /path/to/custom_calendar.db
   - [x] Naver Calendar two-way sync with auto-discovery
   - [x] Background Tokio sync worker & 5-minute auto-interval ticker
   - [x] Cloud accounts management UI (`A` key / mouse click)
-- [ ] **Phase 3: Multi-Cloud Adapters & Polishing (Partially Completed 🚧)**
+- [x] **Phase 3: Multi-Cloud Adapters & Polishing**
   - [x] Transparent Korean IME navigation mapping (`ㅗ/ㅓ/ㅏ/ㅣ` -> `h/j/k/l`)
   - [x] 37 Curated color palettes with instant theme cycler & modal (`T` key)
   - [x] Configurable week start day (Sunday, Monday, Saturday)
-  - [x] Google Calendar REST API v3 client (manual Bearer Token)
-  - [x] Microsoft 365 Graph API client (manual Access Token)
+  - [x] Google Calendar REST API v3 client with interactive 1-click browser OAuth2 flow
+  - [x] Microsoft 365 Graph API client with interactive 1-click browser OAuth2 flow
   - [x] Samsung Calendar sync via CalDAV / Microsoft Bridge
-  - [ ] **In Progress**: Interactive 1-click browser OAuth2 loopback server (`localhost:8088` PKCE flow) for Google & Microsoft
-- [ ] **Phase 4: Ecosystem & Extensibility**
+  - [x] Lightweight loopback HTTP server (`http://127.0.0.1:8088/oauth/callback`) with CSRF protection & automatic account profile detection
+- [ ] **Phase 4: Regional Multi-Cloud Adapters (East Asia & Beyond)**
+  - **Japan (🇯🇵)**:
+    - [ ] **LINE WORKS**: Native two-way CalDAV sync (`caldav.worksmobile.com`) with app-password presets
+    - [ ] **Cybozu Garoon / Office**: REST API & iCal subscription schedule bridge
+    - [ ] **TimeTree**: Community integration (iCal subscription / ecosystem monitoring)
+  - **China (🇨🇳)**:
+    - [ ] **Tencent QQ Mail Calendar (QQ邮箱)**: Native two-way CalDAV sync (`dav.qq.com`) with authorization code presets
+    - [ ] **ByteDance Feishu / Lark (飞书)**: Open Platform REST API v4 adapter (Tenant/User OAuth)
+    - [ ] **Alibaba DingTalk (钉钉)**: OpenAPI v2.0 Calendar schedule adapter
+    - [ ] **NetEase 163 Enterprise Mail (163企业邮箱)**: Native CalDAV sync (`caldav.qiye.163.com`)
+- [ ] **Phase 5: Ecosystem & Extensibility**
   - [x] Model Context Protocol (MCP) server support for AI agents
   - [ ] WebCal / iCalendar (`.ics`) local HTTP subscription server
   - [ ] Recurrence rules (RFC 5545 RRULE support)

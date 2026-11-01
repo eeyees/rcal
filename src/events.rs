@@ -4,9 +4,10 @@ use crossterm::event::{
     Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
 
-use crate::app::{ActiveModal, App, EventFormState, ViewMode};
+use crate::app::{ActiveModal, App, EventFormState, SettingsSection, ViewMode};
 use crate::i18n::hangul_to_qwerty;
 use crate::model::{CalDavAccount, ProviderType};
+use crate::ui::theme::ThemeCategory;
 
 /// Normalize key events so that Korean 2-beolsik keystrokes (Jamo / Syllables)
 /// transparently map to standard English QWERTY shortcuts during navigation & commands.
@@ -196,14 +197,17 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 _ => {}
             }
         } else {
+            let is_oauth = state.provider_idx == 2 || state.provider_idx == 3;
+            let max_fields = if is_oauth { 8 } else { 7 };
+
             match key.code {
                 KeyCode::Esc => state.is_adding = false,
                 KeyCode::Tab | KeyCode::Down => {
-                    state.active_field = (state.active_field + 1) % 7;
+                    state.active_field = (state.active_field + 1) % max_fields;
                 }
                 KeyCode::BackTab | KeyCode::Up => {
                     if state.active_field == 0 {
-                        state.active_field = 6;
+                        state.active_field = max_fields - 1;
                     } else {
                         state.active_field -= 1;
                     }
@@ -212,6 +216,12 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     if state.active_field == 0 {
                         let prev_idx = if state.provider_idx == 0 { 5 } else { state.provider_idx - 1 };
                         state.set_preset(prev_idx);
+                    } else if is_oauth {
+                        if state.active_field == 7 {
+                            state.active_field = 6;
+                        } else if state.active_field == 6 {
+                            state.active_field = 5;
+                        }
                     } else if state.active_field == 6 {
                         state.active_field = 5;
                     }
@@ -220,15 +230,34 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     if state.active_field == 0 {
                         let next_idx = (state.provider_idx + 1) % 6;
                         state.set_preset(next_idx);
+                    } else if is_oauth {
+                        if state.active_field == 5 {
+                            state.active_field = 6;
+                        } else if state.active_field == 6 {
+                            state.active_field = 7;
+                        }
                     } else if state.active_field == 5 {
                         state.active_field = 6;
                     }
                 }
+                // Hotkey 'b' / 'B' on presets or buttons triggers 1-click browser OAuth login
+                KeyCode::Char('b') | KeyCode::Char('B') if is_oauth && (state.active_field == 0 || state.active_field >= 5) => {
+                    app.trigger_oauth_login();
+                }
                 KeyCode::Enter => {
-                    if state.active_field == 6 {
+                    let is_cancel = (is_oauth && state.active_field == 7) || (!is_oauth && state.active_field == 6);
+                    let is_oauth_btn = is_oauth && state.active_field == 5 && state.password.trim().is_empty();
+                    let is_connect = (is_oauth && (state.active_field == 6 || (state.active_field == 5 && !state.password.trim().is_empty()))) || (!is_oauth && state.active_field == 5);
+
+                    if is_cancel {
                         state.is_adding = false;
-                    } else if state.active_field == 5 || state.active_field == 4 {
-                        if state.username.trim().is_empty() {
+                    } else if is_oauth_btn {
+                        app.trigger_oauth_login();
+                    } else if is_connect || state.active_field == 4 {
+                        if is_oauth && state.password.trim().is_empty() {
+                            // Smart fallback: if OAuth provider and token is empty, trigger browser login
+                            app.trigger_oauth_login();
+                        } else if state.username.trim().is_empty() {
                             app.set_status(app.lang.msg_account_username_empty());
                         } else {
                             let (provider, auth_type) = match state.provider_idx {
@@ -254,15 +283,20 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                     } else {
                         // Advance to next field
-                        state.active_field = (state.active_field + 1) % 7;
+                        state.active_field = (state.active_field + 1) % max_fields;
                     }
                 }
                 KeyCode::Char(' ') if state.active_field == 0 => {
                     let next_idx = (state.provider_idx + 1) % 6;
                     state.set_preset(next_idx);
                 }
-                KeyCode::Char(' ') if state.active_field == 5 => {
-                    if !state.username.trim().is_empty() {
+                KeyCode::Char(' ') if is_oauth && state.active_field == 5 => {
+                    app.trigger_oauth_login();
+                }
+                KeyCode::Char(' ') if (is_oauth && state.active_field == 6) || (!is_oauth && state.active_field == 5) => {
+                    if is_oauth && state.password.trim().is_empty() {
+                        app.trigger_oauth_login();
+                    } else if !state.username.trim().is_empty() {
                         let (provider, auth_type) = match state.provider_idx {
                             0 => (ProviderType::Naver, crate::model::AuthType::Basic),
                             1 => (ProviderType::Apple, crate::model::AuthType::Basic),
@@ -285,7 +319,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         acc_action_save = Some(new_acc);
                     }
                 }
-                KeyCode::Char(' ') if state.active_field == 6 => {
+                KeyCode::Char(' ') if (is_oauth && state.active_field == 7) || (!is_oauth && state.active_field == 6) => {
                     state.is_adding = false;
                 }
                 KeyCode::Backspace => {
@@ -522,56 +556,202 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             let norm_code = normalize_key_event(key);
             match norm_code {
                 KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
+                // Tab / Shift-Tab: Navigate between major sections (크게크게 이동)
+                KeyCode::Tab => {
+                    app.settings_section = app.settings_section.next();
+                }
+                KeyCode::BackTab => {
+                    app.settings_section = app.settings_section.prev();
+                }
+
+                // Global direct shortcuts in Settings modal:
                 KeyCode::Char('1') | KeyCode::Char('s') | KeyCode::Char('S') => {
+                    app.settings_section = SettingsSection::WeekStart;
                     app.set_week_start_day(crate::model::WeekStartDay::Sunday);
                 }
                 KeyCode::Char('2') | KeyCode::Char('m') | KeyCode::Char('M') => {
+                    app.settings_section = SettingsSection::WeekStart;
                     app.set_week_start_day(crate::model::WeekStartDay::Monday);
                 }
                 KeyCode::Char('3') | KeyCode::Char('t') => {
+                    app.settings_section = SettingsSection::WeekStart;
                     app.set_week_start_day(crate::model::WeekStartDay::Saturday);
                 }
                 KeyCode::Char('n') | KeyCode::Char('N') => {
+                    app.settings_section = SettingsSection::Notifications;
                     app.toggle_notifications();
                 }
                 KeyCode::Char('d') | KeyCode::Char('D') => {
+                    app.settings_section = SettingsSection::Notifications;
                     app.send_test_notification();
                 }
                 KeyCode::Char('o') | KeyCode::Char('O') => {
+                    app.settings_section = SettingsSection::Notifications;
                     app.toggle_notification_sound();
                 }
                 KeyCode::Char('T') => {
                     app.open_theme_modal();
                 }
                 KeyCode::Char('c') => {
+                    app.settings_section = SettingsSection::Theme;
                     app.cycle_theme();
                 }
                 KeyCode::Char('C') | KeyCode::Char('p') | KeyCode::Char('P') => {
+                    app.settings_section = SettingsSection::Theme;
                     app.cycle_theme_prev();
-                }
-                KeyCode::Tab | KeyCode::Right | KeyCode::Down => {
-                    let next = match app.week_start_day {
-                        crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Monday,
-                        crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Saturday,
-                        crate::model::WeekStartDay::Saturday => crate::model::WeekStartDay::Sunday,
-                    };
-                    app.set_week_start_day(next);
-                }
-                KeyCode::BackTab | KeyCode::Left | KeyCode::Up => {
-                    let prev = match app.week_start_day {
-                        crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Saturday,
-                        crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Sunday,
-                        crate::model::WeekStartDay::Saturday => crate::model::WeekStartDay::Monday,
-                    };
-                    app.set_week_start_day(prev);
                 }
                 KeyCode::Char('l') | KeyCode::Char('L') => {
                     app.open_language_modal();
                 }
-                KeyCode::Enter => {
-                    app.close_modal();
-                }
-                _ => {}
+
+                // Contextual keys based on current section
+                _ => match app.settings_section {
+                    SettingsSection::WeekStart => match norm_code {
+                        KeyCode::Right | KeyCode::Char('l') => {
+                            let next = match app.week_start_day {
+                                crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Monday,
+                                crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Saturday,
+                                crate::model::WeekStartDay::Saturday => crate::model::WeekStartDay::Sunday,
+                            };
+                            app.set_week_start_day(next);
+                        }
+                        KeyCode::Left | KeyCode::Char('h') => {
+                            let prev = match app.week_start_day {
+                                crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Saturday,
+                                crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Sunday,
+                                crate::model::WeekStartDay::Saturday => crate::model::WeekStartDay::Monday,
+                            };
+                            app.set_week_start_day(prev);
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            app.settings_section = SettingsSection::Notifications;
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            app.settings_section = SettingsSection::Close;
+                        }
+                        KeyCode::Enter => {
+                            app.close_modal();
+                        }
+                        _ => {}
+                    },
+                    SettingsSection::Notifications => match norm_code {
+                        KeyCode::Left | KeyCode::Char('h') => {
+                            let prev_mins = match app.notification_config.lead_minutes {
+                                30 => 15,
+                                15 => 10,
+                                10 => 5,
+                                5 => 0,
+                                _ => 30,
+                            };
+                            app.set_notification_lead_minutes(prev_mins);
+                        }
+                        KeyCode::Right | KeyCode::Char('l') => {
+                            let next_mins = match app.notification_config.lead_minutes {
+                                0 => 5,
+                                5 => 10,
+                                10 => 15,
+                                15 => 30,
+                                _ => 0,
+                            };
+                            app.set_notification_lead_minutes(next_mins);
+                        }
+                        KeyCode::Char(' ') => {
+                            app.toggle_notifications();
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            app.settings_section = SettingsSection::Theme;
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            app.settings_section = SettingsSection::WeekStart;
+                        }
+                        KeyCode::Enter => {
+                            app.close_modal();
+                        }
+                        _ => {}
+                    },
+                    SettingsSection::Theme => match norm_code {
+                        KeyCode::Right | KeyCode::Char('l') => {
+                            app.cycle_theme();
+                        }
+                        KeyCode::Left | KeyCode::Char('h') => {
+                            app.cycle_theme_prev();
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            let next_cat = match app.theme_category {
+                                ThemeCategory::Dark => ThemeCategory::Nature,
+                                ThemeCategory::Nature => ThemeCategory::Vibrant,
+                                ThemeCategory::Vibrant => ThemeCategory::Light,
+                                ThemeCategory::Light => ThemeCategory::Dark,
+                            };
+                            app.set_theme_category(next_cat);
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            let prev_cat = match app.theme_category {
+                                ThemeCategory::Dark => ThemeCategory::Light,
+                                ThemeCategory::Nature => ThemeCategory::Dark,
+                                ThemeCategory::Vibrant => ThemeCategory::Nature,
+                                ThemeCategory::Light => ThemeCategory::Vibrant,
+                            };
+                            app.set_theme_category(prev_cat);
+                        }
+                        KeyCode::Char(' ') | KeyCode::Enter => {
+                            app.open_theme_modal();
+                        }
+                        _ => {}
+                    },
+                    SettingsSection::Language => {
+                        let all_len = crate::i18n::Language::ALL.len();
+                        let num_cols = 4;
+                        match norm_code {
+                            KeyCode::Left | KeyCode::Char('h') => {
+                                if app.settings_lang_idx > 0 {
+                                    app.settings_lang_idx -= 1;
+                                } else {
+                                    app.settings_lang_idx = all_len - 1;
+                                }
+                            }
+                            KeyCode::Right | KeyCode::Char('l') => {
+                                if app.settings_lang_idx + 1 < all_len {
+                                    app.settings_lang_idx += 1;
+                                } else {
+                                    app.settings_lang_idx = 0;
+                                }
+                            }
+                            KeyCode::Up | KeyCode::Char('k') => {
+                                if app.settings_lang_idx >= num_cols {
+                                    app.settings_lang_idx -= num_cols;
+                                } else {
+                                    let target = app.settings_lang_idx + (all_len / num_cols) * num_cols;
+                                    app.settings_lang_idx = if target < all_len { target } else { target - num_cols };
+                                }
+                            }
+                            KeyCode::Down | KeyCode::Char('j') => {
+                                if app.settings_lang_idx + num_cols < all_len {
+                                    app.settings_lang_idx += num_cols;
+                                } else {
+                                    app.settings_lang_idx = app.settings_lang_idx % num_cols;
+                                }
+                            }
+                            KeyCode::Char(' ') | KeyCode::Enter => {
+                                let selected_lang = crate::i18n::Language::ALL[app.settings_lang_idx];
+                                app.set_language(selected_lang);
+                            }
+                            _ => {}
+                        }
+                    }
+                    SettingsSection::Close => match norm_code {
+                        KeyCode::Enter | KeyCode::Char(' ') => {
+                            app.close_modal();
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            app.settings_section = SettingsSection::Language;
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            app.settings_section = SettingsSection::WeekStart;
+                        }
+                        _ => {}
+                    },
+                },
             }
             return Ok(());
         }

@@ -28,11 +28,11 @@ pub fn render(f: &mut Frame, app: &mut App, state: &LanguageModalState, area: Re
     let theme = &app.theme;
 
     let title = match lang {
-        Language::Ko => " 🌐 언어 선택 (Language Selection) ",
-        Language::Ja => " 🌐 言語の選択 (Language Selection) ",
-        Language::ZhCn => " 🌐 语言选择 (Language Selection) ",
-        Language::ZhTw => " 🌐 語言選擇 (Language Selection) ",
-        _ => " 🌐 Select Language ",
+        Language::Ko => " 🌐  언어 선택 (Language Selection) ",
+        Language::Ja => " 🌐  言語の選択 (Language Selection) ",
+        Language::ZhCn => " 🌐  语言选择 (Language Selection) ",
+        Language::ZhTw => " 🌐  語言選擇 (Language Selection) ",
+        _ => " 🌐  Select Language ",
     };
 
     let block = Block::default()

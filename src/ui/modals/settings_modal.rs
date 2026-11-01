@@ -6,7 +6,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::App;
+use crate::app::{App, SettingsSection};
 use crate::model::WeekStartDay;
 use crate::mouse::HitTarget;
 use crate::ui::theme::{Theme, ThemeCategory, ThemeMode};
@@ -67,8 +67,16 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // =========================================================================
     // Section 1: Week Start Day
     // =========================================================================
+    let is_week_focused = app.settings_section == SettingsSection::WeekStart;
+    let week_prefix = if is_week_focused { "▶ " } else { "  " };
+    let week_title_style = if is_week_focused {
+        Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)
+    };
+
     f.render_widget(
-        Paragraph::new(Span::styled(t.settings_week_start_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))),
+        Paragraph::new(Span::styled(format!("{}{}", week_prefix, t.settings_week_start_title), week_title_style)),
         chunks[0],
     );
 
@@ -101,10 +109,16 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let text = format!("{}{} {}", prefix, label, shortcut);
 
         let style = if is_selected {
-            Style::default()
+            let mut s = Style::default()
                 .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
                 .bg(theme.primary)
-                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::BOLD);
+            if is_week_focused {
+                s = s.add_modifier(Modifier::UNDERLINED);
+            }
+            s
+        } else if is_week_focused {
+            Style::default().fg(theme.text_normal).bg(theme.button_bg)
         } else {
             theme.button_style()
         };
@@ -120,6 +134,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // =========================================================================
     // Section 2: Desktop Notifications
     // =========================================================================
+    let is_notif_focused = app.settings_section == SettingsSection::Notifications;
+    let notif_prefix = if is_notif_focused { "▶ " } else { "  " };
+    let notif_title_style = if is_notif_focused {
+        Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)
+    };
+
     let notif_header_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -129,19 +151,19 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .split(chunks[4]);
 
     let notif_title = match lang {
-        crate::i18n::Language::Ko => "🔔 바탕화면 알림 (Desktop Notifications)",
-        crate::i18n::Language::Ja => "🔔 デスクトップ通知 (Desktop Notifications)",
-        _ => "🔔 Desktop Notifications",
+        crate::i18n::Language::Ko => "🔔  바탕화면 알림 (Desktop Notifications)",
+        crate::i18n::Language::Ja => "🔔  デスクトップ通知 (Desktop Notifications)",
+        _ => "🔔  Desktop Notifications",
     };
     f.render_widget(
-        Paragraph::new(Span::styled(notif_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))),
+        Paragraph::new(Span::styled(format!("{}{}", notif_prefix, notif_title), notif_title_style)),
         notif_header_chunks[0],
     );
 
     let test_btn_label = match lang {
-        crate::i18n::Language::Ko => "[ 🔔 테스트 발송 (d) ]",
-        crate::i18n::Language::Ja => "[ 🔔 テスト送信 (d) ]",
-        _ => "[ 🔔 Test Alert (d) ]",
+        crate::i18n::Language::Ko => "[ 🔔  테스트 발송 (d) ]",
+        crate::i18n::Language::Ja => "[ 🔔  テスト送信 (d) ]",
+        _ => "[ 🔔  Test Alert (d) ]",
     };
     let btn_test = Paragraph::new(Line::from(vec![Span::raw(test_btn_label)]))
         .style(theme.button_style())
@@ -178,10 +200,16 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         _ => if notif_enabled { "● Alerts ON [n]" } else { "○ Alerts OFF [n]" },
     };
     let toggle_style = if notif_enabled {
-        Style::default()
+        let mut s = Style::default()
             .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
             .bg(theme.primary)
-            .add_modifier(Modifier::BOLD)
+            .add_modifier(Modifier::BOLD);
+        if is_notif_focused {
+            s = s.add_modifier(Modifier::UNDERLINED);
+        }
+        s
+    } else if is_notif_focused {
+        Style::default().fg(theme.text_highlight).bg(theme.button_bg).add_modifier(Modifier::BOLD)
     } else {
         theme.button_style()
     };
@@ -205,10 +233,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let prefix = if is_selected { "● " } else { "○ " };
         let text = format!("{}{}", prefix, label);
         let style = if is_selected {
-            Style::default()
+            let mut s = Style::default()
                 .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
                 .bg(theme.accent)
-                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::BOLD);
+            if is_notif_focused {
+                s = s.add_modifier(Modifier::UNDERLINED);
+            }
+            s
         } else {
             theme.button_style()
         };
@@ -223,12 +255,16 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // 3. Sound Button
     let sound_enabled = app.notification_config.sound;
     let sound_label = match lang {
-        crate::i18n::Language::Ko => if sound_enabled { "● 🔊 소리 [o]" } else { "○ 🔇 무음 [o]" },
-        crate::i18n::Language::Ja => if sound_enabled { "● 🔊 音 [o]" } else { "○ 🔇 消音 [o]" },
-        _ => if sound_enabled { "● 🔊 Sound [o]" } else { "○ 🔇 Mute [o]" },
+        crate::i18n::Language::Ko => if sound_enabled { "● 🔊  소리 [o]" } else { "○ 🔇  무음 [o]" },
+        crate::i18n::Language::Ja => if sound_enabled { "● 🔊  音 [o]" } else { "○ 🔇  消音 [o]" },
+        _ => if sound_enabled { "● 🔊  Sound [o]" } else { "○ 🔇  Mute [o]" },
     };
     let sound_style = if sound_enabled {
-        Style::default().fg(theme.text_highlight).bg(theme.button_bg).add_modifier(Modifier::BOLD)
+        let mut s = Style::default().fg(theme.text_highlight).bg(theme.button_bg).add_modifier(Modifier::BOLD);
+        if is_notif_focused {
+            s = s.add_modifier(Modifier::UNDERLINED);
+        }
+        s
     } else {
         theme.button_style()
     };
@@ -241,6 +277,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // =========================================================================
     // Section 3: Color Themes (37 Themes across 4 Categories)
     // =========================================================================
+    let is_theme_focused = app.settings_section == SettingsSection::Theme;
+    let theme_prefix = if is_theme_focused { "▶ " } else { "  " };
+    let theme_title_style = if is_theme_focused {
+        Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)
+    };
+
     let all_themes = ThemeMode::all();
     let current_idx = all_themes.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
 
@@ -253,14 +297,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .split(chunks[7]);
 
     f.render_widget(
-        Paragraph::new(Span::styled(t.settings_theme_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))),
+        Paragraph::new(Span::styled(format!("{}{}", theme_prefix, t.settings_theme_title), theme_title_style)),
         theme_header_chunks[0],
     );
 
     let open_modal_label = match lang {
-        crate::i18n::Language::Ko => "[ 🎨 전체 테마 모달 (T) ]",
-        crate::i18n::Language::Ja => "[ 🎨 テーマ一覧 (T) ]",
-        _ => "[ 🎨 Theme Modal (T) ]",
+        crate::i18n::Language::Ko => "[ 🎨  전체 테마 모달 (T) ]",
+        crate::i18n::Language::Ja => "[ 🎨  テーマ一覧 (T) ]",
+        _ => "[ 🎨  Theme Modal (T) ]",
     };
     let btn_open_modal = Paragraph::new(Line::from(vec![Span::raw(open_modal_label)]))
         .style(theme.button_style())
@@ -343,6 +387,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let row1_count = (num_in_cat + 1) / 2;
     let row2_count = num_in_cat.saturating_sub(row1_count);
 
+    let mut theme_cursor_pos: Option<(u16, u16)> = None;
+
     // Row 1 themes
     let row1_themes = &cat_themes[0..row1_count.min(num_in_cat)];
     let mut row1_constraints = Vec::with_capacity(row1_themes.len() * 2);
@@ -364,10 +410,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let sample = Theme::from_mode(*mode);
 
         let style = if is_selected {
-            Style::default()
+            let mut s = Style::default()
                 .fg(if mode.is_light() { Color::White } else { Color::Black })
                 .bg(theme.primary)
-                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::BOLD);
+            if is_theme_focused {
+                s = s.add_modifier(Modifier::UNDERLINED);
+            }
+            s
         } else {
             Style::default()
                 .fg(sample.primary)
@@ -375,6 +425,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         };
 
         let rect = row1_chunks[idx * 2];
+        if is_selected {
+            theme_cursor_pos = Some((rect.x + rect.width / 2, rect.y));
+        }
         let p = Paragraph::new(Line::from(vec![Span::raw(label)]))
             .style(style)
             .alignment(Alignment::Center);
@@ -393,9 +446,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         row2_constraints.push(Constraint::Min(0));
 
         let row2_chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints(row2_constraints)
-            .split(chunks[11]);
+        .direction(Direction::Horizontal)
+        .constraints(row2_constraints)
+        .split(chunks[11]);
 
         for (idx, mode) in row2_themes.iter().enumerate() {
             let is_selected = app.theme.mode == *mode;
@@ -404,10 +457,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             let sample = Theme::from_mode(*mode);
 
             let style = if is_selected {
-                Style::default()
+                let mut s = Style::default()
                     .fg(if mode.is_light() { Color::White } else { Color::Black })
                     .bg(theme.primary)
-                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::BOLD);
+                if is_theme_focused {
+                    s = s.add_modifier(Modifier::UNDERLINED);
+                }
+                s
             } else {
                 Style::default()
                     .fg(sample.primary)
@@ -415,6 +472,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             };
 
             let rect = row2_chunks[idx * 2];
+            if is_selected {
+                theme_cursor_pos = Some((rect.x + rect.width / 2, rect.y));
+            }
             let p = Paragraph::new(Line::from(vec![Span::raw(label)]))
                 .style(style)
                 .alignment(Alignment::Center);
@@ -425,17 +485,25 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     // Hint: Config file location for customization & contrast adjustments
     let cfg_hint = match lang {
-        crate::i18n::Language::Ko => "📁 설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 대비 조절 가능)",
-        crate::i18n::Language::Ja => "📁 設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)",
-        _ => "📁 Config file: ~/.config/rcal/theme.toml (Color overrides & contrast options)",
+        crate::i18n::Language::Ko => "📁  설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 대비 조절 가능)",
+        crate::i18n::Language::Ja => "📁  設定ファイル: ~/.config/rcal/theme.toml (色の上書き・コントラスト調整可能)",
+        _ => "📁  Config file: ~/.config/rcal/theme.toml (Color overrides & contrast options)",
     };
     f.render_widget(Paragraph::new(Span::styled(cfg_hint, Style::default().fg(theme.text_dim))), chunks[12]);
 
     // =========================================================================
     // Section 4: Language (4 columns x 6 rows grid for all supported languages)
     // =========================================================================
+    let is_lang_focused = app.settings_section == SettingsSection::Language;
+    let lang_prefix = if is_lang_focused { "▶ " } else { "  " };
+    let lang_title_style = if is_lang_focused {
+        Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)
+    };
+
     f.render_widget(
-        Paragraph::new(Span::styled(t.settings_lang_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))),
+        Paragraph::new(Span::styled(format!("{}{}", lang_prefix, t.settings_lang_title), lang_title_style)),
         chunks[14],
     );
 
@@ -444,6 +512,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let num_cols = 4;
     let num_rows = (all_langs.len() + num_cols - 1) / num_cols;
     let col_w = (grid_area.width.saturating_sub(num_cols as u16 - 1)) / (num_cols as u16);
+
+    let mut lang_cursor_pos: Option<(u16, u16)> = None;
 
     for r in 0..num_rows {
         if r as u16 >= grid_area.height {
@@ -456,14 +526,25 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             }
             let lang_opt = all_langs[idx];
             let is_selected = app.lang == lang_opt;
+            let is_cell_focused = is_lang_focused && idx == app.settings_lang_idx;
             let prefix = if is_selected { "● " } else { "○ " };
             let text = format!(" {}{}", prefix, lang_opt.label());
 
-            let style = if is_selected {
+            let style = if is_selected && is_cell_focused {
+                Style::default()
+                    .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+                    .bg(theme.primary)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+            } else if is_selected {
                 Style::default()
                     .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
                     .bg(theme.primary)
                     .add_modifier(Modifier::BOLD)
+            } else if is_cell_focused {
+                Style::default()
+                    .fg(theme.text_highlight)
+                    .bg(theme.button_bg)
+                    .add_modifier(Modifier::BOLD | Modifier::REVERSED)
             } else {
                 Style::default().fg(theme.text_normal).bg(theme.button_bg)
             };
@@ -482,6 +563,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 height: 1,
             };
 
+            if is_cell_focused {
+                lang_cursor_pos = Some((rect.x + rect.width / 2, rect.y));
+            }
+
             let p = Paragraph::new(Line::from(vec![Span::raw(text)])).style(style);
             f.render_widget(p, rect);
             app.hit_map.register(rect, HitTarget::ModalSelectLanguage(lang_opt));
@@ -493,36 +578,86 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // =========================================================================
     let hint_line = Line::from(vec![
         Span::styled(t.settings_hint_shortcuts, Style::default().fg(theme.text_muted)),
-        Span::styled("[1/2/3]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-        Span::raw(t.settings_hint_day_select),
+        Span::styled("[Tab/S-Tab]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+        Span::raw(match lang {
+            crate::i18n::Language::Ko => " 섹션이동  ",
+            crate::i18n::Language::Ja => " 項目移動  ",
+            _ => " Section  ",
+        }),
+        Span::styled("[1/2/3/←/→]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+        Span::raw(match lang {
+            crate::i18n::Language::Ko => " 변경  ",
+            crate::i18n::Language::Ja => " 変更  ",
+            _ => " Change  ",
+        }),
         Span::styled("[n/d/o]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
         Span::raw(match lang {
-            crate::i18n::Language::Ko => " 알림/테스트/소리  ",
-            crate::i18n::Language::Ja => " 通知/テスト/音  ",
-            _ => " Notif/Test/Sound  ",
+            crate::i18n::Language::Ko => " 알림/소리  ",
+            crate::i18n::Language::Ja => " 通知/音  ",
+            _ => " Notif/Sound  ",
         }),
         Span::styled("[T/c/C]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
         Span::raw(" Theme  "),
-        Span::styled("[Tab/←/→]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-        Span::raw(t.settings_hint_cycle),
         Span::styled("[L]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
         Span::raw(t.settings_hint_lang),
     ]);
     f.render_widget(Paragraph::new(hint_line).alignment(Alignment::Center), chunks[17]);
 
     // Close button
-    let close_btn = Paragraph::new(Line::from(vec![Span::raw(t.settings_btn_close)]))
-        .style(theme.button_style())
+    let is_close_focused = app.settings_section == SettingsSection::Close;
+    let close_style = if is_close_focused {
+        Style::default()
+            .fg(if theme.mode.is_light() { Color::White } else { Color::Black })
+            .bg(theme.primary)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        theme.button_style()
+    };
+    let close_text = if is_close_focused {
+        format!("▶ {} ◀", t.settings_btn_close)
+    } else {
+        t.settings_btn_close.to_string()
+    };
+
+    let close_btn = Paragraph::new(Line::from(vec![Span::raw(close_text)]))
+        .style(close_style)
         .alignment(Alignment::Center);
     f.render_widget(close_btn, chunks[19]);
     app.hit_map.register(chunks[19], HitTarget::ModalClose);
 
-    // Place cursor on active week start option
-    let active_idx = match app.week_start_day {
-        WeekStartDay::Sunday => 0,
-        WeekStartDay::Monday => 1,
-        WeekStartDay::Saturday => 2,
-    };
-    let active_rect = week_btn_chunks[active_idx * 2];
-    f.set_cursor_position((active_rect.x + active_rect.width / 2, active_rect.y));
+    // Place cursor based on active settings section
+    match app.settings_section {
+        SettingsSection::WeekStart => {
+            let active_idx = match app.week_start_day {
+                WeekStartDay::Sunday => 0,
+                WeekStartDay::Monday => 1,
+                WeekStartDay::Saturday => 2,
+            };
+            let active_rect = week_btn_chunks[active_idx * 2];
+            f.set_cursor_position((active_rect.x + active_rect.width / 2, active_rect.y));
+        }
+        SettingsSection::Notifications => {
+            let active_rect = notif_ctrl_chunks[0];
+            f.set_cursor_position((active_rect.x + active_rect.width / 2, active_rect.y));
+        }
+        SettingsSection::Theme => {
+            if let Some(pos) = theme_cursor_pos {
+                f.set_cursor_position(pos);
+            } else {
+                let rect = cat_chunks[0];
+                f.set_cursor_position((rect.x + rect.width / 2, rect.y));
+            }
+        }
+        SettingsSection::Language => {
+            if let Some(pos) = lang_cursor_pos {
+                f.set_cursor_position(pos);
+            } else {
+                f.set_cursor_position((grid_area.x, grid_area.y));
+            }
+        }
+        SettingsSection::Close => {
+            let rect = chunks[19];
+            f.set_cursor_position((rect.x + rect.width / 2, rect.y));
+        }
+    }
 }
