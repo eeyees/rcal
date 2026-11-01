@@ -59,7 +59,7 @@ pub static EN: Translations = Translations {
     btn_new_event: "+ New",
     btn_sync: "⟳  Sync",
     btn_syncing: "⟳  Syncing",
-    btn_accounts: "Accounts",
+    btn_accounts: "☁ Accounts",
     btn_settings: "⚙ Setup",
     btn_help: "? Help",
     btn_save: "[ Save ]",

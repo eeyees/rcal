@@ -68,7 +68,7 @@ pub static JA: Translations = Translations {
     btn_new_event: "+ 新規予定",
     btn_sync: "⟳  同期",
     btn_syncing: "⟳  同期中",
-    btn_accounts: "アカウント",
+    btn_accounts: "☁ アカウント",
     btn_settings: "⚙ 設定",
     btn_help: "? ヘルプ",
     btn_save: "[ 保存 ]",
