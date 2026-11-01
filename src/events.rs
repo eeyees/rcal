@@ -169,12 +169,20 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         if !state.is_adding {
             let norm_code = normalize_key_event(key);
             match norm_code {
-                KeyCode::Esc | KeyCode::Char('q') => acc_action_close = true,
-                KeyCode::Char('a') | KeyCode::Char('n') | KeyCode::Char('c') | KeyCode::Enter => {
+                KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => acc_action_close = true,
+                KeyCode::Char('+')
+                | KeyCode::Char('=')
+                | KeyCode::Char('a')
+                | KeyCode::Char('A')
+                | KeyCode::Char('n')
+                | KeyCode::Char('N')
+                | KeyCode::Char('c')
+                | KeyCode::Char('C')
+                | KeyCode::Enter => {
                     state.is_adding = true;
                     state.active_field = 0;
                 }
-                KeyCode::Char('r') => acc_action_sync = true,
+                KeyCode::Char('r') | KeyCode::Char('R') | KeyCode::F(5) => acc_action_sync = true,
                 KeyCode::Char('d') | KeyCode::Char('D') | KeyCode::Delete | KeyCode::Backspace => {
                     acc_action_delete_idx = Some(state.selected_account_idx);
                 }
@@ -246,14 +254,14 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
                 KeyCode::Enter => {
                     let is_cancel = (is_oauth && state.active_field == 7) || (!is_oauth && state.active_field == 6);
-                    let is_oauth_btn = is_oauth && state.active_field == 5 && state.password.trim().is_empty();
-                    let is_connect = (is_oauth && (state.active_field == 6 || (state.active_field == 5 && !state.password.trim().is_empty()))) || (!is_oauth && state.active_field == 5);
+                    let is_oauth_btn = is_oauth && state.active_field == 5;
+                    let is_connect = (is_oauth && state.active_field == 6) || (!is_oauth && (state.active_field == 5 || state.active_field == 4));
 
                     if is_cancel {
                         state.is_adding = false;
                     } else if is_oauth_btn {
                         app.trigger_oauth_login();
-                    } else if is_connect || state.active_field == 4 {
+                    } else if is_connect {
                         if is_oauth && state.password.trim().is_empty() {
                             // Smart fallback: if OAuth provider and token is empty, trigger browser login
                             app.trigger_oauth_login();
@@ -323,6 +331,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     state.is_adding = false;
                 }
                 KeyCode::Backspace => {
+                    state.error_msg = None;
                     match state.active_field {
                         1 => { state.name.pop(); }
                         2 => { state.url.pop(); }
@@ -332,6 +341,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
                 KeyCode::Char(c) => {
+                    state.error_msg = None;
                     match state.active_field {
                         1 => state.name.push(c),
                         2 => state.url.push(c),
@@ -556,27 +566,30 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             let norm_code = normalize_key_event(key);
             match norm_code {
                 KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
-                // Tab / Shift-Tab: Navigate between major sections (크게크게 이동)
-                KeyCode::Tab => {
+                // Tab / Shift-Tab / [ / ]: Navigate between major tabs
+                KeyCode::Tab | KeyCode::Char(']') => {
                     app.settings_section = app.settings_section.next();
                 }
-                KeyCode::BackTab => {
+                KeyCode::BackTab | KeyCode::Char('[') => {
                     app.settings_section = app.settings_section.prev();
                 }
 
-                // Global direct shortcuts in Settings modal:
-                KeyCode::Char('1') | KeyCode::Char('s') | KeyCode::Char('S') => {
+                // Direct tab shortcuts:
+                KeyCode::Char('1') => {
                     app.settings_section = SettingsSection::WeekStart;
                     app.set_week_start_day(crate::model::WeekStartDay::Sunday);
                 }
-                KeyCode::Char('2') | KeyCode::Char('m') | KeyCode::Char('M') => {
-                    app.settings_section = SettingsSection::WeekStart;
-                    app.set_week_start_day(crate::model::WeekStartDay::Monday);
+                KeyCode::Char('2') => {
+                    app.settings_section = SettingsSection::Notifications;
                 }
-                KeyCode::Char('3') | KeyCode::Char('t') => {
-                    app.settings_section = SettingsSection::WeekStart;
-                    app.set_week_start_day(crate::model::WeekStartDay::Saturday);
+                KeyCode::Char('3') => {
+                    app.settings_section = SettingsSection::Theme;
                 }
+                KeyCode::Char('4') => {
+                    app.settings_section = SettingsSection::Language;
+                }
+
+                // Global direct shortcuts in Settings modal:
                 KeyCode::Char('n') | KeyCode::Char('N') => {
                     app.settings_section = SettingsSection::Notifications;
                     app.toggle_notifications();
@@ -607,7 +620,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Contextual keys based on current section
                 _ => match app.settings_section {
                     SettingsSection::WeekStart => match norm_code {
-                        KeyCode::Right | KeyCode::Char('l') => {
+                        KeyCode::Right | KeyCode::Char('l') | KeyCode::Down | KeyCode::Char('j') => {
                             let next = match app.week_start_day {
                                 crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Monday,
                                 crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Saturday,
@@ -615,7 +628,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                             };
                             app.set_week_start_day(next);
                         }
-                        KeyCode::Left | KeyCode::Char('h') => {
+                        KeyCode::Left | KeyCode::Char('h') | KeyCode::Up | KeyCode::Char('k') => {
                             let prev = match app.week_start_day {
                                 crate::model::WeekStartDay::Sunday => crate::model::WeekStartDay::Saturday,
                                 crate::model::WeekStartDay::Monday => crate::model::WeekStartDay::Sunday,
@@ -623,11 +636,14 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                             };
                             app.set_week_start_day(prev);
                         }
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            app.settings_section = SettingsSection::Notifications;
+                        KeyCode::Char('s') | KeyCode::Char('S') => {
+                            app.set_week_start_day(crate::model::WeekStartDay::Sunday);
                         }
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            app.settings_section = SettingsSection::Close;
+                        KeyCode::Char('m') | KeyCode::Char('M') => {
+                            app.set_week_start_day(crate::model::WeekStartDay::Monday);
+                        }
+                        KeyCode::Char('t') => {
+                            app.set_week_start_day(crate::model::WeekStartDay::Saturday);
                         }
                         KeyCode::Enter => {
                             app.close_modal();
@@ -655,14 +671,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                             };
                             app.set_notification_lead_minutes(next_mins);
                         }
-                        KeyCode::Char(' ') => {
+                        KeyCode::Char(' ') | KeyCode::Down | KeyCode::Char('j') | KeyCode::Up | KeyCode::Char('k') => {
                             app.toggle_notifications();
-                        }
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            app.settings_section = SettingsSection::Theme;
-                        }
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            app.settings_section = SettingsSection::WeekStart;
                         }
                         KeyCode::Enter => {
                             app.close_modal();

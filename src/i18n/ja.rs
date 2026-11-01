@@ -156,7 +156,7 @@ pub static JA: Translations = Translations {
     account_list_header: " 📋  連携済みカレンダーアカウント一覧 (削除は [ 削除 ] をクリック):",
     account_empty_msg: "  連携中のクラウドアカウントがありません。下の '[ + アカウント追加 ]' から連携してください！",
     account_never_synced: "同期履歴なし",
-    account_btn_add: " [ + アカウント追加 ] ",
+    account_btn_add: " [ + アカウント追加 (a/+) ] ",
     account_btn_sync_now: " [ ⟳  今すぐ同期 ] ",
 
     modal_settings_title: " ⚙  環境設定＆テーマ (Settings & Themes) ",

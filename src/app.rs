@@ -144,6 +144,7 @@ impl AccountModalState {
     }
 
     pub fn set_preset(&mut self, idx: usize) {
+        self.error_msg = None;
         self.provider_idx = idx % 6;
         match self.provider_idx {
             0 => {
@@ -157,10 +158,30 @@ impl AccountModalState {
             2 => {
                 self.name = "Google Calendar".to_string();
                 self.url = "https://www.googleapis.com/calendar/v3".to_string();
+                if let Ok(env_id) = std::env::var("RCAL_GOOGLE_CLIENT_ID") {
+                    if !env_id.trim().is_empty() {
+                        self.username = env_id;
+                    }
+                }
+                if let Ok(env_sec) = std::env::var("RCAL_GOOGLE_CLIENT_SECRET") {
+                    if !env_sec.trim().is_empty() {
+                        self.password = env_sec;
+                    }
+                }
             }
             3 => {
                 self.name = "Microsoft 365".to_string();
                 self.url = "https://graph.microsoft.com/v1.0".to_string();
+                if let Ok(env_id) = std::env::var("RCAL_MS_CLIENT_ID").or_else(|_| std::env::var("MS_CLIENT_ID")) {
+                    if !env_id.trim().is_empty() {
+                        self.username = env_id;
+                    }
+                }
+                if let Ok(env_sec) = std::env::var("RCAL_MS_CLIENT_SECRET").or_else(|_| std::env::var("MS_CLIENT_SECRET")) {
+                    if !env_sec.trim().is_empty() {
+                        self.password = env_sec;
+                    }
+                }
             }
             4 => {
                 self.name = "Samsung Calendar".to_string();
@@ -215,19 +236,60 @@ impl SettingsSection {
         SettingsSection::Close,
     ];
 
+    pub const TABS: [SettingsSection; 4] = [
+        SettingsSection::WeekStart,
+        SettingsSection::Notifications,
+        SettingsSection::Theme,
+        SettingsSection::Language,
+    ];
+
+    pub fn tab_title(&self, lang: crate::i18n::Language) -> &'static str {
+        match self {
+            Self::WeekStart => match lang {
+                crate::i18n::Language::Ko => "📅 1. 시작 요일",
+                crate::i18n::Language::Ja => "📅 1. 開始曜日",
+                crate::i18n::Language::ZhCn => "📅 1. 一周起始日",
+                crate::i18n::Language::ZhTw => "📅 1. 一週起始日",
+                _ => "📅 1. Week Start",
+            },
+            Self::Notifications => match lang {
+                crate::i18n::Language::Ko => "🔔 2. 바탕화면 알림",
+                crate::i18n::Language::Ja => "🔔 2. 通知設定",
+                crate::i18n::Language::ZhCn => "🔔 2. 桌面通知",
+                crate::i18n::Language::ZhTw => "🔔 2. 桌面通知",
+                _ => "🔔 2. Notifications",
+            },
+            Self::Theme => match lang {
+                crate::i18n::Language::Ko => "🎨 3. 색상 테마",
+                crate::i18n::Language::Ja => "🎨 3. カラーテーマ",
+                crate::i18n::Language::ZhCn => "🎨 3. 颜色主题",
+                crate::i18n::Language::ZhTw => "🎨 3. 顏色主題",
+                _ => "🎨 3. Themes",
+            },
+            Self::Language => match lang {
+                crate::i18n::Language::Ko => "🌐 4. 언어 설정",
+                crate::i18n::Language::Ja => "🌐 4. 表示言語",
+                crate::i18n::Language::ZhCn => "🌐 4. 语言设置",
+                crate::i18n::Language::ZhTw => "🌐 4. 語言設置",
+                _ => "🌐 4. Language",
+            },
+            Self::Close => "[ ✕ ]",
+        }
+    }
+
     pub fn next(self) -> Self {
         match self {
             Self::WeekStart => Self::Notifications,
             Self::Notifications => Self::Theme,
             Self::Theme => Self::Language,
-            Self::Language => Self::Close,
+            Self::Language => Self::WeekStart,
             Self::Close => Self::WeekStart,
         }
     }
 
     pub fn prev(self) -> Self {
         match self {
-            Self::WeekStart => Self::Close,
+            Self::WeekStart => Self::Language,
             Self::Notifications => Self::WeekStart,
             Self::Theme => Self::Notifications,
             Self::Language => Self::Theme,
@@ -695,6 +757,7 @@ impl App {
     pub fn trigger_google_oauth_login(&mut self) {
         if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
             acc_state.is_oauth_waiting = true;
+            acc_state.error_msg = None;
             let user_id = if acc_state.username.trim().is_empty() {
                 None
             } else {
@@ -734,6 +797,7 @@ impl App {
     pub fn trigger_microsoft_oauth_login(&mut self) {
         if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
             acc_state.is_oauth_waiting = true;
+            acc_state.error_msg = None;
             let user_id = if acc_state.username.trim().is_empty() {
                 None
             } else {
@@ -883,6 +947,10 @@ impl App {
                 HitTarget::BtnToggleSidebar => self.toggle_sidebar(),
                 HitTarget::ModalBackdrop => self.close_modal(),
                 HitTarget::ModalConsume => {}
+
+                HitTarget::ModalSettingTab(sec) => {
+                    self.settings_section = sec;
+                }
 
                 HitTarget::ModalSettingWeekStart(day) => {
                     self.settings_section = SettingsSection::WeekStart;

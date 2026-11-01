@@ -147,7 +147,7 @@ pub static EN: Translations = Translations {
     account_list_header: " 📋  Configured Sync Accounts (Click [ Delete ] to remove):",
     account_empty_msg: "  No cloud accounts linked yet. Click '[ + Add Account ]' below to link Google, Microsoft, Samsung, Naver, or Apple calendars!",
     account_never_synced: "Never",
-    account_btn_add: " [ + Add Account ] ",
+    account_btn_add: " [ + Add Account (a/+) ] ",
     account_btn_sync_now: " [ ⟳  Sync Now ] ",
 
     modal_settings_title: " ⚙  Settings & Themes ",

@@ -156,7 +156,7 @@ pub static KO: Translations = Translations {
     account_list_header: " 📋  연동된 캘린더 계정 목록 (삭제하려면 [ 삭제 ] 버튼 클릭):",
     account_empty_msg: "  연동된 클라우드 계정이 없습니다. 아래의 '[ + 계정 추가 ]'를 클릭하여 Google, Microsoft, Samsung, Naver, Apple 캘린더를 연동하세요!",
     account_never_synced: "동기화 이력 없음",
-    account_btn_add: " [ + 계정 추가 ] ",
+    account_btn_add: " [ + 계정 추가 (a/+) ] ",
     account_btn_sync_now: " [ ⟳  동기화 실행 ] ",
 
     modal_settings_title: " ⚙  환경 설정 & 테마 (Settings & Themes) ",

@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 
@@ -10,8 +10,8 @@ use crate::app::{AccountModalState, App};
 use crate::mouse::HitTarget;
 
 pub fn render(f: &mut Frame, app: &mut App, state: &AccountModalState, area: Rect) {
-    let popup_width = 78.min(area.width.saturating_sub(4));
-    let popup_height = 22.min(area.height.saturating_sub(4));
+    let popup_width = 84.min(area.width.saturating_sub(2));
+    let popup_height = 24.min(area.height.saturating_sub(2));
 
     let popup_rect = Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
@@ -60,7 +60,7 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
             Constraint::Length(1), // URL / Endpoint
             Constraint::Length(1), // Username / ID
             Constraint::Length(1), // Password / OAuth Token
-            Constraint::Min(2),    // Help notes
+            Constraint::Min(4),    // Help notes / Error alert box
             Constraint::Length(1), // Action Buttons
         ])
         .split(area);
@@ -155,7 +155,9 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     } else {
         " Username:  "
     };
-    let user_placeholder = if is_oauth {
+    let user_placeholder = if state.provider_idx == 2 {
+        "(GCP Desktop Client ID)"
+    } else if is_oauth {
         "(Client ID / Key)"
     } else {
         "(User ID / Email)"
@@ -176,8 +178,12 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     } else {
         " Password:  "
     };
-    let pw_display = if state.password.is_empty() {
-        "(App-specific password / OAuth Token)".to_string()
+    let pw_display = if state.provider_idx == 2 && state.password.is_empty() {
+        "(Client Secret / Optional)".to_string()
+    } else if is_oauth && state.password.is_empty() {
+        "(OAuth Token / Secret)".to_string()
+    } else if state.password.is_empty() {
+        "(App-specific password)".to_string()
     } else {
         "•".repeat(state.password.len().min(24))
     };
@@ -191,33 +197,64 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
     f.render_widget(Paragraph::new(pw_line), chunks[5]);
     app.hit_map.register(chunks[5], HitTarget::ModalAccountField(4));
 
-    // Provider guide tip
-    let tip_text = if state.is_oauth_waiting {
-        match app.lang {
+    // Provider guide tip or dedicated error box
+    if state.is_oauth_waiting {
+        let msg = match app.lang {
             crate::i18n::Language::Ko => " ⏳ 브라우저에서 인증을 완료해주세요 (127.0.0.1:8088 대기 중)...",
             crate::i18n::Language::Ja => " ⏳ ブラウザで認証を完了してください (127.0.0.1:8088 待機中)...",
             _ => " ⏳ Waiting for browser authentication on http://127.0.0.1:8088...",
+        };
+        let tip_widget = Paragraph::new(vec![
+            Line::from(""),
+            Line::from(Span::styled(msg, Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))),
+        ]).wrap(Wrap { trim: true });
+        f.render_widget(tip_widget, chunks[6]);
+    } else if let Some(ref err) = state.error_msg {
+        let err_title = match app.lang {
+            crate::i18n::Language::Ko => " ⚠ 인증 오류 안내 (OAuth Error) ",
+            crate::i18n::Language::Ja => " ⚠ 認証エラー (OAuth Error) ",
+            _ => " ⚠ Authentication Error ",
+        };
+
+        let mut lines = Vec::new();
+        for l in err.lines() {
+            lines.push(Line::from(vec![
+                Span::styled(format!(" {}", l), Style::default().fg(Color::LightRed).add_modifier(Modifier::BOLD)),
+            ]));
         }
+
+        let err_block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::LightRed))
+            .title(Span::styled(err_title, Style::default().fg(Color::LightRed).add_modifier(Modifier::BOLD)));
+
+        let err_widget = Paragraph::new(lines)
+            .block(err_block)
+            .wrap(Wrap { trim: true });
+        f.render_widget(err_widget, chunks[6]);
     } else {
-        match state.provider_idx {
+        let msg = match state.provider_idx {
             0 => " Naver: ID and 2-step verification App Password (애플리케이션 비밀번호).",
             1 => " Apple iCloud: Apple ID email and iCloud App-Specific Password.",
-            2 => " Google: Click [ 🌐 1-Click Login ] for browser sign-in (or enter manual token).",
-            3 => " MS 365: Click [ 🌐 1-Click Login ] for browser sign-in (or enter manual token).",
+            2 => match app.lang {
+                crate::i18n::Language::Ko => " Google: GCP '데스크톱 앱' Client ID 입력 후 [ 🌐 1-Click Login ] 클릭 (RCAL_GOOGLE_CLIENT_ID)",
+                crate::i18n::Language::Ja => " Google: GCPデスクトップClient ID入力後 [ 🌐 1-Click Login ]をクリック",
+                _ => " Google: Enter GCP Desktop Client ID then click [ 🌐 1-Click Login ] (or env var)",
+            },
+            3 => match app.lang {
+                crate::i18n::Language::Ko => " MS 365: [ 🌐 1-Click Login ] 클릭으로 브라우저 즉시 로그인 (공용 Client ID 지원)",
+                crate::i18n::Language::Ja => " MS 365: [ 🌐 1-Click Login ]をクリックしてブラウザログイン",
+                _ => " MS 365: Click [ 🌐 1-Click Login ] for browser sign-in (or enter manual token).",
+            },
             4 => " Samsung: Connect via Samsung Cloud CalDAV endpoint or Microsoft Graph exchange.",
             _ => " CalDAV: Enter your own CalDAV server endpoint (Nextcloud, Baïkal, Radicale, etc).",
-        }
-    };
-    let tip_style = if state.is_oauth_waiting {
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-    } else {
-        Style::default().fg(theme.accent).add_modifier(Modifier::ITALIC)
-    };
-    let tip_line = Paragraph::new(vec![
-        Line::from(""),
-        Line::from(Span::styled(tip_text, tip_style)),
-    ]);
-    f.render_widget(tip_line, chunks[6]);
+        };
+        let tip_widget = Paragraph::new(vec![
+            Line::from(""),
+            Line::from(Span::styled(msg, Style::default().fg(theme.accent).add_modifier(Modifier::ITALIC))),
+        ]).wrap(Wrap { trim: true });
+        f.render_widget(tip_widget, chunks[6]);
+    }
 
     let is_oauth = state.provider_idx == 2 || state.provider_idx == 3;
 
@@ -381,8 +418,9 @@ fn render_account_list(f: &mut Frame, app: &mut App, state: &AccountModalState, 
         .constraints([
             Constraint::Length(1), // Title line
             Constraint::Length(1), // Spacer
-            Constraint::Min(6),    // List of accounts
+            Constraint::Min(4),    // List of accounts
             Constraint::Length(1), // Spacer
+            Constraint::Length(1), // Keyboard shortcuts hint line
             Constraint::Length(1), // Bottom Buttons
         ])
         .split(area);
@@ -468,17 +506,58 @@ fn render_account_list(f: &mut Frame, app: &mut App, state: &AccountModalState, 
         }
     }
 
+    // Keyboard shortcuts hint bar
+    let hint_spans = match lang {
+        crate::i18n::Language::Ko => vec![
+            Span::styled("[a/+]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" 계정 추가   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[d]", Style::default().fg(theme.danger).add_modifier(Modifier::BOLD)),
+            Span::styled(" 삭제   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[r]", Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)),
+            Span::styled(" 동기화   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[↑/↓]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" 계정 선택   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[Esc/q]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" 닫기", Style::default().fg(theme.text_normal)),
+        ],
+        crate::i18n::Language::Ja => vec![
+            Span::styled("[a/+]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" アカウント追加   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[d]", Style::default().fg(theme.danger).add_modifier(Modifier::BOLD)),
+            Span::styled(" 削除   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[r]", Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)),
+            Span::styled(" 同期   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[↑/↓]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" アカウント選択   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[Esc/q]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" 閉じる", Style::default().fg(theme.text_normal)),
+        ],
+        _ => vec![
+            Span::styled("[a/+]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" Add Account   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[d]", Style::default().fg(theme.danger).add_modifier(Modifier::BOLD)),
+            Span::styled(" Delete   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[r]", Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)),
+            Span::styled(" Sync   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[↑/↓]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" Select   ", Style::default().fg(theme.text_normal)),
+            Span::styled("[Esc/q]", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" Close", Style::default().fg(theme.text_normal)),
+        ],
+    };
+    f.render_widget(Paragraph::new(Line::from(hint_spans)).alignment(Alignment::Center), chunks[4]);
+
     // Bottom Action Buttons
     let btn_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(20), // [ + 계정 추가 ]
+            Constraint::Length(28), // [ + 계정 추가 (a/+) ]
             Constraint::Length(2),
             Constraint::Length(18), // [ ⟳ 동기화 실행 ]
             Constraint::Min(1),
             Constraint::Length(14), // [ 닫기 (q) ]
         ])
-        .split(chunks[4]);
+        .split(chunks[5]);
 
     let add_label = lang.t().account_btn_add;
     let btn_add = Paragraph::new(Line::from(vec![Span::raw(add_label)]))

@@ -192,7 +192,7 @@ macro_rules! define_locale {
             account_list_header: " 📋 Configured Sync Accounts:",
             account_empty_msg: "  No cloud accounts linked yet.",
             account_never_synced: "Never",
-            account_btn_add: " [ + Add Account ] ",
+            account_btn_add: " [ + Add Account (a/+) ] ",
             account_btn_sync_now: " [ ⟳ Sync Now ] ",
             modal_settings_title: $m_set,
             settings_week_start_title: $st_week,

@@ -56,6 +56,14 @@ impl OAuth2Config {
         }
     }
 
+    pub const GOOGLE_PLACEHOLDER_CLIENT_ID: &'static str =
+        "794938210451-rcaldesktopclient.apps.googleusercontent.com";
+
+    pub fn is_placeholder_google_client(client_id: &str) -> bool {
+        let trimmed = client_id.trim();
+        trimmed.is_empty() || trimmed == Self::GOOGLE_PLACEHOLDER_CLIENT_ID
+    }
+
     pub fn resolve_google_credentials(
         user_id: Option<&str>,
         user_secret: Option<&str>,
@@ -70,7 +78,7 @@ impl OAuth2Config {
             .or(env_id)
             .unwrap_or_else(|| {
                 // Default registered Desktop Application Client ID for rcal open-source
-                "794938210451-rcaldesktopclient.apps.googleusercontent.com".to_string()
+                Self::GOOGLE_PLACEHOLDER_CLIENT_ID.to_string()
             });
 
         let client_secret = user_secret
@@ -494,6 +502,11 @@ pub async fn execute_google_one_click_flow(
     user_secret: Option<&str>,
 ) -> Result<CalDavAccount> {
     let (client_id, client_secret) = OAuth2Config::resolve_google_credentials(user_id, user_secret);
+    if OAuth2Config::is_placeholder_google_client(&client_id) {
+        return Err(anyhow!(
+            "Google Client ID가 필요합니다:\n• Google Cloud Console에서 '데스크톱 앱' OAuth Client ID 발급 후 입력\n• 또는 RCAL_GOOGLE_CLIENT_ID 환경변수를 설정해주세요."
+        ));
+    }
     let config = OAuth2Config::for_google(&client_id, &client_secret);
 
     let state = uuid::Uuid::new_v4().to_string();

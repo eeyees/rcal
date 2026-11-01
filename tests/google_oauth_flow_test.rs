@@ -221,3 +221,70 @@ fn test_microsoft_preset_account_modal_interaction() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_google_one_click_placeholder_rejection() {
+    use rcal::sync::oauth::execute_google_one_click_flow;
+
+    // When no client ID or dummy placeholder is provided, execute_google_one_click_flow returns helpful error
+    let res = execute_google_one_click_flow(None, None).await;
+    assert!(res.is_err());
+    let err_msg = res.unwrap_err().to_string();
+    assert!(err_msg.contains("Google Client ID가 필요합니다"));
+    assert!(err_msg.contains("RCAL_GOOGLE_CLIENT_ID"));
+}
+
+#[test]
+fn test_google_placeholder_detection() {
+    assert!(OAuth2Config::is_placeholder_google_client(""));
+    assert!(OAuth2Config::is_placeholder_google_client("   "));
+    assert!(OAuth2Config::is_placeholder_google_client(OAuth2Config::GOOGLE_PLACEHOLDER_CLIENT_ID));
+    assert!(!OAuth2Config::is_placeholder_google_client("1234567890-custom.apps.googleusercontent.com"));
+}
+
+#[test]
+fn test_google_oauth_modal_error_box_rendering_and_wrapping() -> Result<()> {
+    use ratatui::backend::TestBackend;
+    use ratatui::Terminal;
+    use rcal::ui;
+
+    let db = Database::in_memory()?;
+    let mut app = App::new(db)?;
+
+    let mut acc_state = AccountModalState::new();
+    acc_state.is_adding = true;
+    acc_state.set_preset(2); // Google Calendar preset
+    acc_state.error_msg = Some(
+        "Google Client ID가 필요합니다:\n• Google Cloud Console에서 '데스크톱 앱' OAuth Client ID 발급 후 입력\n• 또는 RCAL_GOOGLE_CLIENT_ID 환경변수를 설정해주세요.".to_string()
+    );
+
+    app.modal = ActiveModal::Accounts(acc_state);
+
+    let backend = TestBackend::new(100, 30);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.draw(|f| {
+        ui::render(f, &mut app);
+    })?;
+
+    let buffer = terminal.backend().buffer();
+    let content_str: String = buffer.content().iter().map(|c| c.symbol()).collect();
+    let clean_str: String = content_str.chars().filter(|c| !c.is_whitespace()).collect();
+
+    // Verify error title and key error messages are present
+    assert!(clean_str.contains("인증오류안내"), "Error title should be rendered inside modal");
+    assert!(clean_str.contains("GoogleClientID가필요합니다"), "First line of error should be rendered");
+    assert!(clean_str.contains("RCAL_GOOGLE_CLIENT_ID"), "Helpful env var guide should be rendered and wrapped");
+
+    // Modal popup is centered in 100x30 with width 84 (popup_rect x = (100 - 84)/2 = 8, right border at x = 91)
+    // Verify that columns x >= 93 outside the modal boundary do NOT contain error box content
+    for y in 0..30 {
+        for x in 92..100 {
+            let symbol = buffer[(x, y)].symbol();
+            assert!(!symbol.contains("Google") && !symbol.contains("Client") && !symbol.contains("RCAL"),
+                "Text should not spill outside modal boundary at ({}, {})", x, y);
+        }
+    }
+
+    Ok(())
+}

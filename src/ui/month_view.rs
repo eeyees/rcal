@@ -112,7 +112,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     theme.selected_day_style(),
                 )
             } else if is_current_month {
-                let color = if col == 0 || col == 6 { theme.accent } else { theme.text_normal };
+                let weekday = current_cell_date.weekday();
+                let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
+                let color = if is_weekend { theme.accent } else { theme.text_normal };
                 Span::styled(day_text, Style::default().fg(color).add_modifier(Modifier::BOLD))
             } else {
                 Span::styled(day_text, Style::default().fg(theme.text_dim))
