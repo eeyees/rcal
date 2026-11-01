@@ -83,8 +83,10 @@ mod tests {
         let mut app = App::new(db).unwrap();
 
         let target_date = NaiveDate::from_ymd_opt(2026, 11, 15).unwrap();
-        app.hit_map
-            .register(Rect::new(5, 5, 10, 4), HitTarget::WeekDayHeader(target_date));
+        app.hit_map.register(
+            Rect::new(5, 5, 10, 4),
+            HitTarget::WeekDayHeader(target_date),
+        );
 
         // Click on week day header selects date
         app.handle_mouse_click(7, 6).unwrap();
