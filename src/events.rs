@@ -622,80 +622,115 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         }
         ActiveModal::Theme(ref mut state) => {
             let norm_code = normalize_key_event(key);
-            let filtered = state.filtered_themes();
-            let count = filtered.len();
+            let mut selection_changed = false;
 
             match norm_code {
-                KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
+                KeyCode::Esc | KeyCode::Char('q') => {
+                    let orig = state.original_mode;
+                    app.set_theme(orig);
+                    app.close_modal();
+                    return Ok(());
+                }
                 KeyCode::Char('0') | KeyCode::Char('a') | KeyCode::Char('A') => {
                     state.category_filter = None;
-                    state.selected_idx = 0;
+                    let filtered = state.filtered_themes();
+                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    selection_changed = true;
                 }
                 KeyCode::Char('1') => {
                     state.category_filter = Some(crate::ui::theme::ThemeCategory::Dark);
-                    state.selected_idx = 0;
+                    let filtered = state.filtered_themes();
+                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    selection_changed = true;
                 }
                 KeyCode::Char('2') => {
                     state.category_filter = Some(crate::ui::theme::ThemeCategory::Nature);
-                    state.selected_idx = 0;
+                    let filtered = state.filtered_themes();
+                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    selection_changed = true;
                 }
                 KeyCode::Char('3') => {
                     state.category_filter = Some(crate::ui::theme::ThemeCategory::Vibrant);
-                    state.selected_idx = 0;
+                    let filtered = state.filtered_themes();
+                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    selection_changed = true;
                 }
                 KeyCode::Char('4') => {
                     state.category_filter = Some(crate::ui::theme::ThemeCategory::Light);
-                    state.selected_idx = 0;
+                    let filtered = state.filtered_themes();
+                    state.selected_idx = filtered.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
+                    selection_changed = true;
                 }
                 KeyCode::Left | KeyCode::Char('h') => {
+                    let count = state.filtered_themes().len();
                     if count > 0 {
                         if state.selected_idx > 0 {
                             state.selected_idx -= 1;
                         } else {
                             state.selected_idx = count - 1;
                         }
+                        selection_changed = true;
                     }
                 }
                 KeyCode::Right | KeyCode::Char('l') | KeyCode::Char('L') => {
+                    let count = state.filtered_themes().len();
                     if count > 0 {
                         if state.selected_idx + 1 < count {
                             state.selected_idx += 1;
                         } else {
                             state.selected_idx = 0;
                         }
+                        selection_changed = true;
                     }
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
+                    let count = state.filtered_themes().len();
                     if count > 0 && state.selected_idx >= 3 {
                         state.selected_idx -= 3;
+                        selection_changed = true;
                     }
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
+                    let count = state.filtered_themes().len();
                     if count > 0 && state.selected_idx + 3 < count {
                         state.selected_idx += 3;
+                        selection_changed = true;
                     }
                 }
                 KeyCode::Tab => {
+                    let count = state.filtered_themes().len();
                     if count > 0 {
                         state.selected_idx = (state.selected_idx + 1) % count;
+                        selection_changed = true;
                     }
                 }
                 KeyCode::BackTab => {
+                    let count = state.filtered_themes().len();
                     if count > 0 {
                         if state.selected_idx == 0 {
                             state.selected_idx = count - 1;
                         } else {
                             state.selected_idx -= 1;
                         }
+                        selection_changed = true;
                     }
                 }
                 KeyCode::Enter | KeyCode::Char(' ') => {
+                    let filtered = state.filtered_themes();
                     if let Some(mode) = filtered.get(state.selected_idx) {
                         app.set_theme(*mode);
-                        app.close_modal();
                     }
+                    app.close_modal();
+                    return Ok(());
                 }
                 _ => {}
+            }
+
+            if selection_changed {
+                let filtered = state.filtered_themes();
+                if let Some(mode) = filtered.get(state.selected_idx) {
+                    app.set_theme(*mode);
+                }
             }
             return Ok(());
         }

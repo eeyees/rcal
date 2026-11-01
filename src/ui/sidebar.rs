@@ -18,13 +18,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
+    let cal_section_height = (app.calendars.len() as u16 + 2).min(8);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(app.calendars.len() as u16 + 4), // Calendar list + manage button
-            Constraint::Length(1),                              // Divider
-            Constraint::Min(4),                                 // Shortcuts hint
-            Constraint::Length(1),                              // Hide sidebar button
+            Constraint::Length(cal_section_height), // Calendar list + manage button
+            Constraint::Length(1),                  // Divider
+            Constraint::Min(6),                     // Shortcuts hint
+            Constraint::Length(1),                  // Hide sidebar button
         ])
         .split(inner);
 
@@ -86,17 +87,61 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     f.render_widget(Paragraph::new(cal_lines), chunks[0]);
 
-    // 2. Localized Quick Tips in sidebar
+    // 2. Localized Quick Tips & Shortcuts in sidebar
     let mut tips = Vec::new();
+    let mut current_line_idx: u16 = 0;
+
     tips.push(Line::from(Span::styled(app.lang.sidebar_quick_nav(), Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))));
+    current_line_idx += 1;
+
     for t in app.lang.sidebar_tips() {
         tips.push(Line::from(Span::styled(t, Style::default().fg(theme.text_muted))));
+        if current_line_idx < chunks[2].height {
+            let row_rect = Rect {
+                x: chunks[2].x,
+                y: chunks[2].y + current_line_idx,
+                width: chunks[2].width,
+                height: 1,
+            };
+            if t.contains("T 키") || t.contains("'T'") || t.contains("Tキー") {
+                app.hit_map.register(row_rect, HitTarget::BtnTheme);
+            } else if t.contains("L 키") || t.contains("'L'") || t.contains("Lキー") {
+                app.hit_map.register(row_rect, HitTarget::BtnLanguage);
+            }
+        }
+        current_line_idx += 1;
     }
 
     tips.push(Line::from(""));
+    current_line_idx += 1;
+
     tips.push(Line::from(Span::styled(app.lang.sidebar_keys(), Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))));
+    current_line_idx += 1;
+
     for k in app.lang.sidebar_key_tips() {
         tips.push(Line::from(Span::styled(k, Style::default().fg(theme.text_muted))));
+        if current_line_idx < chunks[2].height {
+            let row_rect = Rect {
+                x: chunks[2].x,
+                y: chunks[2].y + current_line_idx,
+                width: chunks[2].width,
+                height: 1,
+            };
+            if k.contains("T:") {
+                app.hit_map.register(row_rect, HitTarget::BtnTheme);
+            } else if k.contains("A:") {
+                app.hit_map.register(row_rect, HitTarget::BtnAccounts);
+            } else if k.contains("c/n:") {
+                app.hit_map.register(row_rect, HitTarget::BtnNewEvent);
+            } else if k.contains("r:") {
+                app.hit_map.register(row_rect, HitTarget::BtnSync);
+            } else if k.contains("t:") {
+                app.hit_map.register(row_rect, HitTarget::NavToday);
+            } else if k.contains("b:") {
+                app.hit_map.register(row_rect, HitTarget::BtnToggleSidebar);
+            }
+        }
+        current_line_idx += 1;
     }
 
     f.render_widget(Paragraph::new(tips), chunks[2]);

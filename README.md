@@ -20,6 +20,10 @@
 [![Tokio](https://img.shields.io/badge/Async-Tokio-red.svg?style=flat-square)](https://tokio.rs)
 
 <p align="center">
+  <img src="./assets/screenshot.png" alt="rcal Terminal Calendar Main Screenshot" width="850">
+</p>
+
+<p align="center">
   🌐 <strong>Languages / 다국어 / 语言 / 言語 / Idiomas:</strong><br>
   <strong>English</strong> •
   <a href="./docs/locales/README.ko.md">한국어</a> •
@@ -47,7 +51,7 @@
 
 <p align="center">
   <a href="#-key-features">Key Features</a> •
-  <a href="#-ui-views--preview">UI Views</a> •
+  <a href="#-ui-views--showcase">UI Views & Showcase</a> •
   <a href="#-keyboard--mouse-controls">Controls</a> •
   <a href="#-multi-cloud--caldav-sync">Cloud Sync</a> •
   <a href="#-themes--customization">Themes</a> •
@@ -99,11 +103,26 @@
 
 ---
 
-## 🖥️ UI Views & Preview
+## 🖥️ UI Views & Showcase
+
+### 🎬 Interactive Live Demo
 
 <p align="center">
   <img src="./assets/demo.gif" alt="rcal Interactive TUI Calendar Demo" width="850">
 </p>
+
+### 📸 High-Resolution Screenshot Gallery
+
+| 📅 **Month View (Hero)** | ⏱️ **Week View (Hourly Schedule)** |
+| :---: | :---: |
+| [![Month View](./assets/screenshot.png)](./assets/screenshot.png) | [![Week View](./assets/week_view.png)](./assets/week_view.png) |
+| *7-column monthly overview with calendar color badges, quick sidebar navigation & status line* | *Hourly timeline with intelligent side-by-side positioning for concurrent/overlapping events* |
+| 📋 **Agenda View (Chronological)** | 🎨 **Themes & Settings Modal (Catppuccin)** |
+| [![Agenda View](./assets/agenda_view.png)](./assets/agenda_view.png) | [![Theme Modal](./assets/theme_modal.png)](./assets/theme_modal.png) |
+| *Upcoming agenda stream grouped by date with category badges and location indicators* | *Instant theme cycler across 37 palettes, week start day picker, and runtime language selector* |
+
+<details>
+<summary><b>🔍 Click to view ASCII Terminal Text Preview</b></summary>
 
 ```
 ┌── rcal v2026.11.01.1 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? Help ] [ ⚙ Settings ] ──┐
@@ -122,6 +141,8 @@
 │ [c] New Event  [m/w/d/a] Switch View  [h/j/k/l] Navigate  [/] Search  [a] Accounts  [s] Settings  [q] Quit │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+</details>
 
 ---
 

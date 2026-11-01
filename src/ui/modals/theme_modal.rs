@@ -11,7 +11,7 @@ use crate::mouse::HitTarget;
 use crate::ui::theme::{Theme, ThemeCategory, ThemeMode};
 
 pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect) {
-    let popup_width = 86.min(area.width.saturating_sub(4));
+    let popup_width = 90.min(area.width.saturating_sub(2));
     let popup_height = 23.min(area.height.saturating_sub(2));
 
     let popup_rect = Rect {
@@ -39,28 +39,62 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Title line & current theme
-            Constraint::Length(1), // Category Filter tabs (All, Dark, Nature, Vibrant, Light)
+            Constraint::Length(1), // Title line & current theme badge
             Constraint::Length(1), // Spacer
-            Constraint::Min(12),   // 3-column Theme Grid
+            Constraint::Min(14),   // Main body: Left Shortcuts/Category menu + Right Theme Grid
             Constraint::Length(1), // Spacer
             Constraint::Length(1), // Config file hint
-            Constraint::Length(1), // Keyboard shortcuts guide
             Constraint::Length(1), // Close button
         ])
         .split(inner);
 
     // =========================================================================
-    // 1. Current Theme Badge
+    // 1. Current Theme Badge (Live Preview)
     // =========================================================================
     let all = ThemeMode::all();
     let curr_idx = all.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
     let desc_str = match lang {
-        crate::i18n::Language::Ko => "현재 테마:",
-        crate::i18n::Language::Ja => "現在のテーマ:",
-        _ => "Current Theme:",
+        crate::i18n::Language::Ko => "현재 테마 (실시간 미리보기):",
+        crate::i18n::Language::Ja => "現在のテーマ (リアルタイム確認):",
+        _ => "Current Theme (Live Preview):",
     };
-    let current_badge = format!(" {} [ {}/{} ] {}", desc_str, curr_idx + 1, all.len(), app.theme.mode.label(lang));
+    let current_badge = if state.original_mode != app.theme.mode {
+        let orig_label = state.original_mode.label(lang);
+        match lang {
+            crate::i18n::Language::Ko => format!(
+                " {} [ {}/{} ] {}  (원래 테마: {})",
+                desc_str,
+                curr_idx + 1,
+                all.len(),
+                app.theme.mode.label(lang),
+                orig_label
+            ),
+            crate::i18n::Language::Ja => format!(
+                " {} [ {}/{} ] {}  (元のテーマ: {})",
+                desc_str,
+                curr_idx + 1,
+                all.len(),
+                app.theme.mode.label(lang),
+                orig_label
+            ),
+            _ => format!(
+                " {} [ {}/{} ] {}  (Original: {})",
+                desc_str,
+                curr_idx + 1,
+                all.len(),
+                app.theme.mode.label(lang),
+                orig_label
+            ),
+        }
+    } else {
+        format!(
+            " {} [ {}/{} ] {}",
+            desc_str,
+            curr_idx + 1,
+            all.len(),
+            app.theme.mode.label(lang)
+        )
+    };
     f.render_widget(
         Paragraph::new(Line::from(vec![
             Span::styled(current_badge, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
@@ -69,56 +103,69 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
     );
 
     // =========================================================================
-    // 2. Category Filter Tabs
+    // 2. Main Body: Split into Left Menu Panel (Shortcuts & Category) + Right Theme Grid
     // =========================================================================
+    let body_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(23), // Left: Shortcuts & Category Menu
+            Constraint::Length(1),  // Spacer
+            Constraint::Min(40),    // Right: Theme Grid (3 columns)
+        ])
+        .split(chunks[2]);
+
+    // -------------------------------------------------------------------------
+    // Left Menu Panel: Category filter tabs + Shortcuts guide
+    // -------------------------------------------------------------------------
+    let menu_title = match lang {
+        crate::i18n::Language::Ko => " 단축키 & 분류 ",
+        crate::i18n::Language::Ja => " 操作 & 分類 ",
+        _ => " Shortcuts & Filter ",
+    };
+    let menu_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border))
+        .style(Style::default().bg(theme.panel_bg))
+        .title(Span::styled(menu_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)));
+    let menu_inner = menu_block.inner(body_chunks[0]);
+    f.render_widget(menu_block, body_chunks[0]);
+
     let cat_filters = [
         (None, match lang {
-            crate::i18n::Language::Ko => "0:전체 (37)",
-            crate::i18n::Language::Ja => "0:全テーマ (37)",
-            _ => "0:All (37)",
+            crate::i18n::Language::Ko => "0: 전체 (37)",
+            crate::i18n::Language::Ja => "0: 全体 (37)",
+            _ => "0: All (37)",
         }),
         (Some(ThemeCategory::Dark), match lang {
-            crate::i18n::Language::Ko => "1:다크 (10)",
-            crate::i18n::Language::Ja => "1:ダーク (10)",
-            _ => "1:Dark (10)",
+            crate::i18n::Language::Ko => "1: 다크 (10)",
+            crate::i18n::Language::Ja => "1: ダーク (10)",
+            _ => "1: Dark (10)",
         }),
         (Some(ThemeCategory::Nature), match lang {
-            crate::i18n::Language::Ko => "2:내추럴 (9)",
-            crate::i18n::Language::Ja => "2:自然 (9)",
-            _ => "2:Nature (9)",
+            crate::i18n::Language::Ko => "2: 내추럴 (9)",
+            crate::i18n::Language::Ja => "2: 自然 (9)",
+            _ => "2: Nature (9)",
         }),
         (Some(ThemeCategory::Vibrant), match lang {
-            crate::i18n::Language::Ko => "3:비비드 (8)",
-            crate::i18n::Language::Ja => "3:ビビッド (8)",
-            _ => "3:Vibrant (8)",
+            crate::i18n::Language::Ko => "3: 비비드 (8)",
+            crate::i18n::Language::Ja => "3: ビビッド (8)",
+            _ => "3: Vibrant (8)",
         }),
         (Some(ThemeCategory::Light), match lang {
-            crate::i18n::Language::Ko => "4:라이트 (10)",
-            crate::i18n::Language::Ja => "4:ライト (10)",
-            _ => "4:Light (10)",
+            crate::i18n::Language::Ko => "4: 라이트 (10)",
+            crate::i18n::Language::Ja => "4: ライト (10)",
+            _ => "4: Light (10)",
         }),
     ];
 
-    let filter_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Length(14), // All
-            Constraint::Length(1),
-            Constraint::Length(14), // Dark
-            Constraint::Length(1),
-            Constraint::Length(14), // Nature
-            Constraint::Length(1),
-            Constraint::Length(14), // Vibrant
-            Constraint::Length(1),
-            Constraint::Length(14), // Light
-            Constraint::Min(0),
-        ])
-        .split(chunks[1]);
-
+    // Render 5 categories in Left Menu with clean spacing
     for (idx, (cat_opt, label)) in cat_filters.iter().enumerate() {
+        if idx as u16 >= menu_inner.height {
+            break;
+        }
         let is_active = state.category_filter == *cat_opt;
-        let prefix = if is_active { "● " } else { "○ " };
-        let text = format!("{}{}", prefix, label);
+        let icon = if is_active { "●" } else { "○" };
+        let text = format!(" {}  {}", icon, label);
 
         let style = if is_active {
             Style::default()
@@ -126,23 +173,92 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
                 .bg(theme.primary)
                 .add_modifier(Modifier::BOLD)
         } else {
-            theme.button_style()
+            Style::default().fg(theme.text_normal)
         };
 
-        let rect = filter_chunks[idx * 2];
-        let p = Paragraph::new(Line::from(vec![Span::raw(text)]))
-            .style(style)
-            .alignment(Alignment::Center);
-        f.render_widget(p, rect);
-        app.hit_map.register(rect, HitTarget::ModalThemeCategory(*cat_opt));
+        let row_rect = Rect {
+            x: menu_inner.x,
+            y: menu_inner.y + idx as u16,
+            width: menu_inner.width,
+            height: 1,
+        };
+
+        let p = Paragraph::new(Line::from(vec![Span::raw(text)])).style(style);
+        f.render_widget(p, row_rect);
+        app.hit_map.register(row_rect, HitTarget::ModalThemeCategory(*cat_opt));
     }
 
-    // =========================================================================
-    // 3. Filtered Themes Grid (3 columns)
-    // =========================================================================
+    // Divider and Keyboard Shortcuts in Left Menu
+    let divider_y = menu_inner.y + 5;
+    if divider_y < menu_inner.y + menu_inner.height {
+        let divider_line = Span::styled("─────────────────────", Style::default().fg(theme.border));
+        f.render_widget(
+            Paragraph::new(divider_line),
+            Rect {
+                x: menu_inner.x,
+                y: divider_y,
+                width: menu_inner.width,
+                height: 1,
+            },
+        );
+    }
+
+    let shortcuts_guide: Vec<&str> = match lang {
+        crate::i18n::Language::Ko => vec![
+            "단축키 안내:",
+            " • 0-4 : 카테고리",
+            " • ↑↓←→: 실시간 미리보기",
+            " • hjkl: 커서 이동",
+            " • Tab : 순환 이동",
+            " • Enter: 테마 확정",
+            " • Esc/q: 취소(복원)",
+        ],
+        crate::i18n::Language::Ja => vec![
+            "操作案内:",
+            " • 0-4 : 分類切替",
+            " • ↑↓←→: プレビュー",
+            " • hjkl: 移動",
+            " • Tab : 巡回",
+            " • Enter: 確定",
+            " • Esc/q: 取消(復元)",
+        ],
+        _ => vec![
+            "Key Controls:",
+            " • 0-4 : Filter",
+            " • ↑↓←→: Live Preview",
+            " • hjkl: Move",
+            " • Tab : Cycle",
+            " • Enter: Apply",
+            " • Esc/q: Cancel(Revert)",
+        ],
+    };
+
+    let start_shortcut_y = menu_inner.y + 6;
+    for (s_idx, s_text) in shortcuts_guide.iter().enumerate() {
+        let line_y = start_shortcut_y + s_idx as u16;
+        if line_y >= menu_inner.y + menu_inner.height {
+            break;
+        }
+        let style = if s_idx == 0 {
+            Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(theme.text_dim)
+        };
+        let line_rect = Rect {
+            x: menu_inner.x,
+            y: line_y,
+            width: menu_inner.width,
+            height: 1,
+        };
+        f.render_widget(Paragraph::new(Line::from(vec![Span::styled(format!(" {}", s_text), style)])), line_rect);
+    }
+
+    // -------------------------------------------------------------------------
+    // Right: Theme Grid (3 columns)
+    // -------------------------------------------------------------------------
     let filtered_themes = state.filtered_themes();
-    let grid_area = chunks[3];
-    let num_cols = 3;
+    let grid_area = body_chunks[2];
+    let num_cols = if grid_area.width >= 58 { 3 } else { 2 };
     let num_rows = (filtered_themes.len() + num_cols - 1) / num_cols;
     let col_w = (grid_area.width.saturating_sub(num_cols as u16 - 1)) / (num_cols as u16);
 
@@ -160,7 +276,13 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
             let is_focused = state.selected_idx == idx;
 
             let sample = Theme::from_mode(mode);
-            let radio = if is_current { "●" } else { "○" };
+            let radio = if is_current {
+                "●"
+            } else if mode == state.original_mode {
+                "◎"
+            } else {
+                "○"
+            };
             let cursor = if is_focused { "▶" } else { " " };
 
             let name = mode.short_name(lang);
@@ -224,7 +346,7 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
     }
 
     // =========================================================================
-    // 4. Config file hint & navigation instructions
+    // 3. Config file hint & Close Button
     // =========================================================================
     let cfg_hint = match lang {
         crate::i18n::Language::Ko => "📁 설정 파일: ~/.config/rcal/theme.toml (색상 오버라이드 및 고대비 조절 가능)",
@@ -234,26 +356,12 @@ pub fn render(f: &mut Frame, app: &mut App, state: &ThemeModalState, area: Rect)
     f.render_widget(
         Paragraph::new(Span::styled(cfg_hint, Style::default().fg(theme.text_dim)))
             .alignment(Alignment::Center),
-        chunks[5],
+        chunks[4],
     );
 
-    let hint_desc = match lang {
-        crate::i18n::Language::Ko => "↑↓←→ / hjkl / Tab 이동 | [Enter/클릭] 선택 적용 | [0-4] 카테고리 | [Esc/q] 닫기",
-        crate::i18n::Language::Ja => "↑↓←→ / hjkl / Tab 移動 | [Enter/クリック] 適用 | [0-4] カテゴリ | [Esc/q] 閉じる",
-        _ => "↑↓←→ / hjkl / Tab navigate | [Enter/Click] apply | [0-4] category | [Esc/q] close",
-    };
-    f.render_widget(
-        Paragraph::new(Span::styled(hint_desc, Style::default().fg(theme.text_muted)))
-            .alignment(Alignment::Center),
-        chunks[6],
-    );
-
-    // =========================================================================
-    // 5. Close Button
-    // =========================================================================
     let close_btn = Paragraph::new(Line::from(vec![Span::raw(lang.btn_close())]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
-    f.render_widget(close_btn, chunks[7]);
-    app.hit_map.register(chunks[7], HitTarget::ModalClose);
+    f.render_widget(close_btn, chunks[5]);
+    app.hit_map.register(chunks[5], HitTarget::ModalClose);
 }

@@ -232,4 +232,35 @@ mod tests {
             "Date '5' horizontal column position must NOT shift between selection states!"
         );
     }
+
+    #[test]
+    fn test_sidebar_theme_shortcut_and_interaction() -> anyhow::Result<()> {
+        let db = Database::in_memory()?;
+        let mut app = App::new(db)?;
+
+        // Ensure sidebar tips and key_tips contain theme shortcuts
+        let tips = app.lang.sidebar_tips();
+        assert!(tips.iter().any(|t| t.contains("T 키") || t.contains("'T'") || t.contains("Tキー")), "sidebar_tips must contain T theme shortcut");
+        let key_tips = app.lang.sidebar_key_tips();
+        assert!(key_tips.iter().any(|k| k.contains("T:")), "sidebar_key_tips must contain T theme shortcut");
+
+        // Render sidebar in terminal
+        let backend = TestBackend::new(100, 30);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| ui::render(f, &mut app))?;
+
+        // Hit map must have registered HitTarget::BtnTheme from sidebar
+        let has_theme_hit = app.hit_map.targets().iter().any(|(_, t)| *t == HitTarget::BtnTheme);
+        assert!(has_theme_hit, "Sidebar should register BtnTheme hit target for mouse clicking theme shortcut");
+
+        // Find the rect for BtnTheme that is in the sidebar (x < 35, y > 2)
+        let sidebar_theme_hit = app.hit_map.targets().iter().find(|(r, t)| *t == HitTarget::BtnTheme && r.x < 35 && r.y > 2);
+        assert!(sidebar_theme_hit.is_some(), "Sidebar must have a clickable BtnTheme target");
+
+        let (rect, _) = sidebar_theme_hit.unwrap();
+        app.handle_mouse_click(rect.x + 1, rect.y)?;
+        assert!(matches!(app.modal, ActiveModal::Theme(_)), "Clicking theme shortcut in sidebar must open Theme modal");
+
+        Ok(())
+    }
 }

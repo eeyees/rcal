@@ -269,3 +269,110 @@ fn test_terminal_rendering_all_themes() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_theme_modal_live_preview_and_esc_revert() -> anyhow::Result<()> {
+    let db = Database::in_memory()?;
+    let mut app = App::new(db)?;
+    assert_eq!(app.theme.mode, ThemeMode::ModernDark);
+
+    // Open Theme Modal
+    app.open_theme_modal();
+    if let ActiveModal::Theme(ref state) = app.modal {
+        assert_eq!(state.original_mode, ThemeMode::ModernDark);
+        assert_eq!(state.selected_idx, 0);
+    } else {
+        panic!("Expected ActiveModal::Theme");
+    }
+
+    // Navigate right: focus moves to index 1 (Nord)
+    // The theme behind MUST immediately update to Nord (Live Preview)
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Right, KeyModifiers::NONE))?;
+    assert_eq!(app.theme.mode, ThemeMode::Nord, "Theme should immediately live-preview on focus");
+
+    // Navigate down: focus moves to index 4 (1 + 3 = 4, Catppuccin Mocha)
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Down, KeyModifiers::NONE))?;
+    assert_eq!(app.theme.mode, ThemeMode::CatppuccinMocha, "Theme should live-preview on cursor down");
+
+    // Press Esc: cancel preview and revert to original theme (ModernDark)
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Esc, KeyModifiers::NONE))?;
+    assert_eq!(app.modal, ActiveModal::None);
+    assert_eq!(app.theme.mode, ThemeMode::ModernDark, "Esc must restore original theme");
+
+    // Reopen and navigate to Nord, then confirm with Enter
+    app.open_theme_modal();
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Right, KeyModifiers::NONE))?;
+    assert_eq!(app.theme.mode, ThemeMode::Nord);
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Enter, KeyModifiers::NONE))?;
+    assert_eq!(app.modal, ActiveModal::None);
+    assert_eq!(app.theme.mode, ThemeMode::Nord, "Enter must finalize and persist theme");
+    assert_eq!(app.db.get_setting("theme")?, Some("nord".to_string()));
+
+    Ok(())
+}
+
+#[test]
+fn test_theme_modal_category_filter_live_preview() -> anyhow::Result<()> {
+    let db = Database::in_memory()?;
+    let mut app = App::new(db)?;
+    app.set_theme(ThemeMode::ModernDark);
+
+    app.open_theme_modal();
+
+    // Press '4' to switch category to Light themes
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('4'), KeyModifiers::NONE))?;
+    if let ActiveModal::Theme(ref state) = app.modal {
+        assert_eq!(state.category_filter, Some(ThemeCategory::Light));
+    } else {
+        panic!("Expected ActiveModal::Theme");
+    }
+
+    // Switching category immediately applies the first light theme (SolarizedLight)
+    assert_eq!(app.theme.mode, ThemeMode::SolarizedLight, "Category switch should live preview light theme");
+
+    // Cancel with 'q'
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('q'), KeyModifiers::NONE))?;
+    assert_eq!(app.modal, ActiveModal::None);
+    assert_eq!(app.theme.mode, ThemeMode::ModernDark, "Closing with q should restore original ModernDark");
+
+    Ok(())
+}
+
+#[test]
+fn test_theme_modal_left_menu_panel() -> anyhow::Result<()> {
+    let db = Database::in_memory()?;
+    let mut app = App::new(db)?;
+
+    app.open_theme_modal();
+    assert!(matches!(app.modal, ActiveModal::Theme(_)));
+
+    let backend = TestBackend::new(100, 30);
+    let mut terminal = Terminal::new(backend)?;
+    terminal.draw(|f| {
+        ui::render(f, &mut app);
+    })?;
+
+    // Check hit map contains ModalThemeCategory targets inside modal left panel
+    let cat_targets: Vec<_> = app.hit_map.targets().iter().filter_map(|(r, t)| {
+        if let HitTarget::ModalThemeCategory(cat) = t {
+            Some((*r, *cat))
+        } else {
+            None
+        }
+    }).collect();
+
+    assert_eq!(cat_targets.len(), 5, "Left menu panel must contain 5 category options (0:All, 1:Dark, 2:Nature, 3:Vibrant, 4:Light)");
+
+    // Clicking category 'Dark' in left menu
+    let dark_target = cat_targets.iter().find(|(_, cat)| *cat == Some(ThemeCategory::Dark)).unwrap();
+    app.handle_mouse_click(dark_target.0.x + 1, dark_target.0.y)?;
+
+    if let ActiveModal::Theme(ref state) = app.modal {
+        assert_eq!(state.category_filter, Some(ThemeCategory::Dark));
+        assert_eq!(state.filtered_themes().len(), 10);
+    } else {
+        panic!("Theme modal should remain open");
+    }
+
+    Ok(())
+}

@@ -180,6 +180,7 @@ pub struct LanguageModalState {
 pub struct ThemeModalState {
     pub selected_idx: usize,
     pub category_filter: Option<ThemeCategory>,
+    pub original_mode: ThemeMode,
 }
 
 impl ThemeModalState {
@@ -459,9 +460,11 @@ impl App {
     pub fn open_theme_modal(&mut self) {
         let all = ThemeMode::all();
         let current_idx = all.iter().position(|m| *m == self.theme.mode).unwrap_or(0);
+        let orig = self.theme.mode;
         self.modal = ActiveModal::Theme(ThemeModalState {
             selected_idx: current_idx,
             category_filter: None,
+            original_mode: orig,
         });
     }
 
@@ -663,6 +666,10 @@ impl App {
                         let filtered = state.filtered_themes();
                         let pos = filtered.iter().position(|m| *m == self.theme.mode).unwrap_or(0);
                         state.selected_idx = pos;
+                        if let Some(mode) = filtered.get(pos) {
+                            let m = *mode;
+                            self.set_theme(m);
+                        }
                     }
                 }
 
@@ -835,6 +842,10 @@ impl App {
                 }
 
                 HitTarget::ModalCancel | HitTarget::ModalClose => {
+                    if let ActiveModal::Theme(ref state) = self.modal {
+                        let orig = state.original_mode;
+                        self.set_theme(orig);
+                    }
                     self.close_modal();
                 }
 
