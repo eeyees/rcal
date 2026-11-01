@@ -144,17 +144,65 @@ fn test_theme_db_persistence_and_startup() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_normal_mode_theme_shortcuts() -> anyhow::Result<()> {
+fn test_normal_mode_theme_shortcuts_and_modal() -> anyhow::Result<()> {
     let db = Database::in_memory()?;
     let mut app = App::new(db)?;
     assert_eq!(app.theme.mode, ThemeMode::ModernDark);
 
-    // Shift + T in normal mode cycles theme
+    // Shift + T in normal mode opens the Theme Selection Modal
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('T'), KeyModifiers::SHIFT))?;
-    assert_eq!(app.theme.mode, ThemeMode::Nord);
+    assert!(matches!(app.modal, ActiveModal::Theme(_)));
 
-    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('T'), KeyModifiers::SHIFT))?;
-    assert_eq!(app.theme.mode, ThemeMode::Dracula);
+    // In Theme modal, navigate right with 'l'
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('l'), KeyModifiers::NONE))?;
+    if let ActiveModal::Theme(ref state) = app.modal {
+        assert_eq!(state.selected_idx, 1);
+    } else {
+        panic!("Expected ActiveModal::Theme");
+    }
+
+    // Press Enter to apply selected theme (Nord) and close modal
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Enter, KeyModifiers::NONE))?;
+    assert_eq!(app.theme.mode, ThemeMode::Nord);
+    assert_eq!(app.modal, ActiveModal::None);
+
+    Ok(())
+}
+
+#[test]
+fn test_theme_modal_mouse_interaction() -> anyhow::Result<()> {
+    let db = Database::in_memory()?;
+    let mut app = App::new(db)?;
+
+    // Click Header Theme button -> opens Theme modal
+    app.hit_map.register(
+        ratatui::layout::Rect::new(50, 0, 10, 1),
+        HitTarget::BtnTheme,
+    );
+    app.handle_mouse_click(52, 0)?;
+    assert!(matches!(app.modal, ActiveModal::Theme(_)));
+
+    // Click on category filter tab (Light)
+    app.hit_map.register(
+        ratatui::layout::Rect::new(60, 5, 14, 1),
+        HitTarget::ModalThemeCategory(Some(ThemeCategory::Light)),
+    );
+    app.handle_mouse_click(62, 5)?;
+    if let ActiveModal::Theme(ref state) = app.modal {
+        assert_eq!(state.category_filter, Some(ThemeCategory::Light));
+    } else {
+        panic!("Expected ActiveModal::Theme");
+    }
+
+    // Click on a specific theme button inside the modal -> applies and closes
+    app.hit_map.register(
+        ratatui::layout::Rect::new(20, 10, 24, 1),
+        HitTarget::ModalSelectTheme(ThemeMode::GitHubLight),
+    );
+    app.handle_mouse_click(22, 10)?;
+    assert_eq!(app.theme.mode, ThemeMode::GitHubLight);
+    assert_eq!(app.modal, ActiveModal::None);
+    assert_eq!(app.db.get_setting("theme")?, Some("github_light".to_string()));
 
     Ok(())
 }
@@ -190,6 +238,10 @@ fn test_settings_modal_theme_interaction() -> anyhow::Result<()> {
     assert_eq!(app.theme.mode, ThemeMode::TokyoNightLight);
     assert_eq!(app.db.get_setting("theme")?, Some("tokyo_night_light".to_string()));
 
+    // Pressing T inside settings opens Theme Modal
+    handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('T'), KeyModifiers::SHIFT))?;
+    assert!(matches!(app.modal, ActiveModal::Theme(_)));
+
     Ok(())
 }
 
@@ -201,12 +253,19 @@ fn test_terminal_rendering_all_themes() -> anyhow::Result<()> {
     let backend = TestBackend::new(100, 30);
     let mut terminal = Terminal::new(backend)?;
 
+    // Draw main calendar view for all themes
     for mode in ThemeMode::all() {
         app.set_theme(*mode);
         terminal.draw(|f| {
             ui::render(f, &mut app);
         })?;
     }
+
+    // Draw theme modal open
+    app.open_theme_modal();
+    terminal.draw(|f| {
+        ui::render(f, &mut app);
+    })?;
 
     Ok(())
 }

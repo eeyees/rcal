@@ -17,6 +17,7 @@ pub enum HitTarget {
     BtnSync,
     BtnAccounts,
     BtnLanguage,
+    BtnTheme,
     BtnManageCalendars,
     BtnSettings,
 
@@ -57,6 +58,8 @@ pub enum HitTarget {
     ModalSettingThemePrev,
     ModalSettingThemeNext,
     ModalSelectLanguage(crate::i18n::Language),
+    ModalSelectTheme(crate::ui::theme::ThemeMode),
+    ModalThemeCategory(Option<crate::ui::theme::ThemeCategory>),
 }
 
 impl HitTarget {
@@ -87,6 +90,8 @@ impl HitTarget {
                 | HitTarget::ModalSettingThemePrev
                 | HitTarget::ModalSettingThemeNext
                 | HitTarget::ModalSelectLanguage(_)
+                | HitTarget::ModalSelectTheme(_)
+                | HitTarget::ModalThemeCategory(_)
         )
     }
 }

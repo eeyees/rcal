@@ -522,7 +522,10 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char('3') | KeyCode::Char('t') => {
                     app.set_week_start_day(crate::model::WeekStartDay::Saturday);
                 }
-                KeyCode::Char('T') | KeyCode::Char('c') => {
+                KeyCode::Char('T') => {
+                    app.open_theme_modal();
+                }
+                KeyCode::Char('c') => {
                     app.cycle_theme();
                 }
                 KeyCode::Char('C') | KeyCode::Char('p') | KeyCode::Char('P') => {
@@ -608,6 +611,85 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             return Ok(());
         }
+        ActiveModal::Theme(ref mut state) => {
+            let norm_code = normalize_key_event(key);
+            let filtered = state.filtered_themes();
+            let count = filtered.len();
+
+            match norm_code {
+                KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
+                KeyCode::Char('0') | KeyCode::Char('a') | KeyCode::Char('A') => {
+                    state.category_filter = None;
+                    state.selected_idx = 0;
+                }
+                KeyCode::Char('1') => {
+                    state.category_filter = Some(crate::ui::theme::ThemeCategory::Dark);
+                    state.selected_idx = 0;
+                }
+                KeyCode::Char('2') => {
+                    state.category_filter = Some(crate::ui::theme::ThemeCategory::Nature);
+                    state.selected_idx = 0;
+                }
+                KeyCode::Char('3') => {
+                    state.category_filter = Some(crate::ui::theme::ThemeCategory::Vibrant);
+                    state.selected_idx = 0;
+                }
+                KeyCode::Char('4') => {
+                    state.category_filter = Some(crate::ui::theme::ThemeCategory::Light);
+                    state.selected_idx = 0;
+                }
+                KeyCode::Left | KeyCode::Char('h') => {
+                    if count > 0 {
+                        if state.selected_idx > 0 {
+                            state.selected_idx -= 1;
+                        } else {
+                            state.selected_idx = count - 1;
+                        }
+                    }
+                }
+                KeyCode::Right | KeyCode::Char('l') => {
+                    if count > 0 {
+                        if state.selected_idx + 1 < count {
+                            state.selected_idx += 1;
+                        } else {
+                            state.selected_idx = 0;
+                        }
+                    }
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if count > 0 && state.selected_idx >= 3 {
+                        state.selected_idx -= 3;
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if count > 0 && state.selected_idx + 3 < count {
+                        state.selected_idx += 3;
+                    }
+                }
+                KeyCode::Tab => {
+                    if count > 0 {
+                        state.selected_idx = (state.selected_idx + 1) % count;
+                    }
+                }
+                KeyCode::BackTab => {
+                    if count > 0 {
+                        if state.selected_idx == 0 {
+                            state.selected_idx = count - 1;
+                        } else {
+                            state.selected_idx -= 1;
+                        }
+                    }
+                }
+                KeyCode::Enter | KeyCode::Char(' ') => {
+                    if let Some(mode) = filtered.get(state.selected_idx) {
+                        app.set_theme(*mode);
+                        app.close_modal();
+                    }
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
         ActiveModal::ConfirmDelete(ref id) => {
             let id_clone = id.clone();
             let norm_code = normalize_key_event(key);
@@ -686,7 +768,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('A') => app.open_accounts_modal(),
         KeyCode::Char('o') | KeyCode::Char('O') | KeyCode::Char('S') => app.open_settings_modal(),
         KeyCode::Char('L') => app.open_language_modal(),
-        KeyCode::Char('T') => app.cycle_theme(),
+        KeyCode::Char('T') => app.open_theme_modal(),
         KeyCode::Char('?') => app.open_help_modal(),
 
         // Inspect/Select

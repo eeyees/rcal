@@ -40,6 +40,12 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             Span::raw(format!(" {} | ", t.footer_sync)),
             Span::styled("L", Style::default().fg(theme.primary)),
             Span::raw(format!(" {} | ", t.footer_lang)),
+            Span::styled("T", Style::default().fg(theme.accent)),
+            Span::raw(format!(" {} | ", match lang {
+                crate::i18n::Language::Ko => "테마",
+                crate::i18n::Language::Ja => "テーマ",
+                _ => "Theme",
+            })),
             Span::styled("A", Style::default().fg(theme.secondary)),
             Span::raw(format!(" {} | ", t.footer_accounts)),
             Span::styled("?", Style::default().fg(theme.text_muted)),

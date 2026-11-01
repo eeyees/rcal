@@ -177,6 +177,22 @@ pub struct LanguageModalState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ThemeModalState {
+    pub selected_idx: usize,
+    pub category_filter: Option<ThemeCategory>,
+}
+
+impl ThemeModalState {
+    pub fn filtered_themes(&self) -> Vec<ThemeMode> {
+        if let Some(cat) = self.category_filter {
+            cat.themes().to_vec()
+        } else {
+            ThemeMode::all().to_vec()
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ActiveModal {
     None,
     EventForm(EventFormState),
@@ -185,6 +201,7 @@ pub enum ActiveModal {
     CalendarManager(CalendarModalState),
     Settings,
     Language(LanguageModalState),
+    Theme(ThemeModalState),
     Help,
     #[allow(dead_code)]
     ConfirmDelete(String /* event_id */),
@@ -439,6 +456,15 @@ impl App {
         });
     }
 
+    pub fn open_theme_modal(&mut self) {
+        let all = ThemeMode::all();
+        let current_idx = all.iter().position(|m| *m == self.theme.mode).unwrap_or(0);
+        self.modal = ActiveModal::Theme(ThemeModalState {
+            selected_idx: current_idx,
+            category_filter: None,
+        });
+    }
+
     pub fn set_week_start_day(&mut self, day: WeekStartDay) {
         self.week_start_day = day;
         let _ = self.db.set_setting("week_start_day", day.as_str());
@@ -590,6 +616,7 @@ impl App {
                 HitTarget::BtnSync => self.trigger_sync(),
                 HitTarget::BtnAccounts => self.open_accounts_modal(),
                 HitTarget::BtnLanguage => self.open_language_modal(),
+                HitTarget::BtnTheme => self.open_theme_modal(),
                 HitTarget::BtnManageCalendars => self.open_calendar_modal(),
                 HitTarget::BtnSettings => self.open_settings_modal(),
                 HitTarget::BtnToggleSidebar => self.toggle_sidebar(),
@@ -620,6 +647,22 @@ impl App {
                     self.set_language(l);
                     if matches!(self.modal, ActiveModal::Language(_)) {
                         self.close_modal();
+                    }
+                }
+
+                HitTarget::ModalSelectTheme(mode) => {
+                    self.set_theme(mode);
+                    if matches!(self.modal, ActiveModal::Theme(_)) {
+                        self.close_modal();
+                    }
+                }
+
+                HitTarget::ModalThemeCategory(cat) => {
+                    if let ActiveModal::Theme(ref mut state) = self.modal {
+                        state.category_filter = cat;
+                        let filtered = state.filtered_themes();
+                        let pos = filtered.iter().position(|m| *m == self.theme.mode).unwrap_or(0);
+                        state.selected_idx = pos;
                     }
                 }
 

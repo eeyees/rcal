@@ -120,10 +120,29 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let all_themes = ThemeMode::all();
     let current_idx = all_themes.iter().position(|m| *m == app.theme.mode).unwrap_or(0);
 
+    let theme_header_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Min(20),
+            Constraint::Length(26),
+        ])
+        .split(chunks[4]);
+
     f.render_widget(
         Paragraph::new(Span::styled(t.settings_theme_title, Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD))),
-        chunks[4],
+        theme_header_chunks[0],
     );
+
+    let open_modal_label = match lang {
+        crate::i18n::Language::Ko => "[ 🎨 전체 테마 모달 (T) ]",
+        crate::i18n::Language::Ja => "[ 🎨 テーマ一覧 (T) ]",
+        _ => "[ 🎨 Theme Modal (T) ]",
+    };
+    let btn_open_modal = Paragraph::new(Line::from(vec![Span::raw(open_modal_label)]))
+        .style(theme.button_style())
+        .alignment(Alignment::Right);
+    f.render_widget(btn_open_modal, theme_header_chunks[1]);
+    app.hit_map.register(theme_header_chunks[1], HitTarget::BtnTheme);
 
     let current_theme_badge = format!("  [ {}/{} ] {}", current_idx + 1, all_themes.len(), app.theme.mode.label(lang));
     let theme_desc_line = Line::from(vec![

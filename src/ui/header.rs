@@ -15,8 +15,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .constraints([
             Constraint::Length(24), // Title & Month display
             Constraint::Length(20), // Navigation buttons (<, Today, >)
-            Constraint::Min(28),    // View tabs (Month, Week, Day, Agenda)
-            Constraint::Length(68), // Action buttons (+ New, ⟳ Sync, Accounts, Settings, L:Lang, ? Help)
+            Constraint::Min(24),    // View tabs (Month, Week, Day, Agenda)
+            Constraint::Length(80), // Action buttons (+ New, ⟳ Sync, Accounts, Settings, Theme, L:Lang, ? Help)
         ])
         .split(area);
 
@@ -109,17 +109,19 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         app.hit_map.register(rect, hit);
     }
 
-    // 4. Action buttons: [+ New Event], [⟳ Sync], [Accounts], [⚙ Settings], [L: Language], [? Help]
+    // 4. Action buttons: [+ New Event], [⟳ Sync], [Accounts], [⚙ Settings], [🎨 Theme], [L: Language], [? Help]
     let action_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
             Constraint::Length(11), // [+ 새 일정]
             Constraint::Length(1),
-            Constraint::Length(12), // [⟳ 동기화] / [⟳ 동기화중]
+            Constraint::Length(14), // [⟳  동기화] / [⟳  동기화중]
             Constraint::Length(1),
             Constraint::Length(10), // [계정연동]
             Constraint::Length(1),
             Constraint::Length(10), // [⚙ 설정]
+            Constraint::Length(1),
+            Constraint::Length(10), // [🎨 테마]
             Constraint::Length(1),
             Constraint::Length(8),  // [L: 한/EN]
             Constraint::Length(1),
@@ -144,8 +146,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         lang.btn_sync()
     };
+    let sync_text = if sync_label.starts_with("⟳ ") && !sync_label.starts_with("⟳  ") {
+        sync_label.replacen("⟳ ", "⟳  ", 1)
+    } else {
+        sync_label.to_string()
+    };
     let sync_bg = if app.is_syncing { theme.accent } else { Color::Rgb(45, 90, 160) };
-    let btn_sync = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", sync_label))]))
+    let btn_sync = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", sync_text))]))
         .style(
             Style::default()
                 .fg(Color::White)
@@ -169,17 +176,24 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(btn_settings, action_chunks[6]);
     app.hit_map.register(action_chunks[6], HitTarget::BtnSettings);
 
+    // Theme button: [ 🎨 테마 ]
+    let btn_theme = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_theme()))]))
+        .style(theme.button_style())
+        .alignment(Alignment::Center);
+    f.render_widget(btn_theme, action_chunks[8]);
+    app.hit_map.register(action_chunks[8], HitTarget::BtnTheme);
+
     // Language toggle button: [ L: 한/EN/日 ]
     let lang_btn_text = format!(" L: {} ", lang.short_label());
     let btn_lang = Paragraph::new(Line::from(vec![Span::raw(lang_btn_text)]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
-    f.render_widget(btn_lang, action_chunks[8]);
-    app.hit_map.register(action_chunks[8], HitTarget::BtnLanguage);
+    f.render_widget(btn_lang, action_chunks[10]);
+    app.hit_map.register(action_chunks[10], HitTarget::BtnLanguage);
 
     let btn_help = Paragraph::new(Line::from(vec![Span::raw(format!(" {} ", lang.btn_help()))]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
-    f.render_widget(btn_help, action_chunks[10]);
-    app.hit_map.register(action_chunks[10], HitTarget::BtnHelp);
+    f.render_widget(btn_help, action_chunks[12]);
+    app.hit_map.register(action_chunks[12], HitTarget::BtnHelp);
 }

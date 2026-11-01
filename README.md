@@ -156,7 +156,7 @@
 
 | Keybinding | Mouse Action | Description |
 | :--- | :--- | :--- |
-| `T` | Click theme in `[ ⚙ Settings ]` | Cycle color theme (Modern Dark, Nord, Dracula, Forest, Sunset, Monokai, Solarized) |
+| `T` | Click `[ 🎨 테마 ]` in header | Open Theme Selection Modal (37 palettes with color swatches & categories) |
 | `L` | Click `[ L: 한/EN/日 ]` | Cycle language (Korean ↔ English ↔ Japanese) |
 | `s` | Click `[ ⚙ Settings ]` | Open Settings Modal (Week start day, themes, language) |
 | `a` | Click Accounts in sidebar | Open Cloud Accounts Manager Modal |

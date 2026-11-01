@@ -66,9 +66,9 @@ pub static KO: Translations = Translations {
 
     btn_today: "오늘",
     btn_new_event: "+ 새 일정",
-    btn_sync: "⟳ 동기화",
-    btn_syncing: "⟳ 동기화중",
-    btn_accounts: "계정연동",
+    btn_sync: "⟳  동기화",
+    btn_syncing: "⟳  동기화중",
+    btn_accounts: "☁ 계정연동",
     btn_settings: "⚙ 설정",
     btn_help: "? 도움말",
     btn_save: "[ 저장 ]",

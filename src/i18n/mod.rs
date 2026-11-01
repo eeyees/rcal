@@ -244,6 +244,26 @@ impl Language {
         self.translations().btn_settings
     }
 
+    pub fn btn_theme(&self) -> &'static str {
+        match self {
+            Language::Ko => "🎨 테마",
+            Language::Ja => "🎨 テーマ",
+            Language::ZhCn => "🎨 主题",
+            Language::ZhTw => "🎨 主題",
+            _ => "🎨 Theme",
+        }
+    }
+
+    pub fn modal_theme_title(&self) -> &'static str {
+        match self {
+            Language::Ko => " 🎨 컬러 테마 선택 (Select Theme) ",
+            Language::Ja => " 🎨 テーマの選択 (Select Theme) ",
+            Language::ZhCn => " 🎨 主题选择 (Select Theme) ",
+            Language::ZhTw => " 🎨 主題選擇 (Select Theme) ",
+            _ => " 🎨 Select Color Theme ",
+        }
+    }
+
     pub fn btn_help(&self) -> &'static str {
         self.translations().btn_help
     }

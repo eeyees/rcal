@@ -67,9 +67,9 @@ mod tests {
         assert_eq!(lang_zh_tw.btn_new_event(), "+ 新增");
         assert_eq!(lang_mn.btn_new_event(), "+ Шинэ");
 
-        assert_eq!(lang_ko.btn_sync(), "⟳ 동기화");
-        assert_eq!(lang_en.btn_sync(), "⟳ Sync");
-        assert_eq!(lang_ja.btn_sync(), "⟳ 同期");
+        assert_eq!(lang_ko.btn_sync(), "⟳  동기화");
+        assert_eq!(lang_en.btn_sync(), "⟳  Sync");
+        assert_eq!(lang_ja.btn_sync(), "⟳  同期");
         assert_eq!(lang_zh_cn.btn_sync(), "⟳ 同步");
         assert_eq!(lang_zh_tw.btn_sync(), "⟳ 同步");
         assert_eq!(lang_mn.btn_sync(), "⟳ Синк");
