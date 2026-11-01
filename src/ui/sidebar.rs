@@ -165,7 +165,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 width: chunks[2].width,
                 height: 1,
             };
-            if k.contains("T:") {
+            if k.contains("v/C:") {
+                app.hit_map
+                    .register(row_rect, HitTarget::BtnManageCalendars);
+            } else if k.contains("T:") {
                 app.hit_map.register(row_rect, HitTarget::BtnTheme);
             } else if k.contains("A:") {
                 app.hit_map.register(row_rect, HitTarget::BtnAccounts);

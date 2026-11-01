@@ -56,7 +56,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mouse_click_date_selection() {
+    fn test_mouse_click_month_cell_opens_new_event_modal() {
         let db = Database::in_memory().unwrap();
         let mut app = App::new(db).unwrap();
 
@@ -64,11 +64,33 @@ mod tests {
         app.hit_map
             .register(Rect::new(5, 5, 10, 4), HitTarget::MonthDay(target_date));
 
-        // Click on date cell
+        // Clicking on a month date cell should NOT jump to Day view, but open the new event modal
+        app.handle_mouse_click(7, 6).unwrap();
+        assert_eq!(app.selected_date, target_date);
+        assert_eq!(app.current_view, ViewMode::Month);
+
+        if let ActiveModal::EventForm(ref form) = app.modal {
+            assert_eq!(form.date_str, "2026-11-15");
+            assert!(form.is_new);
+        } else {
+            panic!("Expected EventForm modal to open when clicking a month date cell");
+        }
+    }
+
+    #[test]
+    fn test_mouse_click_week_day_header_navigation() {
+        let db = Database::in_memory().unwrap();
+        let mut app = App::new(db).unwrap();
+
+        let target_date = NaiveDate::from_ymd_opt(2026, 11, 15).unwrap();
+        app.hit_map
+            .register(Rect::new(5, 5, 10, 4), HitTarget::WeekDayHeader(target_date));
+
+        // Click on week day header selects date
         app.handle_mouse_click(7, 6).unwrap();
         assert_eq!(app.selected_date, target_date);
 
-        // Double click on already selected date opens Day view
+        // Double click on already selected week day header opens Day view
         app.handle_mouse_click(7, 6).unwrap();
         assert_eq!(app.current_view, ViewMode::Day);
     }

@@ -126,7 +126,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
         // Register hit for day header
         app.hit_map
-            .register(col_chunks[0], HitTarget::MonthDay(current_date));
+            .register(col_chunks[0], HitTarget::WeekDayHeader(current_date));
 
         // Render All-day events row
         let all_day_events_on_day: Vec<&_> = app

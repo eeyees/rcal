@@ -590,6 +590,26 @@ impl Database {
         Ok(new_state == 1)
     }
 
+    pub fn set_calendar_enabled(&self, id: &str, enabled: bool) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE calendars SET enabled = ?1 WHERE id = ?2",
+            params![if enabled { 1 } else { 0 }, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_calendars_enabled(&self, states: &[(String, bool)]) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        for (id, enabled) in states {
+            conn.execute(
+                "UPDATE calendars SET enabled = ?1 WHERE id = ?2",
+                params![if *enabled { 1 } else { 0 }, id],
+            )?;
+        }
+        Ok(())
+    }
+
     pub fn get_all_events(&self) -> Result<Vec<Event>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
@@ -877,6 +897,8 @@ impl Database {
                   (e.all_day = 0 AND e.start_time >= ?1 AND e.start_time <= ?2)
                   OR
                   (e.all_day = 1 AND substr(e.start_time, 1, 10) = substr(?1, 1, 10))
+                  OR
+                  (e.rrule IS NOT NULL AND e.rrule != '')
               )
             ORDER BY e.start_time ASC
             "#,

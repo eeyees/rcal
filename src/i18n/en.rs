@@ -82,7 +82,7 @@ pub static EN: Translations = Translations {
     format_date_long: format_date_long_en,
 
     sidebar_calendars: " My Calendars ",
-    sidebar_manage: " + Manage Calendars (C) ",
+    sidebar_manage: " + Select/Manage Calendars (v/C) ",
     sidebar_hide: "[ Hide (b) ]",
     sidebar_quick_nav: "Quick Navigation:",
     sidebar_tips: &[
@@ -96,6 +96,7 @@ pub static EN: Translations = Translations {
     sidebar_keys: "Keys:",
     sidebar_key_tips: &[
         " • b: Toggle sidebar",
+        " • v/C: Select calendars",
         " • h/j/k/l: Navigate",
         " • c/n: New event",
         " • r: Sync now",
@@ -145,6 +146,7 @@ pub static EN: Translations = Translations {
     cal_status_hidden: "[Hidden]",
     cal_default_badge: "(Default)",
     cal_btn_create: " [ + Create Calendar ] ",
+    cal_key_hint: " [Space] Toggle  [1~9] Select num  [s/Enter] Save  [n] Add  [d] Delete  [Esc] Cancel ",
 
     modal_account_add_title: " Add Calendar Account (Google / MS 365 / Samsung / Naver / Apple) ",
     modal_account_manage_title: " Calendar Accounts & Multi-Cloud Sync ",
@@ -172,8 +174,7 @@ pub static EN: Translations = Translations {
         "  • Click View Tabs       : Switch between Month, Week, Day, Agenda",
         "  • Click [<] / [>]       : Navigate backward / forward in time (or wheel scroll)",
         "  • Click [Today]         : Jump straight to today's date",
-        "  • Click Day Cell        : Select date in Month view",
-        "  • Double Click Day      : Open Day view for that date",
+        "  • Click Day Cell        : Create new event on that date",
         "  • Click Time Slot       : Create new event at that hour",
         "  • Click Event Block     : View event details & edit/delete",
         "  • Click [x] Checkbox    : Toggle calendar visibility ON/OFF",
@@ -182,6 +183,7 @@ pub static EN: Translations = Translations {
     help_keyboard_lines: &[
         "  • 1 / 2 / 3 / 4         : Month / Week / Day / Agenda view",
         "  • b                     : Toggle left sidebar visibility (Ctrl+B)",
+        "  • v / C                 : Select & manage calendars (toggle visibility & save)",
         "  • h / j / k / l         : Navigate days / weeks / hours",
         "  • [ / ]                 : Previous / Next period",
         "  • t                     : Jump to today",

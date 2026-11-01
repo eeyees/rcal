@@ -444,6 +444,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
 
     // 3. Handle CalendarManager modal
     let mut cal_action_close = false;
+    let mut cal_action_save_visibility = false;
     let mut cal_action_delete_idx: Option<usize> = None;
     let mut cal_action_save: Option<(String, String)> = None;
 
@@ -452,7 +453,29 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             let norm_code = normalize_key_event(key);
             match norm_code {
                 KeyCode::Esc | KeyCode::Char('q') => cal_action_close = true,
-                KeyCode::Char('n') | KeyCode::Char('c') | KeyCode::Enter => {
+                // Space: toggle checkbox for current calendar
+                KeyCode::Char(' ') => {
+                    if let Some(cal) = app.calendars.get(cal_state.selected_calendar_idx) {
+                        cal_state.toggle_calendar_id(&cal.id, cal.enabled);
+                    }
+                }
+                // Number 1-9: directly toggle calendar by 1-based index
+                KeyCode::Char(c) if c.is_ascii_digit() && c != '0' => {
+                    let num = (c as usize) - ('1' as usize);
+                    if let Some(cal) = app.calendars.get(num) {
+                        cal_state.toggle_calendar_id(&cal.id, cal.enabled);
+                        cal_state.selected_calendar_idx = num;
+                    }
+                }
+                // Save and apply visibility changes: Enter, 's', or 'S'
+                KeyCode::Enter | KeyCode::Char('s') | KeyCode::Char('S') => {
+                    cal_action_save_visibility = true;
+                }
+                // Add new calendar: 'n', 'a', 'A', '+'
+                KeyCode::Char('n')
+                | KeyCode::Char('a')
+                | KeyCode::Char('A')
+                | KeyCode::Char('+') => {
                     cal_state.is_creating = true;
                     cal_state.active_field = 0;
                     cal_state.name.clear();
@@ -547,7 +570,10 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         }
     }
 
-    if cal_action_close {
+    if cal_action_save_visibility {
+        app.save_calendar_visibility()?;
+        return Ok(());
+    } else if cal_action_close {
         app.close_modal();
         return Ok(());
     } else if let Some(idx) = cal_action_delete_idx {
@@ -1112,7 +1138,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         // Actions
         KeyCode::Char('b') | KeyCode::Char('B') => app.toggle_sidebar(),
         KeyCode::Char('c') | KeyCode::Char('n') => app.open_new_event_modal(None),
-        KeyCode::Char('C') => app.open_calendar_modal(),
+        KeyCode::Char('C') | KeyCode::Char('v') | KeyCode::Char('V') => app.open_calendar_modal(),
         KeyCode::Char('r') | KeyCode::Char('R') => app.trigger_sync(),
         KeyCode::Char('A') => app.open_accounts_modal(),
         KeyCode::Char('s') | KeyCode::Char('S') | KeyCode::Char('o') | KeyCode::Char('O') => {

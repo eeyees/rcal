@@ -1,6 +1,8 @@
-use chrono::{DateTime, Datelike, Local, NaiveDate};
+use chrono::{DateTime, Datelike, Duration, Local, NaiveDate};
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
+
+pub mod rrule;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProviderType {
@@ -281,13 +283,38 @@ impl Event {
         let event_start_date = self.start_time.date_naive();
         let event_end_date = self.end_time.date_naive();
 
-        if self.all_day {
-            date >= event_start_date && date <= event_end_date
-        } else {
-            // For timed events: spans if date is between start and end date
-            // or if starts/ends on this date
-            date >= event_start_date && date <= event_end_date
+        // 1. Direct span check (for single events or multi-day spans)
+        if date >= event_start_date && date <= event_end_date {
+            return true;
         }
+
+        // 2. If recurring rule (RRULE) exists, check if target date coincides with any recurring instance
+        if let Some(ref rrule_str) = self.rrule {
+            if let Some(rule) = rrule::parse_rrule(rrule_str) {
+                let duration_days = (event_end_date - event_start_date).num_days().max(0);
+                for offset in 0..=duration_days {
+                    let candidate_start = date - Duration::days(offset);
+                    if rrule::rrule_matches(&rule, event_start_date, candidate_start) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Returns the start and end DateTime adjusted for a recurring instance on the given date.
+    pub fn instance_times_on(&self, date: NaiveDate) -> (DateTime<Local>, DateTime<Local>) {
+        let event_start_date = self.start_time.date_naive();
+        if event_start_date == date {
+            return (self.start_time, self.end_time);
+        }
+
+        let time_offset = date - event_start_date;
+        let new_start = self.start_time + time_offset;
+        let new_end = self.end_time + time_offset;
+        (new_start, new_end)
     }
 
     /// Formatted time string, e.g. "14:00 - 15:30" or "All day"

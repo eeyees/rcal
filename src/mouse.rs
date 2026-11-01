@@ -27,6 +27,7 @@ pub enum HitTarget {
 
     // Views
     MonthDay(NaiveDate),
+    WeekDayHeader(NaiveDate),
     WeekSlot(NaiveDate, u32 /* hour */),
     WeekAllDaySlot(NaiveDate),
     DaySlot(u32 /* hour */, u32 /* minute */),
@@ -53,6 +54,8 @@ pub enum HitTarget {
     ModalCalSave,
     ModalCalDelete(String),
     ModalCalNew,
+    ModalCalToggle(String),
+    ModalCalSaveVisibility,
     ModalSettingTab(crate::app::SettingsSection),
     ModalSettingWeekStart(WeekStartDay),
     ModalSettingNotificationToggle,
@@ -91,6 +94,8 @@ impl HitTarget {
                 | HitTarget::ModalCalSave
                 | HitTarget::ModalCalDelete(_)
                 | HitTarget::ModalCalNew
+                | HitTarget::ModalCalToggle(_)
+                | HitTarget::ModalCalSaveVisibility
                 | HitTarget::ModalSettingTab(_)
                 | HitTarget::ModalSettingWeekStart(_)
                 | HitTarget::ModalSettingNotificationToggle

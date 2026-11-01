@@ -90,6 +90,7 @@ pub struct Translations {
     pub cal_status_hidden: &'static str,
     pub cal_default_badge: &'static str,
     pub cal_btn_create: &'static str,
+    pub cal_key_hint: &'static str,
 
     // Account Modal
     pub modal_account_add_title: &'static str,

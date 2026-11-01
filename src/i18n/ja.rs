@@ -97,7 +97,7 @@ pub static JA: Translations = Translations {
     format_date_long: format_date_long_ja,
 
     sidebar_calendars: " マイカレンダー ",
-    sidebar_manage: " + カレンダー管理/追加 (C) ",
+    sidebar_manage: " + カレンダー選択/管理 (v/C) ",
     sidebar_hide: "[ サイドバー非表示 (b) ]",
     sidebar_quick_nav: "クイックナビ:",
     sidebar_tips: &[
@@ -111,6 +111,7 @@ pub static JA: Translations = Translations {
     sidebar_keys: "ショートカット:",
     sidebar_key_tips: &[
         " • b: サイドバー表示切替",
+        " • v/C: カレンダー選択",
         " • h/j/k/l: 移動・選択",
         " • c/n: 新規予定",
         " • r: リアルタイム同期",
@@ -160,6 +161,7 @@ pub static JA: Translations = Translations {
     cal_status_hidden: "[非表示]",
     cal_default_badge: "(デフォルト)",
     cal_btn_create: " [ + 新規カレンダー作成 ] ",
+    cal_key_hint: " [Space] 選択/解除  [1~9] 番号選択  [s/Enter] 保存  [n] 追加  [d] 削除  [Esc] 取消 ",
 
     modal_account_add_title: " カレンダーアカウント連携 (Google / MS 365 / Samsung / Naver / Apple) ",
     modal_account_manage_title: " カレンダーアカウント & クラウド同期 ",
@@ -187,8 +189,7 @@ pub static JA: Translations = Translations {
         "  • 画面上部タブクリック   : 月間 / 週間 / 日間 / 予定表ビュー即時切替",
         "  • [<] / [>] クリック     : 前 / 次の期間へ移動 (マウスホイール操作可)",
         "  • [今日] クリック        : 今日の日付へ即時移動",
-        "  • 日付セルクリック       : その日付を選択",
-        "  • 日付セルダブルクリック : その日付の日間ビューへ即時移動",
+        "  • 日付セルクリック       : その日付に新しい予定を登録",
         "  • 時間枠クリック         : その時間帯に新規予定作成モーダルを開く",
         "  • 予定ブロッククリック   : 予定の詳細表示 (編集 / 削除モーダル)",
         "  • [x] チェッククリック   : カレンダー表示 / 非表示トグル",
@@ -197,6 +198,7 @@ pub static JA: Translations = Translations {
     help_keyboard_lines: &[
         "  • 1 / 2 / 3 / 4         : 月間(1) / 週間(2) / 日間(3) / 予定表(4) 切替",
         "  • b                     : 左サイドバー表示 / 非表示切替 (Ctrl+B)",
+        "  • v / C                 : カレンダー表示選択 & 管理 (トグル・保存)",
         "  • h / j / k / l         : 左 / 下 / 上 / 右 日付・時間移動",
         "  • [ / ]                 : 前 / 次の月・週・日へ移動",
         "  • t                     : 今日の日付へ移動",

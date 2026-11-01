@@ -31,27 +31,50 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         return;
     }
 
-    // Sort events by start_time
-    let mut sorted_events: Vec<&_> = app.events_cache.iter().collect();
-    sorted_events.sort_by_key(|e| e.start_time);
+    let today = Local::now().date_naive();
+    let lookahead_days = 60;
+
+    // Collect occurrences for upcoming days (including recurring events)
+    let mut upcoming_occurrences: Vec<(NaiveDate, &crate::model::Event)> = Vec::new();
+    for d_offset in 0..=lookahead_days {
+        let current_date = today + chrono::Duration::days(d_offset);
+        for ev in &app.events_cache {
+            if ev.occurs_on(current_date) {
+                upcoming_occurrences.push((current_date, ev));
+            }
+        }
+    }
+
+    // Fallback: If no upcoming events in next 60 days, show all events sorted by start_time
+    if upcoming_occurrences.is_empty() {
+        for ev in &app.events_cache {
+            upcoming_occurrences.push((ev.start_time.date_naive(), ev));
+        }
+    }
+
+    // Sort by occurrence date, then all-day first, then time
+    upcoming_occurrences.sort_by(|(d1, e1), (d2, e2)| {
+        d1.cmp(d2)
+            .then_with(|| e2.all_day.cmp(&e1.all_day))
+            .then_with(|| e1.start_time.time().cmp(&e2.start_time.time()))
+    });
 
     let mut current_y = inner.y;
     let max_y = inner.y + inner.height;
     let mut prev_date: Option<NaiveDate> = None;
 
-    for (idx, ev) in sorted_events.iter().enumerate() {
+    for (idx, (ev_date, ev)) in upcoming_occurrences.iter().enumerate() {
         if current_y >= max_y {
             break;
         }
 
-        let ev_date = ev.start_time.date_naive();
         // If date changes, print a date header
-        if prev_date != Some(ev_date) {
-            prev_date = Some(ev_date);
+        if prev_date != Some(*ev_date) {
+            prev_date = Some(*ev_date);
             let today = Local::now().date_naive();
-            let date_label = if ev_date == today {
+            let date_label = if *ev_date == today {
                 format!("Today, {}", ev_date.format("%A, %b %d"))
-            } else if ev_date == today + chrono::Duration::days(1) {
+            } else if *ev_date == today + chrono::Duration::days(1) {
                 format!("Tomorrow, {}", ev_date.format("%A, %b %d"))
             } else {
                 ev_date.format("%A, %B %d, %Y").to_string()

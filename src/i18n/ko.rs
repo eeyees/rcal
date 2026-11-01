@@ -97,7 +97,7 @@ pub static KO: Translations = Translations {
     format_date_long: format_date_long_ko,
 
     sidebar_calendars: " 내 캘린더 ",
-    sidebar_manage: " + 캘린더 관리/추가 (C) ",
+    sidebar_manage: " + 캘린더 관리/선택 (v/C) ",
     sidebar_hide: "[ 사이드바 숨김 (b) ]",
     sidebar_quick_nav: "빠른 탐색:",
     sidebar_tips: &[
@@ -111,6 +111,7 @@ pub static KO: Translations = Translations {
     sidebar_keys: "단축키:",
     sidebar_key_tips: &[
         " • b: 사이드바 토글",
+        " • v/C: 캘린더 선택",
         " • h/j/k/l: 탐색",
         " • c/n: 새 일정",
         " • r: 실시간 동기화",
@@ -160,6 +161,7 @@ pub static KO: Translations = Translations {
     cal_status_hidden: "[숨김]",
     cal_default_badge: "(기본)",
     cal_btn_create: " [ + 새 캘린더 생성 ] ",
+    cal_key_hint: " [Space] 선택/해제  [1~9] 번호선택  [s/Enter] 저장  [n] 추가  [d] 삭제  [Esc] 취소 ",
 
     modal_account_add_title: " 캘린더 계정 연동 (Google / MS 365 / Samsung / Naver / Apple) ",
     modal_account_manage_title: " 캘린더 계정 & 클라우드 실시간 동기화 ",
@@ -187,8 +189,7 @@ pub static KO: Translations = Translations {
         "  • 상단 뷰 탭 클릭       : 월간 / 주간 / 일간 / 목록 뷰 즉시 전환",
         "  • [<] / [>] 클릭        : 이전 / 다음 기간 이동 (마우스 휠 스크롤 가능)",
         "  • [오늘] 클릭           : 오늘 날짜로 즉시 이동",
-        "  • 날짜 셀 클릭          : 해당 날짜 선택",
-        "  • 날짜 셀 더블 클릭     : 해당 날짜의 일간 뷰로 즉시 이동",
+        "  • 날짜 셀 클릭          : 해당 날짜에 새 일정 등록",
         "  • 시간 슬롯 클릭        : 해당 시간대에 새 일정 등록 모달 열기",
         "  • 일정 블록 클릭        : 일정 상세 보기 (수정 / 삭제 모달)",
         "  • [x] 체크박스 클릭     : 캘린더 표시 / 숨김 토글",
@@ -197,6 +198,7 @@ pub static KO: Translations = Translations {
     help_keyboard_lines: &[
         "  • 1 / 2 / 3 / 4         : 월간(1) / 주간(2) / 일간(3) / 목록(4) 전환",
         "  • b                     : 좌측 사이드바 표시 / 숨김 토글 (Ctrl+B)",
+        "  • v / C                 : 캘린더 표시 선택 및 관리 (체크박스 선택 및 저장)",
         "  • h / j / k / l         : 좌 / 하 / 상 / 우 날짜 및 시간대 이동",
         "  • [ / ]                 : 이전 / 다음 월/주/일 이동",
         "  • t                     : 오늘 날짜로 이동",

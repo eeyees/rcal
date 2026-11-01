@@ -10,8 +10,18 @@ use crate::app::App;
 use crate::mouse::HitTarget;
 
 pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
+    let event = match app.events_cache.iter().find(|e| e.id == event_id) {
+        Some(ev) => ev,
+        None => return,
+    };
+
+    let has_rrule = event
+        .rrule
+        .as_ref()
+        .map(|s| !s.trim().is_empty())
+        .unwrap_or(false);
     let popup_width = 58.min(area.width.saturating_sub(4));
-    let popup_height = 14.min(area.height.saturating_sub(4));
+    let popup_height = (if has_rrule { 15 } else { 14 }).min(area.height.saturating_sub(4));
 
     let popup_rect = Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
@@ -22,11 +32,6 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
 
     f.render_widget(Clear, popup_rect);
     app.hit_map.register(popup_rect, HitTarget::ModalConsume);
-
-    let event = match app.events_cache.iter().find(|e| e.id == event_id) {
-        Some(ev) => ev,
-        None => return,
-    };
 
     let lang = app.lang;
     let theme = &app.theme;
@@ -46,17 +51,22 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
+    let mut constraints = vec![
+        Constraint::Length(1), // Title
+        Constraint::Length(1), // Calendar badge
+        Constraint::Length(1), // Time
+    ];
+    if has_rrule {
+        constraints.push(Constraint::Length(1)); // Repeat
+    }
+    constraints.push(Constraint::Length(1)); // Location
+    constraints.push(Constraint::Length(if has_rrule { 2 } else { 3 })); // Description
+    constraints.push(Constraint::Min(1)); // Spacer
+    constraints.push(Constraint::Length(1)); // Buttons: [ Edit ] [ Delete ] [ Close ]
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(1), // Title
-            Constraint::Length(1), // Calendar badge
-            Constraint::Length(1), // Time
-            Constraint::Length(1), // Location
-            Constraint::Length(3), // Description
-            Constraint::Min(1),    // Spacer
-            Constraint::Length(1), // Buttons: [ Edit ] [ Delete ] [ Close ]
-        ])
+        .constraints(constraints)
         .split(inner);
 
     // Title
@@ -93,13 +103,43 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
     ]);
     f.render_widget(Paragraph::new(time_line), chunks[2]);
 
+    let mut current_chunk_idx = 3;
+
+    // Repeat (RRULE)
+    if has_rrule {
+        let rrule_desc = event
+            .rrule
+            .as_deref()
+            .and_then(|r| crate::model::rrule::format_rrule_description(r, lang))
+            .unwrap_or_else(|| "반복 일정".to_string());
+
+        let repeat_label = match lang {
+            crate::i18n::Language::Ko => "반복",
+            crate::i18n::Language::Ja => "繰り返し",
+            _ => "Repeat",
+        };
+
+        let repeat_line = Line::from(vec![
+            Span::styled("🔁  ", Style::default().fg(theme.primary)),
+            Span::styled(
+                format!("{}: {}", repeat_label, rrule_desc),
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]);
+        f.render_widget(Paragraph::new(repeat_line), chunks[current_chunk_idx]);
+        current_chunk_idx += 1;
+    }
+
     // Location
     let loc_text = event.location.as_deref().unwrap_or(lang.t().no_location);
     let loc_line = Line::from(vec![
         Span::styled("📍  ", Style::default().fg(theme.secondary)),
         Span::styled(loc_text, Style::default().fg(theme.text_muted)),
     ]);
-    f.render_widget(Paragraph::new(loc_line), chunks[3]);
+    f.render_widget(Paragraph::new(loc_line), chunks[current_chunk_idx]);
+    current_chunk_idx += 1;
 
     // Description
     let desc_text = event
@@ -111,7 +151,8 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
             .fg(theme.text_muted)
             .add_modifier(Modifier::ITALIC),
     );
-    f.render_widget(desc_p, chunks[4]);
+    f.render_widget(desc_p, chunks[current_chunk_idx]);
+    current_chunk_idx += 2; // skip Spacer (min 1)
 
     // Buttons: [ Edit (e) ] [ Delete (d) ] [ Close (Esc) ]
     let btn_chunks = Layout::default()
@@ -123,7 +164,7 @@ pub fn render(f: &mut Frame, app: &mut App, event_id: &str, area: Rect) {
             Constraint::Min(1),
             Constraint::Length(14), // [ Close ]
         ])
-        .split(chunks[6]);
+        .split(chunks[current_chunk_idx]);
 
     let btn_edit = Paragraph::new(Line::from(vec![Span::raw(lang.btn_edit())]))
         .style(theme.button_style())

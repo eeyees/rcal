@@ -235,7 +235,7 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(1), // Header
-            Constraint::Length(1), // Spacer
+            Constraint::Length(1), // Key Hint
             Constraint::Min(6),    // List of calendars
             Constraint::Length(1), // Spacer
             Constraint::Length(1), // Action Buttons
@@ -251,6 +251,15 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
                 .add_modifier(Modifier::BOLD),
         )),
         chunks[0],
+    );
+
+    let hint_text = lang.t().cal_key_hint;
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            hint_text,
+            Style::default().fg(theme.text_muted),
+        )),
+        chunks[1],
     );
 
     for (idx, cal) in calendars.iter().enumerate() {
@@ -269,24 +278,53 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
         let row_parts = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Min(30),    // Left: Calendar info
+                Constraint::Min(30),    // Left: Calendar info & checkbox
                 Constraint::Length(12), // Right: [ 삭제 ] button
             ])
             .split(row_rect);
 
+        let is_enabled = state.is_calendar_enabled(&cal.id, cal.enabled);
+        let check_box = if is_enabled { "[x] " } else { "[ ] " };
+        let check_color = if is_enabled {
+            theme.secondary
+        } else {
+            theme.text_dim
+        };
+
         let cal_color = cal.ratatui_color();
-        let status_text = if cal.enabled {
+        let status_text = if is_enabled {
             lang.t().cal_status_visible
         } else {
             lang.t().cal_status_hidden
         };
 
         let is_selected = idx == state.selected_calendar_idx;
-        let bullet = if is_selected { " ▶ " } else { " ● " };
-        let bullet_color = if is_selected { theme.accent } else { cal_color };
+        let bullet = if is_selected { " ▶ " } else { "   " };
+        let num_badge = if idx < 9 {
+            format!("[{}] ", idx + 1)
+        } else {
+            "    ".to_string()
+        };
 
         let info_line = Line::from(vec![
-            Span::styled(bullet, Style::default().fg(bullet_color)),
+            Span::styled(bullet, Style::default().fg(theme.accent)),
+            Span::styled(
+                num_badge,
+                Style::default()
+                    .fg(if is_selected {
+                        theme.primary
+                    } else {
+                        theme.text_muted
+                    })
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                check_box,
+                Style::default()
+                    .fg(check_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("● ", Style::default().fg(cal_color)),
             Span::styled(
                 &cal.name,
                 Style::default()
@@ -303,7 +341,7 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
             ),
             Span::styled(
                 status_text,
-                Style::default().fg(if cal.enabled {
+                Style::default().fg(if is_enabled {
                     theme.secondary
                 } else {
                     theme.text_dim
@@ -316,9 +354,11 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
             Style::default()
         };
         f.render_widget(Paragraph::new(info_line).style(row_style), row_parts[0]);
+        app.hit_map
+            .register(row_parts[0], HitTarget::ModalCalToggle(cal.id.clone()));
 
         if !cal.is_default {
-            let del_label = lang.btn_delete();
+            let del_label = format!("{} (d)", lang.btn_delete());
             let del_btn = Paragraph::new(Line::from(vec![Span::raw(del_label)]))
                 .style(
                     Style::default()
@@ -342,13 +382,15 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
     let btn_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(22), // [ + 새 캘린더 만들기 ]
+            Constraint::Length(22), // [ + 새 캘린더 (n) ]
             Constraint::Min(1),
-            Constraint::Length(14), // [ 닫기 ]
+            Constraint::Length(22), // [ ✓ 저장 (s/Enter) ]
+            Constraint::Length(2),
+            Constraint::Length(14), // [ 닫기 (Esc) ]
         ])
         .split(chunks[4]);
 
-    let add_label = lang.t().cal_btn_create;
+    let add_label = format!(" {} (n) ", lang.t().cal_btn_create.trim());
     let btn_add = Paragraph::new(Line::from(vec![Span::raw(add_label)]))
         .style(
             Style::default()
@@ -360,11 +402,25 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
     f.render_widget(btn_add, btn_chunks[0]);
     app.hit_map.register(btn_chunks[0], HitTarget::ModalCalNew);
 
-    let btn_close = Paragraph::new(Line::from(vec![Span::raw(lang.btn_close())]))
+    let save_label = format!(" ✓ {} (s/Enter) ", lang.btn_save());
+    let btn_save = Paragraph::new(Line::from(vec![Span::raw(save_label)]))
+        .style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(theme.secondary)
+                .add_modifier(Modifier::BOLD),
+        )
+        .alignment(Alignment::Center);
+    f.render_widget(btn_save, btn_chunks[2]);
+    app.hit_map
+        .register(btn_chunks[2], HitTarget::ModalCalSaveVisibility);
+
+    let close_label = format!(" {} (Esc) ", lang.btn_close());
+    let btn_close = Paragraph::new(Line::from(vec![Span::raw(close_label)]))
         .style(theme.button_style())
         .alignment(Alignment::Center);
-    f.render_widget(btn_close, btn_chunks[2]);
-    app.hit_map.register(btn_chunks[2], HitTarget::ModalClose);
+    f.render_widget(btn_close, btn_chunks[4]);
+    app.hit_map.register(btn_chunks[4], HitTarget::ModalClose);
 
     if calendars.is_empty() {
         f.set_cursor_position((btn_chunks[0].x + btn_chunks[0].width / 2, btn_chunks[0].y));

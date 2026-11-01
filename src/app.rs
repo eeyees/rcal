@@ -93,6 +93,7 @@ pub struct CalendarModalState {
     pub color_idx: usize,
     pub selected_calendar_idx: usize,
     pub active_field: usize,
+    pub enabled_map: std::collections::HashMap<String, bool>,
 }
 
 impl CalendarModalState {
@@ -113,7 +114,32 @@ impl CalendarModalState {
             color_idx: 0,
             selected_calendar_idx: 0,
             active_field: 0,
+            enabled_map: std::collections::HashMap::new(),
         }
+    }
+
+    pub fn with_calendars(calendars: &[crate::model::Calendar]) -> Self {
+        let mut enabled_map = std::collections::HashMap::new();
+        for c in calendars {
+            enabled_map.insert(c.id.clone(), c.enabled);
+        }
+        Self {
+            is_creating: false,
+            name: String::new(),
+            color_idx: 0,
+            selected_calendar_idx: 0,
+            active_field: 0,
+            enabled_map,
+        }
+    }
+
+    pub fn is_calendar_enabled(&self, id: &str, default_val: bool) -> bool {
+        self.enabled_map.get(id).copied().unwrap_or(default_val)
+    }
+
+    pub fn toggle_calendar_id(&mut self, id: &str, default_val: bool) {
+        let current = self.is_calendar_enabled(id, default_val);
+        self.enabled_map.insert(id.to_string(), !current);
     }
 }
 
@@ -570,7 +596,24 @@ impl App {
     }
 
     pub fn open_calendar_modal(&mut self) {
-        self.modal = ActiveModal::CalendarManager(CalendarModalState::new());
+        self.modal =
+            ActiveModal::CalendarManager(CalendarModalState::with_calendars(&self.calendars));
+    }
+
+    pub fn save_calendar_visibility(&mut self) -> Result<()> {
+        if let ActiveModal::CalendarManager(ref state) = self.modal {
+            let updates: Vec<(String, bool)> = state
+                .enabled_map
+                .iter()
+                .map(|(id, &enabled)| (id.clone(), enabled))
+                .collect();
+            self.db.update_calendars_enabled(&updates)?;
+            self.reload_calendars()?;
+            self.reload_events()?;
+            self.set_status(self.lang.msg_calendar_toggled());
+        }
+        self.close_modal();
+        Ok(())
     }
 
     pub fn open_settings_modal(&mut self) {
@@ -1163,6 +1206,22 @@ impl App {
                     }
                 }
 
+                HitTarget::ModalCalToggle(id) => {
+                    if let ActiveModal::CalendarManager(ref mut cal_state) = self.modal {
+                        let current = self
+                            .calendars
+                            .iter()
+                            .find(|c| c.id == id)
+                            .map(|c| c.enabled)
+                            .unwrap_or(true);
+                        cal_state.toggle_calendar_id(&id, current);
+                    }
+                }
+
+                HitTarget::ModalCalSaveVisibility => {
+                    self.save_calendar_visibility()?;
+                }
+
                 HitTarget::ModalAccountPreset(idx) => {
                     if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
                         acc_state.set_preset(idx);
@@ -1263,6 +1322,11 @@ impl App {
                 }
 
                 HitTarget::MonthDay(date) => {
+                    self.selected_date = date;
+                    self.open_new_event_modal(None);
+                }
+
+                HitTarget::WeekDayHeader(date) => {
                     if self.selected_date == date {
                         // Double click on already selected date opens Day view
                         self.current_view = ViewMode::Day;

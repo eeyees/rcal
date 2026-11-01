@@ -208,16 +208,37 @@ pub fn check_and_notify_upcoming(
     let events_with_cal = db.get_events_for_notification(from_time, to_time)?;
     let mut notified = Vec::new();
 
-    for (event, cal_name) in events_with_cal {
+    for (mut event, cal_name) in events_with_cal {
+        let is_recurring = event
+            .rrule
+            .as_ref()
+            .map(|s| !s.trim().is_empty())
+            .unwrap_or(false);
+        if is_recurring && !event.occurs_on(now.date_naive()) {
+            continue;
+        }
+
+        if is_recurring {
+            let (adj_start, adj_end) = event.instance_times_on(now.date_naive());
+            event.start_time = adj_start;
+            event.end_time = adj_end;
+        }
+
+        let notif_suffix = if is_recurring {
+            format!("_{}", now.format("%Y%m%d"))
+        } else {
+            String::new()
+        };
+
         if event.all_day {
             // For all-day events, notify once on that day if now >= 08:00
             if now.date_naive() == event.start_time.date_naive() && now.hour() >= 8 {
-                let notif_key = "allday_today";
-                if !db.has_notified(&event.id, notif_key)? {
+                let notif_key = format!("allday_today{}", notif_suffix);
+                if !db.has_notified(&event.id, &notif_key)? {
                     let (summary, body) =
                         format_event_notification(&event, &cal_name, config.lead_minutes, 0, lang);
                     send_desktop_notification_safe(&summary, &body, config.sound);
-                    db.mark_notified(&event.id, notif_key)?;
+                    db.mark_notified(&event.id, &notif_key)?;
                     notified.push((event, cal_name));
                 }
             }
@@ -230,7 +251,7 @@ pub fn check_and_notify_upcoming(
             // Event is starting in <= lead_mins (or starting now if lead_mins == 0)
             // and event hasn't started more than 1 minute ago.
             if minutes_remaining <= lead_mins && diff_sec >= -60 {
-                let notif_key = format!("lead_{}m", config.lead_minutes);
+                let notif_key = format!("lead_{}m{}", config.lead_minutes, notif_suffix);
                 if !db.has_notified(&event.id, &notif_key)? {
                     let (summary, body) = format_event_notification(
                         &event,

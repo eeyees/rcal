@@ -153,6 +153,7 @@ macro_rules! define_locale {
             sidebar_keys: "Keys:",
             sidebar_key_tips: &[
                 " • b: Toggle sidebar",
+                " • v/C: Select calendars",
                 " • h/j/k/l: Navigate",
                 " • c/n: New event",
                 " • r: Sync now",
@@ -199,6 +200,7 @@ macro_rules! define_locale {
             cal_status_hidden: "[Hidden]",
             cal_default_badge: "(Default)",
             cal_btn_create: " [ + Create Calendar ] ",
+            cal_key_hint: " [Space] Toggle  [1~9] Select num  [s/Enter] Save  [n] Add  [d] Delete  [Esc] Cancel ",
             modal_account_add_title: $m_acc,
             modal_account_manage_title: " Calendar Accounts & Sync ",
             account_list_header: " 📋 Configured Sync Accounts:",
@@ -223,7 +225,7 @@ macro_rules! define_locale {
                 "  • Click View Tabs       : Switch between views",
                 "  • Click [<] / [>]       : Navigate backward / forward",
                 "  • Click [Today]         : Jump straight to today",
-                "  • Click Day Cell        : Select date in Month view",
+                "  • Click Day Cell        : Create new event on that date",
                 "  • Click Time Slot       : Create new event at that hour",
                 "  • Click [x] Checkbox    : Toggle calendar visibility",
             ],
@@ -231,6 +233,7 @@ macro_rules! define_locale {
             help_keyboard_lines: &[
                 "  • 1 / 2 / 3 / 4         : Month / Week / Day / Agenda view",
                 "  • b                     : Toggle left sidebar visibility",
+                "  • v / C                 : Select & manage calendars (toggle visibility & save)",
                 "  • h / j / k / l         : Navigate days / weeks / hours",
                 "  • t                     : Jump to today",
                 "  • c / n                 : Create new event",
