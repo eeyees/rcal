@@ -54,7 +54,10 @@ pub struct GoogleCalendarClient {
 impl GoogleCalendarClient {
     pub fn new(access_token: String) -> Self {
         let mut headers = HeaderMap::new();
-        headers.insert(USER_AGENT, HeaderValue::from_static("rcal/0.1.0"));
+        let ua = format!("rcal/{}", crate::version());
+        if let Ok(hv) = HeaderValue::from_str(&ua) {
+            headers.insert(USER_AGENT, hv);
+        }
         let auth_val = format!("Bearer {}", access_token);
         if let Ok(hv) = HeaderValue::from_str(&auth_val) {
             headers.insert(AUTHORIZATION, hv);

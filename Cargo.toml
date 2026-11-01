@@ -1,6 +1,6 @@
 [package]
 name = "rcal"
-version = "0.1.0"
+version = "2026.1101.1"
 edition = "2021"
 authors = ["jungkh"]
 description = "Fast, mouse-interactive TUI Calendar in Rust with multi-cloud sync"

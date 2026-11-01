@@ -245,52 +245,77 @@ mod tests {
         let initial_date = app.selected_date;
 
         // In normal mode:
-        // 'l' (lowercase) is navigation right, not language toggle
+        // 'l' (lowercase) is navigation right, not language modal
         handle_crossterm_event(
             &mut app,
             CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)),
         )?;
         assert_eq!(app.selected_date, initial_date + chrono::Duration::days(1));
         assert_eq!(app.lang, Language::Ko);
+        assert_eq!(app.modal, ActiveModal::None);
 
-        // 'L' (Shift+l) toggles language: Ko -> En
+        // 'L' (Shift+l) opens Language selection modal
         handle_crossterm_event(
             &mut app,
             CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::SHIFT)),
         )?;
-        assert_eq!(app.lang, Language::En);
+        assert!(matches!(app.modal, ActiveModal::Language(_)));
 
-        // Shift + 'ㅣ' (Korean IME) also normalizes to 'L': En -> Ja
+        // In Language modal: navigate Right to English (idx 1), then Right to Japanese (idx 2)
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+        )?;
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+        )?;
+        // Press Enter to select Japanese
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        )?;
+        assert_eq!(app.lang, Language::Ja);
+        assert_eq!(app.modal, ActiveModal::None);
+
+        // Shift + 'ㅣ' (Korean IME) also normalizes to 'L': opens Language modal
         handle_crossterm_event(
             &mut app,
             CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('ㅣ'), KeyModifiers::SHIFT)),
         )?;
-        assert_eq!(app.lang, Language::Ja);
+        assert!(matches!(app.modal, ActiveModal::Language(_)));
+
+        // Press 'j' (Down) in 3-column grid: moves from idx 2 (Ja) to idx 5 (Mn)
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)),
+        )?;
+        // Press Space to select Mongolian
+        handle_crossterm_event(
+            &mut app,
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
+        )?;
+        assert_eq!(app.lang, Language::Mn);
+        assert_eq!(app.modal, ActiveModal::None);
 
         // In Settings modal:
         app.open_settings_modal();
         assert_eq!(app.modal, ActiveModal::Settings);
 
-        // In Settings modal, 'l' (lowercase) toggles language: Ja -> ZhCn
+        // In Settings modal, 'l' or 'L' opens Language modal
         handle_crossterm_event(
             &mut app,
             CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)),
         )?;
-        assert_eq!(app.lang, Language::ZhCn);
+        assert!(matches!(app.modal, ActiveModal::Language(_)));
 
-        // 'L' toggles language: ZhCn -> ZhTw
+        // Press 'Esc' to cancel without change
         handle_crossterm_event(
             &mut app,
-            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::SHIFT)),
-        )?;
-        assert_eq!(app.lang, Language::ZhTw);
-
-        // 'ㅣ' (Korean IME without shift) in settings modal toggles language: ZhTw -> Mn
-        handle_crossterm_event(
-            &mut app,
-            CrosstermEvent::Key(KeyEvent::new(KeyCode::Char('ㅣ'), KeyModifiers::NONE)),
+            CrosstermEvent::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
         )?;
         assert_eq!(app.lang, Language::Mn);
+        assert_eq!(app.modal, ActiveModal::None);
 
         Ok(())
     }

@@ -97,10 +97,10 @@ fn test_hangul_shift_shortcuts() -> anyhow::Result<()> {
     let db = Database::in_memory()?;
     let mut app = App::new(db)?;
 
-    let initial_lang = app.lang;
-    // Shift + 'ㅣ' is 'L' -> Language toggle
+    // Shift + 'ㅣ' is 'L' -> Opens Language Selection modal
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅣ'), KeyModifiers::SHIFT))?;
-    assert_ne!(app.lang, initial_lang);
+    assert!(matches!(app.modal, ActiveModal::Language(_)));
+    app.close_modal();
 
     // Shift + 'ㅊ' is 'C' -> Calendar Manager modal
     handle_crossterm_event(&mut app, make_key_event(KeyCode::Char('ㅊ'), KeyModifiers::SHIFT))?;

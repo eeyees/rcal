@@ -17,6 +17,27 @@ use rcal::ui;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // 0. Process command line arguments (e.g. --version, -v, --help)
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "--version" | "-v" | "-V" => {
+                println!("rcal {}", rcal::version());
+                return Ok(());
+            }
+            "--help" | "-h" => {
+                println!("rcal {}", rcal::version());
+                println!("Fast, mouse-interactive TUI Calendar in Rust with multi-cloud sync\n");
+                println!("Usage: rcal [OPTIONS]\n");
+                println!("Options:");
+                println!("  -v, --version  Print version information (CalVer: YYYY.MM.DD.N)");
+                println!("  -h, --help     Print help information");
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
+
     // 1. Setup panic hook to guarantee terminal cleanup on crash
     setup_panic_hook();
 

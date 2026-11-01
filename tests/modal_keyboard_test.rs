@@ -378,12 +378,11 @@ mod tests {
         handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
         assert_eq!(app.week_start_day, WeekStartDay::Monday);
 
-        // Language toggle with 'l'
-        let initial_lang = app.lang;
+        // Language modal with 'l'
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('l'))).unwrap();
-        assert_ne!(app.lang, initial_lang);
+        assert!(matches!(app.modal, ActiveModal::Language(_)));
 
-        // Enter closes modal
+        // Enter closes modal and selects language
         handle_crossterm_event(&mut app, make_key(KeyCode::Enter)).unwrap();
         assert_eq!(app.modal, ActiveModal::None);
     }

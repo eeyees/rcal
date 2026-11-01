@@ -36,7 +36,10 @@ impl CalDavClient {
         }
 
         let mut headers = HeaderMap::new();
-        headers.insert(USER_AGENT, HeaderValue::from_static("rcal/0.1.0 (Rust TUI Calendar)"));
+        let ua = format!("rcal/{} (Rust TUI Calendar)", crate::version());
+        if let Ok(val) = HeaderValue::from_str(&ua) {
+            headers.insert(USER_AGENT, val);
+        }
 
         let client = Client::builder()
             .default_headers(headers)
@@ -339,7 +342,7 @@ impl CalDavClient {
                 let get_res = self.client
                     .get(event_url.as_str())
                     .basic_auth(&self.username, Some(&self.password))
-                    .header(USER_AGENT, "rcal/0.1.0 (Rust TUI Calendar)")
+                    .header(USER_AGENT, format!("rcal/{} (Rust TUI Calendar)", crate::version()))
                     .send()
                     .await;
 

@@ -545,9 +545,63 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.set_week_start_day(prev);
                 }
                 KeyCode::Char('l') | KeyCode::Char('L') => {
-                    app.toggle_language();
+                    app.open_language_modal();
                 }
                 KeyCode::Enter => {
+                    app.close_modal();
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
+        ActiveModal::Language(ref mut state) => {
+            let norm_code = normalize_key_event(key);
+            let all_len = crate::i18n::Language::ALL.len();
+            match norm_code {
+                KeyCode::Esc | KeyCode::Char('q') => app.close_modal(),
+                KeyCode::Left | KeyCode::Char('h') => {
+                    if state.selected_idx > 0 {
+                        state.selected_idx -= 1;
+                    } else {
+                        state.selected_idx = all_len - 1;
+                    }
+                }
+                KeyCode::Right | KeyCode::Char('l') => {
+                    if state.selected_idx + 1 < all_len {
+                        state.selected_idx += 1;
+                    } else {
+                        state.selected_idx = 0;
+                    }
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if state.selected_idx >= 3 {
+                        state.selected_idx -= 3;
+                    } else if state.selected_idx + 18 < all_len {
+                        state.selected_idx += 18;
+                    } else if state.selected_idx + 15 < all_len {
+                        state.selected_idx += 15;
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if state.selected_idx + 3 < all_len {
+                        state.selected_idx += 3;
+                    } else {
+                        state.selected_idx = state.selected_idx % 3;
+                    }
+                }
+                KeyCode::Tab => {
+                    state.selected_idx = (state.selected_idx + 1) % all_len;
+                }
+                KeyCode::BackTab => {
+                    if state.selected_idx == 0 {
+                        state.selected_idx = all_len - 1;
+                    } else {
+                        state.selected_idx -= 1;
+                    }
+                }
+                KeyCode::Enter | KeyCode::Char(' ') => {
+                    let selected_lang = crate::i18n::Language::ALL[state.selected_idx];
+                    app.set_language(selected_lang);
                     app.close_modal();
                 }
                 _ => {}
@@ -631,7 +685,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('r') => app.trigger_sync(),
         KeyCode::Char('A') => app.open_accounts_modal(),
         KeyCode::Char('o') | KeyCode::Char('O') | KeyCode::Char('S') => app.open_settings_modal(),
-        KeyCode::Char('L') => app.toggle_language(),
+        KeyCode::Char('L') => app.open_language_modal(),
         KeyCode::Char('T') => app.cycle_theme(),
         KeyCode::Char('?') => app.open_help_modal(),
 

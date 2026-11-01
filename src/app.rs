@@ -172,6 +172,11 @@ impl AccountModalState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LanguageModalState {
+    pub selected_idx: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ActiveModal {
     None,
     EventForm(EventFormState),
@@ -179,6 +184,7 @@ pub enum ActiveModal {
     Accounts(AccountModalState),
     CalendarManager(CalendarModalState),
     Settings,
+    Language(LanguageModalState),
     Help,
     #[allow(dead_code)]
     ConfirmDelete(String /* event_id */),
@@ -426,6 +432,13 @@ impl App {
         self.modal = ActiveModal::Settings;
     }
 
+    pub fn open_language_modal(&mut self) {
+        let current_idx = Language::ALL.iter().position(|l| *l == self.lang).unwrap_or(0);
+        self.modal = ActiveModal::Language(LanguageModalState {
+            selected_idx: current_idx,
+        });
+    }
+
     pub fn set_week_start_day(&mut self, day: WeekStartDay) {
         self.week_start_day = day;
         let _ = self.db.set_setting("week_start_day", day.as_str());
@@ -576,7 +589,7 @@ impl App {
                 HitTarget::BtnHelp => self.open_help_modal(),
                 HitTarget::BtnSync => self.trigger_sync(),
                 HitTarget::BtnAccounts => self.open_accounts_modal(),
-                HitTarget::BtnLanguage => self.toggle_language(),
+                HitTarget::BtnLanguage => self.open_language_modal(),
                 HitTarget::BtnManageCalendars => self.open_calendar_modal(),
                 HitTarget::BtnSettings => self.open_settings_modal(),
                 HitTarget::BtnToggleSidebar => self.toggle_sidebar(),
@@ -605,6 +618,9 @@ impl App {
 
                 HitTarget::ModalSelectLanguage(l) => {
                     self.set_language(l);
+                    if matches!(self.modal, ActiveModal::Language(_)) {
+                        self.close_modal();
+                    }
                 }
 
                 HitTarget::ModalCalNameField => {}
