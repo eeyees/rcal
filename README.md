@@ -19,6 +19,32 @@
 [![Tokio](https://img.shields.io/badge/Async-Tokio-red.svg?style=flat-square)](https://tokio.rs)
 
 <p align="center">
+  🌐 <strong>Languages / 다국어 / 语言 / 言語 / Idiomas:</strong><br>
+  <strong>English</strong> •
+  <a href="./docs/locales/README.ko.md">한국어</a> •
+  <a href="./docs/locales/README.zh-CN.md">简体中文</a> •
+  <a href="./docs/locales/README.zh-TW.md">繁體中文</a> •
+  <a href="./docs/locales/README.ja.md">日本語</a> •
+  <a href="./docs/locales/README.es.md">Español</a> •
+  <a href="./docs/locales/README.fr.md">Français</a> •
+  <a href="./docs/locales/README.de.md">Deutsch</a> •
+  <a href="./docs/locales/README.pt-BR.md">Português</a> •
+  <a href="./docs/locales/README.ru.md">Русский</a> •
+  <a href="./docs/locales/README.it.md">Italiano</a> •<br>
+  <a href="./docs/locales/README.id.md">Bahasa Indonesia</a> •
+  <a href="./docs/locales/README.vi.md">Tiếng Việt</a> •
+  <a href="./docs/locales/README.tr.md">Türkçe</a> •
+  <a href="./docs/locales/README.pl.md">Polski</a> •
+  <a href="./docs/locales/README.nl.md">Nederlands</a> •
+  <a href="./docs/locales/README.ar.md">العربية</a> •
+  <a href="./docs/locales/README.hi.md">हिन्दी</a> •
+  <a href="./docs/locales/README.bn.md">বাংলা</a> •
+  <a href="./docs/locales/README.sv.md">Svenska</a> •
+  <a href="./docs/locales/README.uk.md">Українська</a> •
+  <a href="./docs/locales/README.th.md">ภาษาไทย</a>
+</p>
+
+<p align="center">
   <a href="#-key-features">Key Features</a> •
   <a href="#-ui-views--preview">UI Views</a> •
   <a href="#-keyboard--mouse-controls">Controls</a> •

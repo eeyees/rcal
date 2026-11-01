@@ -1,0 +1,319 @@
+<div align="center">
+
+```
+  ██████╗  ██████╗ █████╗ ██╗     
+  ██╔══██╗██╔════╝██╔══██╗██║     
+  ██████╔╝██║     ███████║██║     
+  ██╔══██╗██║     ██╔══██║██║     
+  ██║  ██║╚██████╗██║  ██║███████╗
+  ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝
+```
+
+### **멀티 클라우드 동기화를 지원하는 빠르고 현대적인 마우스 인터랙티브 Rust 터미널 캘린더**
+
+[![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](../../LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg?style=flat-square)](https://github.com/eeyees/rcal)
+[![Ratatui](https://img.shields.io/badge/Ratatui-0.29-green.svg?style=flat-square&logo=terminal)](https://github.com/ratatui/ratatui)
+[![SQLite](https://img.shields.io/badge/SQLite-WAL%20Mode-003B57.svg?style=flat-square&logo=sqlite)](https://www.sqlite.org)
+[![Tokio](https://img.shields.io/badge/Async-Tokio-red.svg?style=flat-square)](https://tokio.rs)
+
+<p align="center">
+  🌐 <strong>Languages / 언어:</strong><br>
+  <a href="../../README.md">English</a> •
+  <a href="./README.ko.md"><strong>한국어</strong></a> •
+  <a href="./README.zh-CN.md">简体中文</a> •
+  <a href="./README.zh-TW.md">繁體中文</a> •
+  <a href="./README.ja.md">日本語</a> •
+  <a href="./README.es.md">Español</a> •
+  <a href="./README.fr.md">Français</a> •
+  <a href="./README.de.md">Deutsch</a> •
+  <a href="./README.pt-BR.md">Português</a> •
+  <a href="./README.ru.md">Русский</a> •
+  <a href="./README.it.md">Italiano</a> •
+  <a href="./README.id.md">Bahasa Indonesia</a> •
+  <a href="./README.vi.md">Tiếng Việt</a> •
+  <a href="./README.tr.md">Türkçe</a> •
+  <a href="./README.pl.md">Polski</a> •
+  <a href="./README.nl.md">Nederlands</a> •
+  <a href="./README.ar.md">العربية</a> •
+  <a href="./README.hi.md">हिन्दी</a> •
+  <a href="./README.bn.md">বাংলা</a> •
+  <a href="./README.sv.md">Svenska</a> •
+  <a href="./README.uk.md">Українська</a> •
+  <a href="./README.th.md">ภาษาไทย</a>
+</p>
+
+<p align="center">
+  <a href="#-주요-기능">주요 기능</a> •
+  <a href="#-ui-뷰--화면-프리뷰">UI 뷰</a> •
+  <a href="#-키보드--마우스-조작법">조작법</a> •
+  <a href="#-멀티-클라우드--caldav-동기화">클라우드 동기화</a> •
+  <a href="#-테마--개인화">테마</a> •
+  <a href="#-설치--실행">설치</a> •
+  <a href="#-아키텍처">아키텍처</a>
+</p>
+
+---
+
+</div>
+
+`rcal`은 터미널 환경에서도 구글 캘린더 수준의 직관적인 시각화와 편리함을 누릴 수 있도록 개발된 초경량 고성능 TUI 캘린더입니다. **지연 시간 없는 즉각적인 반응성**, **100% 마우스 인터랙션**, 그리고 **안정적인 멀티 클라우드 양방향 동기화**를 제공합니다.
+
+---
+
+## ✨ 주요 기능
+
+- ⚡ **지연 없는 오프라인 퍼스트 아키텍처**: 임베디드 SQLite WAL(Write-Ahead Logging) 모드를 기반으로 하여 1밀리초 미만의 초고속 시작 속도와 오프라인 조회를 지원합니다.
+- 🖱️ **완벽한 마우스 상호작용 지원**:
+  - 뷰 탭(`[ 1:월간 ]`, `[ 2:주간 ]`, `[ 3:일간 ]`, `[ 4:목록 ]`) 및 헤더 버튼(`[ < ]`, `[ 오늘 ]`, `[ > ]`, `[ ⟳ 동기화 ]`) 클릭 동작.
+  - 월간 뷰에서 날짜 클릭 시 해당 날짜 선택, 더블 클릭 시 즉시 일간 뷰 상세 화면으로 전환.
+  - 주간 및 일간 뷰에서 원하는 시간 슬롯 클릭 시 해당 시간에 바로 일정 생성 모달 열림.
+  - 일정 블록 클릭 시 상세 보기 및 수정 모달 실행.
+  - 마우스 휠 스크롤을 통한 날짜 이동 및 시간 타임라인 스크롤.
+- 📅 **4가지 친숙한 고밀도 캘린더 뷰**:
+  - **월간 뷰 (Month View)**: 일정 수 표시 배지, 오늘 날짜 강조 표시가 포함된 7열 레이아웃.
+  - **주간 뷰 (Week View)**: 일~토(또는 월/토 시작) 타임라인과 시간대별 컬러 일정 블록 배치.
+  - **일간 뷰 (Day View)**: 동시간대 겹치는 일정들을 나란히 배치(Concurrent Overlap Slotting)하는 고정밀 타임라인.
+  - **목록 뷰 (Agenda View)**: 날짜별로 그룹화된 다가오는 일정 목록 스트림.
+- ☁️ **멀티 클라우드 & CalDAV 동기화 엔진**:
+  - **Apple iCloud**: CalDAV 기반 안정적인 양방향 동기화.
+  - **네이버 캘린더 (Naver)**: 네이버 캘린더 CalDAV 자동 주소 탐색 및 동기화.
+  - **Google Calendar**: Google Cloud OAuth2 토큰 기반 캘린더 API 어댑터.
+  - **Microsoft 365 / Outlook**: Microsoft Graph API 어댑터.
+  - **삼성 캘린더 (Samsung)**: 삼성 클라우드 연동 어댑터.
+  - **백그라운드 비동기 워커**: UI를 멈추지 않고 5분 주기 또는 수동 호출 시 백그라운드 Tokio 워커가 조용히 동기화 수행.
+- ⌨️ **Vim 키바인딩 & 투명 한글 IME 네비게이션**:
+  - `h` / `j` / `k` / `l` 방향 이동, 숫자 뷰 전환, 간편한 단축키 제공.
+  - **한글 입력 상태 투명 변환**: 한글 입력기(`ㅗ/ㅓ/ㅏ/ㅣ` 등)가 켜져 있어도 영문 단축키로 자동 매핑되어 터미널 경고음 없이 쾌적하게 조작 가능.
+- 🌐 **다국어(i18n) 시스템 지원**:
+  - 시스템 로케일(`LANG`, `LC_ALL`) 자동 감지.
+  - `L` 키 또는 `[ L: 한/EN ]` 클릭으로 런타임 중 즉시 **한국어** ↔ **English** 전환.
+  - 날짜 표기, 요일, 모달 안내, 상태 메시지 전체 다국어 처리.
+- 🎨 **다채로운 테마 및 개인화**:
+  - 7가지 빌트인 컬러 팔레트: **Modern Dark**, **Nord**, **Dracula**, **Forest**, **Sunset**, **Monokai**, **Solarized**.
+  - 주의 시작 요일 설정: **일요일**, **월요일**, **토요일** 중 선택 가능.
+  - 커스텀 캘린더 생성 및 색상 태그 관리 (`개인`, `업무`, `공휴일` 등).
+
+---
+
+## 🖥️ UI 뷰 & 화면 프리뷰
+
+```
+┌── rcal v0.1.0 ─────────────────────────────────────────────── [ L: 한/EN ] [ ? 도움말 ] [ ⚙ 설정 ] ──┐
+│ [ 1:월간 ] [ 2:주간 ] [ 3:일간 ] [ 4:목록 ]      [ < ] [ 오늘 ] [ > ]  2026-11-01 (일)   [ ⟳ 동기화 ]  │
+├────────────────────┬───────────────────────────────────────────────────────────────────────────────────┤
+│ 캘린더 목록        │                               2026년 11월                                         │
+│ [x] ■ 개인         │  일          월          화          수          목          금          토       │
+│ [x] ■ 업무         │ ┌───────────┬───────────┬───────────┬───────────┬───────────┬───────────┬───────────┐ │
+│ [x] ■ 공휴일       │ │ 1  오늘   │ 2         │ 3         │ 4         │ 5         │ 6         │ 7         │ │
+│                    │ │■ 10:00    │■ 09:00    │           │■ 14:00    │           │■ 19:00    │           │ │
+│ 계정               │ │  스프린트 │  스탠드업 │           │  디자인   │           │  저녁약속 │           │ │
+│ • iCloud (동기화중)│ ├───────────┼───────────┼───────────┼───────────┼───────────┼───────────┼───────────┤ │
+│ • Google (연결됨)  │ │ 8         │ 9         │ 10        │ 11        │ 12        │ 13        │ 14        │ │
+│                    │ │           │           │           │           │           │           │           │ │
+├────────────────────┴───────────────────────────────────────────────────────────────────────────────────┤
+│ [c] 새 일정  [m/w/d/a] 뷰 전환  [h/j/k/l] 이동  [/] 검색  [a] 계정 관리  [s] 설정  [q] 종료            │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ⌨️ 키보드 & 마우스 조작법
+
+### 🧭 탐색 및 뷰 전환
+
+| 단축키 | 마우스 동작 | 설명 |
+| :--- | :--- | :--- |
+| `h` / `j` / `k` / `l` 또는 방향키 | 날짜 셀 / 시간 슬롯 클릭 | 좌 / 하 / 상 / 우 커서 이동 |
+| `1` 또는 `m` | `[ 1:월간 ]` 탭 클릭 | **월간 뷰**로 전환 |
+| `2` 또는 `w` | `[ 2:주간 ]` 탭 클릭 | **주간 뷰**로 전환 |
+| `3` 또는 `d` | `[ 3:일간 ]` 탭 클릭 | **일간 뷰**로 전환 |
+| `4` 또는 `a` | `[ 4:목록 ]` 탭 클릭 | **목록(Agenda) 뷰**로 전환 |
+| `t` | `[ 오늘 ]` 버튼 클릭 | 커서를 오늘 날짜로 이동 |
+| `[` / `]` | `[ < ]` / `[ > ]` 버튼 클릭 | 이전 / 다음 기간 이동 (월/주/일 단위) |
+| 마우스 휠 스크롤 | 휠 위/아래 굴리기 | 타임라인 스크롤 및 날짜 이동 |
+| 더블 클릭 | 월간 뷰 날짜 셀 더블 클릭 | 해당 날짜의 일간 뷰로 즉시 드릴다운 |
+
+### 📝 일정 생성 및 모달 관리
+
+| 단축키 | 마우스 동작 | 설명 |
+| :--- | :--- | :--- |
+| `c` 또는 `n` | `[ + 새 일정 ]` 또는 빈 슬롯 클릭 | 새 일정 생성 모달 열기 |
+| `Enter` | 일정 블록 클릭 | 선택한 일정 상세 보기 모달 열기 |
+| `e` | `[ 수정 ]` 버튼 클릭 | 일정 정보 수정 |
+| `x` 또는 `Delete` | `[ 삭제 ]` 버튼 클릭 | 선택한 일정 삭제 |
+| `Tab` / `Shift+Tab` | 입력 필드 / 버튼 클릭 | 입력 폼 필드 및 버튼 간 포커스 이동 |
+| `Esc` 또는 `q` | `[ 닫기 ]` 또는 백드롭 클릭 | 열려 있는 모달 닫기 |
+
+### ⚙️ 시스템 설정 및 동기화
+
+| 단축키 | 마우스 동작 | 설명 |
+| :--- | :--- | :--- |
+| `L` | `[ L: 한/EN ]` 버튼 클릭 | 언어 전환 (한국어 ↔ English) |
+| `s` | `[ ⚙ 설정 ]` 버튼 클릭 | 환경설정 모달 (주 시작 요일, 테마, 언어) |
+| `a` | 사이드바 계정 메뉴 클릭 | 클라우드 계정 관리자 모달 열기 |
+| `b` | 사이드바 접기 버튼 클릭 | 사이드바 표시/숨김 토글 |
+| `r` | `[ ⟳ 동기화 ]` 버튼 클릭 | 즉시 클라우드 백그라운드 동기화 실행 |
+| `?` | `[ ? 도움말 ]` 버튼 클릭 | 전체 단축키 안내 도움말 열기 |
+| `Ctrl+C` / `q` | - | `rcal` 안전하게 종료 |
+
+---
+
+## ☁️ 멀티 클라우드 & CalDAV 동기화
+
+`rcal`은 외부 캘린더 서비스와 항상 최신 일정을 주고받을 수 있도록 견고한 동기화 레이어를 제공합니다.
+
+```mermaid
+flowchart LR
+    A["rcal TUI"] <--> B["로컬 SQLite (WAL)"]
+    B <--> C["백그라운드 Tokio 동기화 워커"]
+    C <--> D["Apple iCloud (CalDAV)"]
+    C <--> E["Google Calendar (OAuth2)"]
+    C <--> F["Microsoft 365 (Graph API)"]
+    C <--> G["네이버 캘린더 (CalDAV)"]
+    C <--> H["삼성 캘린더"]
+```
+
+### 지원 계정 서비스
+
+- **Apple iCloud**: Apple ID 및 앱 전용 암호(App-Specific Password)를 통한 CalDAV 연결.
+- **네이버 캘린더**: 네이버 CalDAV 서버 주소와 2단계 인증 전용 비밀번호로 연결.
+- **Google Calendar**: Google Cloud OAuth2 인증 토큰 교환을 통한 동기화.
+- **Microsoft 365 / Outlook**: Microsoft Graph API를 통한 기업 및 개인 Outlook 캘린더 연동.
+- **삼성 캘린더**: 삼성 클라우드 계정 연동.
+
+`rcal` 실행 후 `a` 키를 누르거나 사이드바의 **계정** 항목을 클릭하여 손쉽게 계정을 등록할 수 있습니다.
+
+---
+
+## 🎨 테마 & 개인화
+
+`s` 키를 눌러 **환경설정 모달**에서 취향에 맞게 설정할 수 있습니다:
+
+### 지원 테마
+- 🌙 **Modern Dark** (기본 깔끔한 모던 다크)
+- ❄️ **Nord** (차분한 북유럽 아틱 블루)
+- 🧛 **Dracula** (선명한 고대비 다크)
+- 🌲 **Forest** (편안한 말차 & 자연 감성 그린)
+- 🌆 **Sunset** (화려한 사이버펑크 퍼플 & 오렌지)
+- 🎨 **Monokai** (클래식 개발자 에디터 스타일)
+- ☀️ **Solarized** (정밀하게 조율된 솔라라이즈드 다크)
+
+### 주의 시작 요일
+사용자의 생활 패턴 및 근무 환경에 맞춰 주의 시작 요일을 **일요일**, **월요일**, **토요일** 중에서 선택할 수 있습니다.
+
+---
+
+## 🏗️ 아키텍처
+
+```mermaid
+flowchart TD
+    subgraph UI ["터미널 UI 레이어 (Ratatui + Crossterm)"]
+        EventLoop["이벤트 스트림 (키 입력, 마우스 이벤트, 리사이즈)"]
+        HitMap["HitMap 좌표 히트테스팅 엔진"]
+        Renderer["Ratatui 렌더러"]
+        Modals["모달 스택 (일정 생성, 계정 관리, 설정, 도움말)"]
+    end
+
+    subgraph Core ["코어 엔진"]
+        AppState["앱 상태 머신"]
+        i18n["다국어 엔진 & 한글 투명 IME 매핑"]
+        ThemeEngine["테마 및 스타일 엔진"]
+    end
+
+    subgraph Storage ["영구 저장소"]
+        DB["SQLite 데이터베이스 (rusqlite WAL 모드)"]
+        Models["데이터 모델: Event, Calendar, Account"]
+    end
+
+    subgraph BackgroundWorker ["비동기 네트워크 동기화"]
+        Tokio["Tokio 백그라운드 태스크 (300초 주기 + mpsc 채널)"]
+        SyncEngine["동기화 엔진"]
+        Adapters["어댑터 (CalDAV, iCalendar, Google, MS Graph)"]
+    end
+
+    EventLoop --> HitMap --> AppState
+    AppState --> Renderer
+    AppState --> Modals
+    AppState <--> DB
+    AppState --> Tokio
+    Tokio <--> SyncEngine
+    SyncEngine <--> DB
+    SyncEngine <--> Adapters
+```
+
+---
+
+## 🚀 설치 & 실행
+
+### 사전 요구사항
+
+- [Rust 1.80 이상](https://www.rust-lang.org/tools/install) (`cargo` 및 `rustup`)
+
+### 소스코드에서 빌드
+
+```bash
+# 리포지토리 복제
+git clone https://github.com/eeyees/rcal.git
+cd rcal
+
+# 최적화 릴리스 빌드
+cargo build --release
+
+# 실행
+./target/release/rcal
+```
+
+### Cargo 전역 설치
+
+```bash
+cargo install --path .
+rcal
+```
+
+### 로컬 데이터 저장 위치
+
+- **macOS**: `~/Library/Application Support/rcal/rcal.db`
+- **Linux**: `~/.local/share/rcal/rcal.db`
+- **Windows**: `%LOCALAPPDATA%\rcal\rcal.db`
+
+---
+
+## 🗺️ 개발 로드맵
+
+- [x] **1단계: 로컬 TUI MVP**
+  - 월간, 주간, 일간(겹침 감지), 목록 뷰 구현
+  - 100% 마우스 인터랙션 히트테스팅 엔진
+  - SQLite WAL 기반 영구 저장 및 캐시
+  - 일정 CRUD 모달 및 유효성 검사
+- [x] **2단계: CalDAV 동기화**
+  - Apple iCloud 양방향 동기화
+  - 네이버 캘린더 양방향 동기화
+  - Tokio 비동기 백그라운드 동기화 워커
+  - 계정 설정 관리 UI
+- [x] **3단계: 멀티 클라우드 어댑터 및 완성도 향상**
+  - Google Calendar OAuth2 동기화
+  - Microsoft 365 Graph API 어댑터
+  - 삼성 캘린더 어댑터
+  - 한글 IME 상태 투명 단축키 매핑
+  - 7가지 테마 및 주 시작 요일 설정
+- [ ] **4단계: 확장 생태계 및 프로토콜 지원**
+  - [ ] AI 에이전트를 위한 MCP(Model Context Protocol) 서버 모드 지원
+  - [ ] 외부 캘린더용 WebCal / iCalendar(`.ics`) HTTP 구독 서버
+  - [ ] 반복 일정 규칙(RFC 5545 RRULE) 지원
+  - [ ] 자연어 일정 등록 (예: `rcal add "내일 오후 2시 팀 회의"`)
+  - [ ] OS 시스템 알림 연동
+
+---
+
+## 🤝 기여하기
+
+버그 리포트, 기능 제안, PR(Pull Request) 모두 환영합니다!  
+[GitHub Issues](https://github.com/eeyees/rcal/issues)를 통해 의견을 남겨주세요.
+
+---
+
+## 📜 라이선스
+
+이 프로젝트는 **MIT 라이선스**에 따라 배포됩니다. 자세한 내용은 [`LICENSE`](../../LICENSE) 파일을 참조하세요.
