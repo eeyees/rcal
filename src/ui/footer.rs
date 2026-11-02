@@ -35,6 +35,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         ])
     } else {
         let t = lang.t();
+        let nav_label = match lang {
+            crate::i18n::Language::Ko => "탐색",
+            crate::i18n::Language::Ja => "移動",
+            _ => "Navigate",
+        };
         Line::from(vec![
             Span::styled(
                 format!(" {} ", t.footer_keys_label),
@@ -44,23 +49,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
             Span::raw(format!(" {} | ", t.footer_view)),
             Span::styled("b", Style::default().fg(theme.primary)),
             Span::raw(format!(" {} | ", t.footer_sidebar)),
-            Span::styled("c/n", Style::default().fg(theme.secondary)),
-            Span::raw(format!(" {} | ", t.footer_new)),
-            Span::styled("r", Style::default().fg(theme.accent)),
-            Span::raw(format!(" {} | ", t.footer_sync)),
-            Span::styled("L", Style::default().fg(theme.primary)),
-            Span::raw(format!(" {} | ", t.footer_lang)),
-            Span::styled("T", Style::default().fg(theme.accent)),
-            Span::raw(format!(
-                " {} | ",
-                match lang {
-                    crate::i18n::Language::Ko => "테마",
-                    crate::i18n::Language::Ja => "テーマ",
-                    _ => "Theme",
-                }
-            )),
-            Span::styled("A", Style::default().fg(theme.secondary)),
-            Span::raw(format!(" {} | ", t.footer_accounts)),
+            Span::styled("h/j/k/l", Style::default().fg(theme.accent)),
+            Span::raw(format!(" {} | ", nav_label)),
+            Span::styled("t", Style::default().fg(theme.secondary)),
+            Span::raw(format!(" {} | ", t.btn_today)),
             Span::styled("?", Style::default().fg(theme.text_muted)),
             Span::raw(format!(" {} | ", t.footer_help)),
             Span::styled("q", Style::default().fg(theme.danger)),
