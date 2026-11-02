@@ -39,6 +39,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             Constraint::Length(1), // Header
             Constraint::Length(1), // Spacer
             Constraint::Min(15),   // Main Workspace (Sidebar + Calendar View)
+            Constraint::Length(1), // Message line
             Constraint::Length(1), // Footer status bar
         ])
         .split(size);
@@ -79,7 +80,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
     }
 
     // 3. Footer
-    footer::render(f, app, chunks[3]);
+    footer::render_message(f, app, chunks[3]);
+    footer::render(f, app, chunks[4]);
 
     // 4. Modals (Overlays on top)
     if !matches!(app.modal, ActiveModal::None) {

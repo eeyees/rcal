@@ -380,4 +380,282 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_sidebar_mini_calendar_in_week_and_day_view() -> anyhow::Result<()> {
+        use chrono::{Datelike, Local};
+        use ratatui::style::Modifier;
+        use rcal::app::ViewMode;
+
+        let db = Database::in_memory()?;
+        let mut app = App::new(db)?;
+        app.lang = rcal::i18n::Language::Ko;
+
+        let backend = TestBackend::new(120, 40);
+        let mut terminal = Terminal::new(backend)?;
+
+        // 1. Month View: Mini calendar should NOT be rendered in sidebar
+        app.current_view = ViewMode::Month;
+        terminal.draw(|f| ui::render(f, &mut app))?;
+
+        let has_mini_cal_in_month = app
+            .hit_map
+            .targets()
+            .iter()
+            .any(|(_, t)| matches!(t, HitTarget::MiniCalendarDay(_)));
+        assert!(
+            !has_mini_cal_in_month,
+            "Mini calendar should NOT be rendered in Month view"
+        );
+
+        // 2. Week View: Mini calendar MUST be rendered in sidebar
+        app.current_view = ViewMode::Week;
+        terminal.draw(|f| ui::render(f, &mut app))?;
+
+        let mini_cal_days: Vec<_> = app
+            .hit_map
+            .targets()
+            .iter()
+            .filter_map(|(rect, t)| {
+                if let HitTarget::MiniCalendarDay(d) = t {
+                    Some((*rect, *d))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        assert!(
+            !mini_cal_days.is_empty(),
+            "Mini calendar must be rendered in Week view"
+        );
+        assert_eq!(
+            mini_cal_days.len(),
+            42,
+            "Mini calendar should register 42 day cells (6 rows * 7 days)"
+        );
+
+        // Sidebar width is 34 (since width is 120), so all mini calendar cells must be in sidebar (x < 34)
+        for (rect, _) in &mini_cal_days {
+            assert!(
+                rect.x < 34,
+                "Mini calendar cell x ({}) must be inside sidebar (< 34)",
+                rect.x
+            );
+        }
+
+        // Hit map must also contain MiniCalPrev and MiniCalNext
+        let has_mini_prev = app
+            .hit_map
+            .targets()
+            .iter()
+            .any(|(_, t)| *t == HitTarget::MiniCalPrev);
+        let has_mini_next = app
+            .hit_map
+            .targets()
+            .iter()
+            .any(|(_, t)| *t == HitTarget::MiniCalNext);
+        assert!(has_mini_prev, "MiniCalPrev must be registered in Week view");
+        assert!(has_mini_next, "MiniCalNext must be registered in Week view");
+
+        // Verify that TODAY is highlighted in the terminal buffer!
+        let today = Local::now().date_naive();
+        let today_cell = mini_cal_days
+            .iter()
+            .find(|(_, d)| *d == today)
+            .expect("Today must exist in mini calendar grid");
+
+        let (today_rect, _) = today_cell;
+        let buf = terminal.backend().buffer();
+        // The day number cell should have today's background and BOLD modifier
+        let cell_at_today = &buf[(today_rect.x + 1, today_rect.y)];
+        assert_eq!(
+            cell_at_today.bg, app.theme.today_bg,
+            "Today's cell must be highlighted with theme.today_bg!"
+        );
+        assert!(
+            cell_at_today.modifier.contains(Modifier::BOLD),
+            "Today's cell must have BOLD modifier!"
+        );
+
+        // Click a different date in the mini calendar (e.g. 15th of the month)
+        let target_date =
+            NaiveDate::from_ymd_opt(app.selected_date.year(), app.selected_date.month(), 15)
+                .unwrap();
+        let (rect_15, _) = mini_cal_days
+            .iter()
+            .find(|(_, d)| *d == target_date)
+            .expect("15th of month must be in grid");
+
+        app.handle_mouse_click(rect_15.x + 1, rect_15.y)?;
+        assert_eq!(
+            app.selected_date, target_date,
+            "Clicking date in mini calendar must update app.selected_date"
+        );
+
+        // 3. Day View: Mini calendar MUST also be rendered in sidebar
+        app.current_view = ViewMode::Day;
+        terminal.draw(|f| ui::render(f, &mut app))?;
+
+        let has_mini_cal_in_day = app
+            .hit_map
+            .targets()
+            .iter()
+            .any(|(_, t)| matches!(t, HitTarget::MiniCalendarDay(_)));
+        assert!(
+            has_mini_cal_in_day,
+            "Mini calendar must be rendered in Day view"
+        );
+
+        // Click another date in Day view (e.g. 20th of the month)
+        let target_date_20 =
+            NaiveDate::from_ymd_opt(app.selected_date.year(), app.selected_date.month(), 20)
+                .unwrap();
+        let (rect_20, _) = app
+            .hit_map
+            .targets()
+            .iter()
+            .find_map(|(r, t)| {
+                if let HitTarget::MiniCalendarDay(d) = t {
+                    if *d == target_date_20 {
+                        Some((*r, *d))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .expect("20th must exist in Day view mini calendar");
+
+        app.handle_mouse_click(rect_20.x + 1, rect_20.y)?;
+        assert_eq!(
+            app.selected_date, target_date_20,
+            "Clicking date in mini calendar in Day view must update app.selected_date"
+        );
+
+        // 4. Test Prev / Next Month navigation in mini calendar
+        let orig_month = app.selected_date.month();
+        let (prev_rect, _) = app
+            .hit_map
+            .targets()
+            .iter()
+            .find(|(_, t)| *t == HitTarget::MiniCalPrev)
+            .unwrap();
+        app.handle_mouse_click(prev_rect.x, prev_rect.y)?;
+        let expected_prev_month = if orig_month == 1 { 12 } else { orig_month - 1 };
+        assert_eq!(
+            app.selected_date.month(),
+            expected_prev_month,
+            "Clicking MiniCalPrev must navigate to previous month"
+        );
+
+        let (next_rect, _) = app
+            .hit_map
+            .targets()
+            .iter()
+            .find(|(_, t)| *t == HitTarget::MiniCalNext)
+            .unwrap();
+        app.handle_mouse_click(next_rect.x, next_rect.y)?;
+        assert_eq!(
+            app.selected_date.month(),
+            orig_month,
+            "Clicking MiniCalNext must navigate forward 1 month"
+        );
+
+        // 5. Calendar toggle and sidebar toggle must still function in Week/Day view
+        let has_cal_toggle = app
+            .hit_map
+            .targets()
+            .iter()
+            .any(|(_, t)| matches!(t, HitTarget::CalendarToggle(_)));
+        let has_sidebar_toggle = app
+            .hit_map
+            .targets()
+            .iter()
+            .any(|(_, t)| *t == HitTarget::BtnToggleSidebar);
+        assert!(
+            has_cal_toggle,
+            "Calendar toggle must be present in Day view sidebar"
+        );
+        assert!(
+            has_sidebar_toggle,
+            "Sidebar toggle button must be present in Day view sidebar"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sidebar_mini_calendar_week_starts_and_themes() -> anyhow::Result<()> {
+        use chrono::{Datelike, Local};
+        use rcal::app::ViewMode;
+        use rcal::model::WeekStartDay;
+        use rcal::ui::theme::{Theme, ThemeMode};
+
+        let db = Database::in_memory()?;
+        let mut app = App::new(db)?;
+        app.current_view = ViewMode::Week;
+
+        let backend = TestBackend::new(120, 40);
+        let mut terminal = Terminal::new(backend)?;
+
+        // Test with Monday start
+        app.week_start_day = WeekStartDay::Monday;
+        terminal.draw(|f| ui::render(f, &mut app))?;
+
+        let days_mon_start: Vec<_> = app
+            .hit_map
+            .targets()
+            .iter()
+            .filter_map(|(rect, t)| {
+                if let HitTarget::MiniCalendarDay(d) = t {
+                    Some((*rect, *d))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(days_mon_start.len(), 42);
+
+        // First day of Monday start grid should be a Monday
+        let (_, first_date) = days_mon_start[0];
+        assert_eq!(first_date.weekday(), chrono::Weekday::Mon);
+
+        // Test with Saturday start
+        app.week_start_day = WeekStartDay::Saturday;
+        terminal.draw(|f| ui::render(f, &mut app))?;
+
+        let days_sat_start: Vec<_> = app
+            .hit_map
+            .targets()
+            .iter()
+            .filter_map(|(rect, t)| {
+                if let HitTarget::MiniCalendarDay(d) = t {
+                    Some((*rect, *d))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(days_sat_start.len(), 42);
+        let (_, first_sat_date) = days_sat_start[0];
+        assert_eq!(first_sat_date.weekday(), chrono::Weekday::Sat);
+
+        // Test with Light theme to verify today highlighting in light mode
+        app.theme = Theme::from_mode(ThemeMode::GitHubLight);
+        terminal.draw(|f| ui::render(f, &mut app))?;
+
+        let today = Local::now().date_naive();
+        let (today_rect, _) = days_sat_start
+            .iter()
+            .find(|(_, d)| *d == today)
+            .expect("Today must exist in Saturday start grid");
+
+        let buf = terminal.backend().buffer();
+        let cell_at_today = &buf[(today_rect.x + 1, today_rect.y)];
+        assert_eq!(cell_at_today.bg, app.theme.today_bg);
+
+        Ok(())
+    }
 }

@@ -150,4 +150,101 @@ mod tests {
             "All-day event must have a hit target registered in Week View"
         );
     }
+
+    #[test]
+    fn test_day_view_keyboard_selection_and_enter_to_details() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use rcal::app::ActiveModal;
+        use rcal::events::handle_crossterm_event;
+
+        let db = Database::in_memory().unwrap();
+        let mut app = App::new(db).unwrap();
+
+        let test_date = NaiveDate::from_ymd_opt(2028, 12, 25).unwrap();
+        app.selected_date = test_date;
+        app.current_view = ViewMode::Day;
+
+        let all_day_ev = Event {
+            id: "ev_day_1".to_string(),
+            calendar_id: "cal_personal".to_string(),
+            title: "워크샵".to_string(),
+            description: None,
+            location: None,
+            start_time: Local
+                .from_local_datetime(&test_date.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap(),
+            end_time: Local
+                .from_local_datetime(&test_date.and_hms_opt(23, 59, 59).unwrap())
+                .unwrap(),
+            all_day: true,
+            rrule: None,
+            sync_status: SyncStatus::Synced,
+            remote_id: None,
+            etag: None,
+            updated_at: Local::now(),
+        };
+
+        let timed_ev = Event {
+            id: "ev_day_2".to_string(),
+            calendar_id: "cal_personal".to_string(),
+            title: "회의".to_string(),
+            description: None,
+            location: None,
+            start_time: Local
+                .from_local_datetime(&test_date.and_hms_opt(14, 0, 0).unwrap())
+                .unwrap(),
+            end_time: Local
+                .from_local_datetime(&test_date.and_hms_opt(15, 0, 0).unwrap())
+                .unwrap(),
+            all_day: false,
+            rrule: None,
+            sync_status: SyncStatus::Synced,
+            remote_id: None,
+            etag: None,
+            updated_at: Local::now(),
+        };
+
+        app.db.save_event(&all_day_ev).unwrap();
+        app.db.save_event(&timed_ev).unwrap();
+        app.reload_events().unwrap();
+
+        assert_eq!(app.day_selected_event_idx, None);
+
+        // 1. Press Tab: Select first event (all-day event)
+        let tab_key = crossterm::event::Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE));
+        handle_crossterm_event(&mut app, tab_key.clone()).unwrap();
+        assert_eq!(app.day_selected_event_idx, Some(0));
+
+        // 2. Press Tab again: Select second event (timed event)
+        handle_crossterm_event(&mut app, tab_key).unwrap();
+        assert_eq!(app.day_selected_event_idx, Some(1));
+
+        // 3. Press Enter: Opens EventDetail for ev_day_2
+        let enter_key =
+            crossterm::event::Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        handle_crossterm_event(&mut app, enter_key.clone()).unwrap();
+        assert_eq!(app.modal, ActiveModal::EventDetail("ev_day_2".to_string()));
+
+        // Close modal
+        app.close_modal();
+        assert_eq!(app.modal, ActiveModal::None);
+
+        // 4. Press BackTab: cycles back to ev_day_1 (index 0)
+        let backtab_key =
+            crossterm::event::Event::Key(KeyEvent::new(KeyCode::BackTab, KeyModifiers::NONE));
+        handle_crossterm_event(&mut app, backtab_key).unwrap();
+        assert_eq!(app.day_selected_event_idx, Some(0));
+
+        // 5. Press Enter: Opens EventDetail for ev_day_1
+        handle_crossterm_event(&mut app, enter_key.clone()).unwrap();
+        assert_eq!(app.modal, ActiveModal::EventDetail("ev_day_1".to_string()));
+
+        app.close_modal();
+
+        // 6. Test hour-based Enter fallback when day_selected_event_idx is None:
+        app.day_selected_event_idx = None;
+        app.selected_hour = 14; // Matches ev_day_2 (14:00)
+        handle_crossterm_event(&mut app, enter_key).unwrap();
+        assert_eq!(app.modal, ActiveModal::EventDetail("ev_day_2".to_string()));
+    }
 }

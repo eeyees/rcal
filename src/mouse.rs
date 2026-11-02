@@ -24,6 +24,9 @@ pub enum HitTarget {
     // Sidebar
     CalendarToggle(String /* calendar_id */),
     BtnToggleSidebar,
+    MiniCalendarDay(NaiveDate),
+    MiniCalPrev,
+    MiniCalNext,
 
     // Views
     MonthDay(NaiveDate),

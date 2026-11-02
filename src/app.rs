@@ -358,6 +358,7 @@ pub struct App {
     pub current_view: ViewMode,
     pub selected_date: NaiveDate,
     pub selected_hour: u32,
+    pub day_selected_event_idx: Option<usize>,
     pub agenda_selected_index: usize,
 
     pub db: Database,
@@ -423,6 +424,7 @@ impl App {
             current_view: ViewMode::Month,
             selected_date: today,
             selected_hour: 9,
+            day_selected_event_idx: None,
             agenda_selected_index: 0,
             db,
             calendars: Vec::new(),
@@ -503,25 +505,41 @@ impl App {
     }
 
     // Navigation methods
+    pub fn nav_prev_month(&mut self) {
+        let (year, month) = if self.selected_date.month() == 1 {
+            (self.selected_date.year() - 1, 12)
+        } else {
+            (self.selected_date.year(), self.selected_date.month() - 1)
+        };
+        let day = self.selected_date.day().min(days_in_month(year, month));
+        if let Some(d) = NaiveDate::from_ymd_opt(year, month, day) {
+            self.selected_date = d;
+        }
+    }
+
+    pub fn nav_next_month(&mut self) {
+        let (year, month) = if self.selected_date.month() == 12 {
+            (self.selected_date.year() + 1, 1)
+        } else {
+            (self.selected_date.year(), self.selected_date.month() + 1)
+        };
+        let day = self.selected_date.day().min(days_in_month(year, month));
+        if let Some(d) = NaiveDate::from_ymd_opt(year, month, day) {
+            self.selected_date = d;
+        }
+    }
+
     pub fn nav_prev(&mut self) {
         match self.current_view {
             ViewMode::Month => {
-                // Go to previous month
-                let (year, month) = if self.selected_date.month() == 1 {
-                    (self.selected_date.year() - 1, 12)
-                } else {
-                    (self.selected_date.year(), self.selected_date.month() - 1)
-                };
-                let day = self.selected_date.day().min(days_in_month(year, month));
-                if let Some(d) = NaiveDate::from_ymd_opt(year, month, day) {
-                    self.selected_date = d;
-                }
+                self.nav_prev_month();
             }
             ViewMode::Week => {
                 self.selected_date = self.selected_date - ChronoDuration::days(7);
             }
             ViewMode::Day => {
                 self.selected_date = self.selected_date - ChronoDuration::days(1);
+                self.day_selected_event_idx = None;
             }
             ViewMode::Agenda => {
                 if self.agenda_selected_index > 0 {
@@ -534,22 +552,14 @@ impl App {
     pub fn nav_next(&mut self) {
         match self.current_view {
             ViewMode::Month => {
-                // Go to next month
-                let (year, month) = if self.selected_date.month() == 12 {
-                    (self.selected_date.year() + 1, 1)
-                } else {
-                    (self.selected_date.year(), self.selected_date.month() + 1)
-                };
-                let day = self.selected_date.day().min(days_in_month(year, month));
-                if let Some(d) = NaiveDate::from_ymd_opt(year, month, day) {
-                    self.selected_date = d;
-                }
+                self.nav_next_month();
             }
             ViewMode::Week => {
                 self.selected_date = self.selected_date + ChronoDuration::days(7);
             }
             ViewMode::Day => {
                 self.selected_date = self.selected_date + ChronoDuration::days(1);
+                self.day_selected_event_idx = None;
             }
             ViewMode::Agenda => {
                 self.agenda_selected_index += 1;
@@ -559,8 +569,28 @@ impl App {
 
     pub fn nav_today(&mut self) {
         self.selected_date = Local::now().date_naive();
+        self.day_selected_event_idx = None;
         let formatted = self.lang.format_month_year(self.selected_date);
         self.set_status(self.lang.msg_jump_today(&formatted));
+    }
+
+    pub fn events_for_day(&self, date: NaiveDate) -> Vec<Event> {
+        let mut all_day: Vec<Event> = self
+            .events_cache
+            .iter()
+            .filter(|ev| ev.occurs_on(date) && ev.all_day)
+            .cloned()
+            .collect();
+        let mut timed: Vec<Event> = self
+            .events_cache
+            .iter()
+            .filter(|ev| ev.occurs_on(date) && !ev.all_day)
+            .cloned()
+            .collect();
+        all_day.sort_by_key(|e| e.start_time);
+        timed.sort_by_key(|e| e.start_time);
+        all_day.extend(timed);
+        all_day
     }
 
     // Modal triggers
@@ -1401,6 +1431,18 @@ impl App {
 
                 HitTarget::CalendarToggle(cal_id) => {
                     self.toggle_calendar(&cal_id)?;
+                }
+
+                HitTarget::MiniCalendarDay(date) => {
+                    self.selected_date = date;
+                }
+
+                HitTarget::MiniCalPrev => {
+                    self.nav_prev_month();
+                }
+
+                HitTarget::MiniCalNext => {
+                    self.nav_next_month();
                 }
 
                 HitTarget::MonthDay(date) => {

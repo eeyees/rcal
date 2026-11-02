@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::Duration;
+use chrono::{Duration, Timelike};
 use crossterm::event::{
     Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent,
     MouseEventKind,
@@ -1079,9 +1079,11 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         // Navigation
         KeyCode::Char('h') | KeyCode::Left => {
             app.selected_date = app.selected_date - Duration::days(1);
+            app.day_selected_event_idx = None;
         }
         KeyCode::Char('l') | KeyCode::Right => {
             app.selected_date = app.selected_date + Duration::days(1);
+            app.day_selected_event_idx = None;
         }
         KeyCode::Char('k') | KeyCode::Up => match app.current_view {
             ViewMode::Month | ViewMode::Week => {
@@ -1128,10 +1130,51 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('T') => app.open_theme_modal(),
         KeyCode::Char('?') => app.open_help_modal(),
 
+        // Selection / Cycling in Day View
+        KeyCode::Tab => {
+            if app.current_view == ViewMode::Day {
+                let day_events = app.events_for_day(app.selected_date);
+                if !day_events.is_empty() {
+                    let next_idx = match app.day_selected_event_idx {
+                        Some(idx) => (idx + 1) % day_events.len(),
+                        None => 0,
+                    };
+                    app.day_selected_event_idx = Some(next_idx);
+                }
+            }
+        }
+        KeyCode::BackTab => {
+            if app.current_view == ViewMode::Day {
+                let day_events = app.events_for_day(app.selected_date);
+                if !day_events.is_empty() {
+                    let prev_idx = match app.day_selected_event_idx {
+                        Some(0) | None => day_events.len() - 1,
+                        Some(idx) => idx - 1,
+                    };
+                    app.day_selected_event_idx = Some(prev_idx);
+                }
+            }
+        }
+
         // Inspect/Select
         KeyCode::Enter => {
             if app.current_view == ViewMode::Month {
                 app.current_view = ViewMode::Day;
+            } else if app.current_view == ViewMode::Day {
+                let day_events = app.events_for_day(app.selected_date);
+                if let Some(idx) = app.day_selected_event_idx {
+                    if let Some(ev) = day_events.get(idx) {
+                        app.open_event_detail_modal(ev.id.clone());
+                    }
+                } else {
+                    // If no event selected with Tab, check if selected_hour has any events
+                    if let Some(ev) = day_events
+                        .iter()
+                        .find(|e| !e.all_day && e.start_time.hour() == app.selected_hour)
+                    {
+                        app.open_event_detail_modal(ev.id.clone());
+                    }
+                }
             } else if app.current_view == ViewMode::Agenda {
                 let mut sorted: Vec<&_> = app.events_cache.iter().collect();
                 sorted.sort_by_key(|e| e.start_time);

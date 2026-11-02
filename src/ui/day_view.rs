@@ -16,18 +16,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let is_today = selected_date == today;
     let theme = &app.theme;
 
-    // Filter events for this day
-    let events_today: Vec<&_> = app
-        .events_cache
-        .iter()
-        .filter(|ev| ev.occurs_on(selected_date))
-        .collect();
-
-    let all_day_events: Vec<&_> = events_today
-        .iter()
-        .filter(|ev| ev.all_day)
-        .copied()
-        .collect();
+    // Filter events for this day (all-day first, then timed sorted by start_time)
+    let events_today = app.events_for_day(selected_date);
+    let all_day_events: Vec<&_> = events_today.iter().filter(|ev| ev.all_day).collect();
 
     let all_day_height = if all_day_events.len() > 3 { 3 } else { 2 };
 
@@ -42,6 +33,15 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     // 1. Header Banner
     let day_name = app.lang.format_date_long(selected_date);
+    let selected_event_hint = if let Some(idx) = app.day_selected_event_idx {
+        if let Some(ev) = events_today.get(idx) {
+            format!(" [선택: {} - Enter: 상세]", ev.title)
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
     let hint_text = app.lang.t().day_view_hint;
     let header_line = Line::from(vec![
         Span::styled(
@@ -54,6 +54,16 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     .add_modifier(Modifier::BOLD)
             },
         ),
+        if !selected_event_hint.is_empty() {
+            Span::styled(
+                selected_event_hint,
+                Style::default()
+                    .fg(theme.secondary)
+                    .add_modifier(Modifier::BOLD),
+            )
+        } else {
+            Span::raw("")
+        },
         Span::raw("  "),
         Span::styled(
             hint_text,
@@ -129,21 +139,34 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 .map(|c| c.ratatui_color())
                 .unwrap_or(Color::Cyan);
 
+            let is_selected_event = app
+                .day_selected_event_idx
+                .map(|idx| idx == ev_i)
+                .unwrap_or(false);
+
             let ev_area = ev_chunks[ev_i];
             let loc_str = if let Some(loc) = &ev.location {
                 format!(" @ {}", loc)
             } else {
                 String::new()
             };
-            let title_text = format!(" ■ {}{}", ev.title, loc_str);
+            let prefix = if is_selected_event {
+                "▶ ■ "
+            } else {
+                " ■ "
+            };
+            let title_text = format!("{}{}{}", prefix, ev.title, loc_str);
 
-            let p_ev = Paragraph::new(Line::from(vec![Span::styled(
-                title_text,
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(cal_color)
-                    .add_modifier(Modifier::BOLD),
-            )]));
+            let mut style = Style::default()
+                .fg(Color::Black)
+                .bg(cal_color)
+                .add_modifier(Modifier::BOLD);
+
+            if is_selected_event {
+                style = style.add_modifier(Modifier::UNDERLINED | Modifier::REVERSED);
+            }
+
+            let p_ev = Paragraph::new(Line::from(vec![Span::styled(title_text, style)]));
 
             f.render_widget(p_ev, ev_area);
             app.hit_map
@@ -173,6 +196,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .direction(Direction::Vertical)
         .constraints(hour_constraints)
         .split(chunks[2]);
+
+    let mut timed_event_counter = 0;
 
     for h in start_hour..=end_hour {
         let idx = (h - start_hour) as usize;
@@ -214,7 +239,6 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         let events_in_hour: Vec<&_> = events_today
             .iter()
             .filter(|ev| !ev.all_day && ev.start_time.hour() == h)
-            .copied()
             .collect();
 
         if !events_in_hour.is_empty() {
@@ -234,21 +258,28 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     .map(|c| c.ratatui_color())
                     .unwrap_or(Color::Cyan);
 
+                let is_selected_event = app
+                    .day_selected_event_idx
+                    .map(|idx| idx == all_day_events.len() + timed_event_counter + ev_i)
+                    .unwrap_or(false);
+
                 let ev_area = ev_chunks[ev_i];
-                let title_text = format!(" {} ({})", ev.title, ev.time_str());
+                let prefix = if is_selected_event { "▶ " } else { " " };
+                let title_text = format!("{}{}({})", prefix, ev.title, ev.time_str());
+
+                let mut style = Style::default()
+                    .fg(Color::Black)
+                    .bg(cal_color)
+                    .add_modifier(Modifier::BOLD);
+
+                if is_selected_event {
+                    style = style.add_modifier(Modifier::UNDERLINED | Modifier::REVERSED);
+                }
+
                 let p_ev = Paragraph::new(Line::from(vec![
-                    Span::styled(
-                        title_text,
-                        Style::default()
-                            .fg(Color::Black)
-                            .bg(cal_color)
-                            .add_modifier(Modifier::BOLD),
-                    ),
+                    Span::styled(title_text, style),
                     if let Some(loc) = &ev.location {
-                        Span::styled(
-                            format!(" @ {}", loc),
-                            Style::default().fg(Color::Black).bg(cal_color),
-                        )
+                        Span::styled(format!(" @ {}", loc), style)
                     } else {
                         Span::raw("")
                     },
@@ -258,6 +289,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 app.hit_map
                     .register(ev_area, HitTarget::EventItem(ev.id.clone()));
             }
+            timed_event_counter += events_in_hour.len();
         }
     }
 }
