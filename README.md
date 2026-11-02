@@ -185,6 +185,7 @@
 
 | Keybinding | Mouse Action | Description |
 | :--- | :--- | :--- |
+| `v` or `C` | Click `+ Select/Manage (v/C)` in sidebar | Open **Calendar Selection & Management Modal** (`Space` or `1`–`9` to toggle `[x]`/`[ ]` visibility, `s` or `Enter` to save & apply, `n` to add, `d` to delete) |
 | `T` | Click `[ 🎨 테마 ]` in header | Open Theme Selection Modal (37 palettes with color swatches & categories) |
 | `L` | Click `[ L: 한/EN/日 ]` | Cycle language (Korean ↔ English ↔ Japanese) |
 | `s` | Click `[ ⚙ Settings ]` | Open Settings Modal (Week start day, themes, language) |
