@@ -177,7 +177,7 @@
 | `c` or `n` | Click `[ + New ]` / empty slot | Create new event form modal |
 | `Enter` | Click on event box | Open selected event details modal |
 | `e` | Click `[ Edit ]` button | Edit event |
-| `x` or `Delete` | Click `[ Delete ]` button | Delete selected event |
+| `d` or `Delete` | Click `[ Delete ]` button | Request deletion of selected event, calendar, or account (prompts confirmation dialog: `y` to confirm, `n`/`Esc` to cancel) |
 | `Tab` / `Shift+Tab` | Click form field / button | Cycle between input fields and buttons |
 | `Esc` or `q` | Click `[ Close ]` / outside backdrop | Close active modal |
 

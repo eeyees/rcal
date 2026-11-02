@@ -128,6 +128,16 @@ pub struct Translations {
     pub add_all_day_tip: &'static str,
     pub more_events: fn(usize) -> String,
 
+    // Confirm Delete Modal
+    pub modal_confirm_delete_title: &'static str,
+    pub confirm_delete_prompt: &'static str,
+    pub confirm_delete_warning: &'static str,
+    pub btn_confirm_yes: &'static str,
+    pub btn_confirm_no: &'static str,
+    pub label_type_event: &'static str,
+    pub label_type_calendar: &'static str,
+    pub label_type_account: &'static str,
+
     // Status messages
     pub msg_welcome: &'static str,
     pub msg_saved: &'static str,

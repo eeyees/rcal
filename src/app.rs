@@ -333,6 +333,13 @@ impl SettingsSection {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DeleteTarget {
+    Event { id: String, title: String },
+    Calendar { id: String, name: String },
+    Account { id: String, name: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ActiveModal {
     None,
     EventForm(EventFormState),
@@ -343,8 +350,7 @@ pub enum ActiveModal {
     Language(LanguageModalState),
     Theme(ThemeModalState),
     Help,
-    #[allow(dead_code)]
-    ConfirmDelete(String /* event_id */),
+    ConfirmDelete(DeleteTarget),
 }
 
 pub struct App {
@@ -1040,6 +1046,95 @@ impl App {
         Ok(())
     }
 
+    pub fn request_delete_event(&mut self, event_id: &str) {
+        let title = self
+            .events_cache
+            .iter()
+            .find(|e| e.id == event_id)
+            .map(|e| e.title.clone())
+            .or_else(|| {
+                self.db
+                    .get_event_by_id(event_id)
+                    .ok()
+                    .flatten()
+                    .map(|e| e.title)
+            })
+            .unwrap_or_else(|| "(제목 없음)".to_string());
+        self.modal = ActiveModal::ConfirmDelete(DeleteTarget::Event {
+            id: event_id.to_string(),
+            title,
+        });
+    }
+
+    pub fn request_delete_calendar(&mut self, cal_id: &str) {
+        let name = self
+            .calendars
+            .iter()
+            .find(|c| c.id == cal_id)
+            .map(|c| c.name.clone())
+            .unwrap_or_else(|| "(캘린더)".to_string());
+        self.modal = ActiveModal::ConfirmDelete(DeleteTarget::Calendar {
+            id: cal_id.to_string(),
+            name,
+        });
+    }
+
+    pub fn request_delete_account(&mut self, acc_id: &str) {
+        let name = self
+            .db
+            .get_accounts()
+            .ok()
+            .and_then(|accs| accs.into_iter().find(|a| a.id == acc_id).map(|a| a.name))
+            .unwrap_or_else(|| "(계정)".to_string());
+        self.modal = ActiveModal::ConfirmDelete(DeleteTarget::Account {
+            id: acc_id.to_string(),
+            name,
+        });
+    }
+
+    pub fn confirm_delete(&mut self) -> Result<()> {
+        if let ActiveModal::ConfirmDelete(target) = self.modal.clone() {
+            match target {
+                DeleteTarget::Event { id, .. } => {
+                    self.delete_event(&id)?;
+                }
+                DeleteTarget::Calendar { id, name } => {
+                    self.db.delete_calendar(&id)?;
+                    self.reload_calendars()?;
+                    self.reload_events()?;
+                    self.set_status(self.lang.msg_calendar_deleted_name(&name));
+                    self.open_calendar_modal();
+                }
+                DeleteTarget::Account { id, .. } => {
+                    self.db.delete_account(&id)?;
+                    self.reload_calendars()?;
+                    self.reload_events()?;
+                    self.set_status(self.lang.msg_account_removed());
+                    self.open_accounts_modal();
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn cancel_delete(&mut self) {
+        if let ActiveModal::ConfirmDelete(target) = self.modal.clone() {
+            match target {
+                DeleteTarget::Event { id, .. } => {
+                    self.open_event_detail_modal(id);
+                }
+                DeleteTarget::Calendar { .. } => {
+                    self.open_calendar_modal();
+                }
+                DeleteTarget::Account { .. } => {
+                    self.open_accounts_modal();
+                }
+            }
+        } else {
+            self.close_modal();
+        }
+    }
+
     pub fn toggle_calendar(&mut self, cal_id: &str) -> Result<()> {
         self.db.toggle_calendar(cal_id)?;
         self.reload_calendars()?;
@@ -1197,13 +1292,7 @@ impl App {
                 }
 
                 HitTarget::ModalCalDelete(id) => {
-                    self.db.delete_calendar(&id)?;
-                    self.reload_calendars()?;
-                    self.reload_events()?;
-                    self.set_status(self.lang.msg_calendar_deleted());
-                    if let ActiveModal::CalendarManager(ref mut cal_state) = self.modal {
-                        cal_state.is_creating = false;
-                    }
+                    self.request_delete_calendar(&id);
                 }
 
                 HitTarget::ModalCalToggle(id) => {
@@ -1307,14 +1396,7 @@ impl App {
                 }
 
                 HitTarget::ModalAccountDelete(id) => {
-                    self.db.delete_account(&id)?;
-                    self.reload_calendars()?;
-                    self.reload_events()?;
-                    self.set_status(self.lang.msg_account_removed());
-                    if let ActiveModal::Accounts(ref mut acc_state) = self.modal {
-                        acc_state.is_adding = false;
-                        acc_state.selected_account_idx = 0;
-                    }
+                    self.request_delete_account(&id);
                 }
 
                 HitTarget::CalendarToggle(cal_id) => {
@@ -1388,8 +1470,16 @@ impl App {
                 HitTarget::ModalDelete => {
                     if let ActiveModal::EventDetail(ref id) = self.modal {
                         let id_clone = id.clone();
-                        self.delete_event(&id_clone)?;
+                        self.request_delete_event(&id_clone);
                     }
+                }
+
+                HitTarget::ModalConfirmYes => {
+                    self.confirm_delete()?;
+                }
+
+                HitTarget::ModalConfirmNo => {
+                    self.cancel_delete();
                 }
             }
         }

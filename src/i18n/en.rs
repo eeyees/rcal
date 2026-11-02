@@ -204,6 +204,15 @@ pub static EN: Translations = Translations {
     add_all_day_tip: " + Click to add all-day event...",
     more_events: more_events_en,
 
+    modal_confirm_delete_title: " ⚠️  Confirm Deletion ",
+    confirm_delete_prompt: "Are you sure you want to permanently delete this item?",
+    confirm_delete_warning: "※ This action cannot be undone.",
+    btn_confirm_yes: "[ ✕ Delete (y/Enter) ]",
+    btn_confirm_no: "[ Cancel (n/Esc) ]",
+    label_type_event: "Event",
+    label_type_calendar: "Calendar",
+    label_type_account: "Account",
+
     msg_welcome: "Welcome to rcal! Press ? or click [ Help ] for shortcuts.",
     msg_saved: "Event saved successfully.",
     msg_deleted: "Event deleted.",

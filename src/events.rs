@@ -411,16 +411,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
     } else if let Some(idx) = acc_action_delete_idx {
         let accounts = app.db.get_accounts().unwrap_or_default();
         if let Some(acc) = accounts.get(idx) {
-            let _ = app.db.delete_account(&acc.id);
-            let _ = app.reload_calendars();
-            let _ = app.reload_events();
-            app.set_status(app.lang.msg_account_removed());
-            if let ActiveModal::Accounts(ref mut s) = app.modal {
-                let remaining = app.db.get_accounts().unwrap_or_default().len();
-                if s.selected_account_idx >= remaining && remaining > 0 {
-                    s.selected_account_idx = remaining - 1;
-                }
-            }
+            app.request_delete_account(&acc.id);
         }
         return Ok(());
     } else if let Some(new_acc) = acc_action_save {
@@ -577,20 +568,10 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         app.close_modal();
         return Ok(());
     } else if let Some(idx) = cal_action_delete_idx {
-        if let Some(cal) = app.calendars.get(idx) {
+        let target_cal = app.calendars.get(idx).cloned();
+        if let Some(cal) = target_cal {
             if !cal.is_default {
-                let cal_id = cal.id.clone();
-                let cal_name = cal.name.clone();
-                let _ = app.db.delete_calendar(&cal_id);
-                let _ = app.reload_calendars();
-                let _ = app.reload_events();
-                app.set_status(app.lang.msg_calendar_deleted_name(&cal_name));
-                if let ActiveModal::CalendarManager(ref mut s) = app.modal {
-                    let count = app.calendars.len();
-                    if s.selected_calendar_idx >= count && count > 0 {
-                        s.selected_calendar_idx = count - 1;
-                    }
-                }
+                app.request_delete_calendar(&cal.id);
             }
         }
         return Ok(());
@@ -625,7 +606,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.open_edit_event_modal(&id_clone);
                 }
                 KeyCode::Char('d') | KeyCode::Char('D') => {
-                    app.delete_event(&id_clone)?;
+                    app.request_delete_event(&id_clone);
                 }
                 KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => {
                     app.close_modal();
@@ -1055,19 +1036,18 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             return Ok(());
         }
-        ActiveModal::ConfirmDelete(ref id) => {
-            let id_clone = id.clone();
+        ActiveModal::ConfirmDelete(_) => {
             let norm_code = normalize_key_event(key);
             if matches!(
                 norm_code,
                 KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter
             ) {
-                app.delete_event(&id_clone)?;
+                app.confirm_delete()?;
             } else if matches!(
                 norm_code,
-                KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc
+                KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc | KeyCode::Char('q')
             ) {
-                app.close_modal();
+                app.cancel_delete();
             }
             return Ok(());
         }

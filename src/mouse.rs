@@ -69,6 +69,8 @@ pub enum HitTarget {
     ModalSelectLanguage(crate::i18n::Language),
     ModalSelectTheme(crate::ui::theme::ThemeMode),
     ModalThemeCategory(Option<crate::ui::theme::ThemeCategory>),
+    ModalConfirmYes,
+    ModalConfirmNo,
 }
 
 impl HitTarget {
@@ -109,6 +111,8 @@ impl HitTarget {
                 | HitTarget::ModalSelectLanguage(_)
                 | HitTarget::ModalSelectTheme(_)
                 | HitTarget::ModalThemeCategory(_)
+                | HitTarget::ModalConfirmYes
+                | HitTarget::ModalConfirmNo
         )
     }
 }

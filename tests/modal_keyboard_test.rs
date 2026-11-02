@@ -314,8 +314,11 @@ mod tests {
             assert_eq!(state.selected_account_idx, 0);
         }
 
-        // Delete Acc 1 with 'd'
+        // Delete Acc 1 with 'd' -> prompts for confirmation
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('d'))).unwrap();
+        assert!(matches!(app.modal, ActiveModal::ConfirmDelete(_)));
+        // Confirm deletion with 'y'
+        handle_crossterm_event(&mut app, make_key(KeyCode::Char('y'))).unwrap();
         let remaining = app.db.get_accounts().unwrap();
         assert_eq!(remaining.len(), 1);
         assert_eq!(remaining[0].name, "Acc 2");
@@ -377,8 +380,11 @@ mod tests {
                 s.selected_calendar_idx = idx;
             }
         }
-        // Delete with 'd'
+        // Delete with 'd' -> prompts for confirmation
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('d'))).unwrap();
+        assert!(matches!(app.modal, ActiveModal::ConfirmDelete(_)));
+        // Confirm deletion with 'y'
+        handle_crossterm_event(&mut app, make_key(KeyCode::Char('y'))).unwrap();
         let after_delete = app.db.get_calendars().unwrap();
         assert!(!after_delete.iter().any(|c| c.name == "Project X"));
     }
@@ -480,8 +486,12 @@ mod tests {
         app.close_modal();
         app.open_event_detail_modal(ev_id.clone());
 
-        // Press 'd' to delete
+        // Press 'd' to delete -> prompts for confirmation
         handle_crossterm_event(&mut app, make_key(KeyCode::Char('d'))).unwrap();
+        assert!(matches!(app.modal, ActiveModal::ConfirmDelete(_)));
+
+        // Confirm deletion with 'y'
+        handle_crossterm_event(&mut app, make_key(KeyCode::Char('y'))).unwrap();
         assert_eq!(app.modal, ActiveModal::None);
         assert!(app.db.get_event_by_id(&ev_id).unwrap().is_none());
     }

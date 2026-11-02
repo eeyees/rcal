@@ -219,6 +219,15 @@ pub static KO: Translations = Translations {
     add_all_day_tip: " + 클릭하여 종일 일정 추가...",
     more_events: more_events_ko,
 
+    modal_confirm_delete_title: " ⚠️  삭제 확인 (Confirm Deletion) ",
+    confirm_delete_prompt: "정말 다음 항목을 영구 삭제하시겠습니까?",
+    confirm_delete_warning: "※ 삭제된 데이터는 복구할 수 없습니다.",
+    btn_confirm_yes: "[ ✕ 삭제 확인 (y/Enter) ]",
+    btn_confirm_no: "[ 취소 (n/Esc) ]",
+    label_type_event: "일정",
+    label_type_calendar: "캘린더",
+    label_type_account: "연동 계정",
+
     msg_welcome: "rcal에 오신 것을 환영합니다! '?'를 누르거나 [ ? 도움말 ]을 클릭하세요.",
     msg_saved: "일정이 성공적으로 저장되었습니다.",
     msg_deleted: "일정이 삭제되었습니다.",

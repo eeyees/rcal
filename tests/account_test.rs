@@ -97,8 +97,12 @@ mod tests {
         let click_x = del_rect.x + del_rect.width / 2;
         let click_y = del_rect.y;
 
-        // Perform mouse click on the Delete button
+        // Perform mouse click on the Delete button -> opens confirmation modal
         app.handle_mouse_click(click_x, click_y).unwrap();
+        assert!(matches!(app.modal, ActiveModal::ConfirmDelete(_)));
+
+        // Confirm deletion
+        app.confirm_delete().unwrap();
 
         // Verify account was successfully deleted
         let remaining_accounts = app.db.get_accounts().unwrap();

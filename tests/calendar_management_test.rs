@@ -85,6 +85,9 @@ mod tests {
         let click_y = del_rect.y;
 
         app.handle_mouse_click(click_x, click_y).unwrap();
+        assert!(matches!(app.modal, ActiveModal::ConfirmDelete(_)));
+
+        app.confirm_delete().unwrap();
 
         let remaining = app.db.get_calendars().unwrap();
         assert!(remaining.iter().all(|c| c.id != "cal_hobby"));

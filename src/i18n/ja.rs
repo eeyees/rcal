@@ -219,6 +219,15 @@ pub static JA: Translations = Translations {
     add_all_day_tip: " + クリックして終日予定を追加...",
     more_events: more_events_ja,
 
+    modal_confirm_delete_title: " ⚠️  削除の確認 (Confirm Deletion) ",
+    confirm_delete_prompt: "本当にこの項目を完全に削除しますか？",
+    confirm_delete_warning: "※ 削除されたデータは復元できません。",
+    btn_confirm_yes: "[ ✕ 削除確認 (y/Enter) ]",
+    btn_confirm_no: "[ キャンセル (n/Esc) ]",
+    label_type_event: "予定",
+    label_type_calendar: "カレンダー",
+    label_type_account: "連携アカウント",
+
     msg_welcome: "rcalへようこそ！ '?' キーまたは [ ? ヘルプ ] をクリックしてください。",
     msg_saved: "予定が正常に保存されました。",
     msg_deleted: "予定が削除されました。",

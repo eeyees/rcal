@@ -118,8 +118,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
             let state_clone = state.clone();
             modals::theme_modal::render(f, app, &state_clone, size);
         }
-        ActiveModal::ConfirmDelete(_) => {
-            // Can be extended or handled via EventDetail
+        ActiveModal::ConfirmDelete(ref target) => {
+            let target_clone = target.clone();
+            modals::confirm_modal::render(f, app, &target_clone, size);
         }
         ActiveModal::None => {}
     }
