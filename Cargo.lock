@@ -1494,7 +1494,7 @@ dependencies = [
 
 [[package]]
 name = "rcal"
-version = "2026.1103.1"
+version = "2026.1104.1"
 dependencies = [
  "anyhow",
  "chrono",

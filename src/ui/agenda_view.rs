@@ -15,7 +15,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
-        .title(" Agenda / Upcoming Events ");
+        .title(format!(" {} ", app.lang.view_agenda()));
     let inner = block.inner(area);
     f.render_widget(block, area);
 
