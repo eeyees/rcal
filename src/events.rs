@@ -1159,7 +1159,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         // Inspect/Select
         KeyCode::Enter => {
             if app.current_view == ViewMode::Month {
-                app.current_view = ViewMode::Day;
+                app.open_new_event_modal(None);
             } else if app.current_view == ViewMode::Day {
                 let day_events = app.events_for_day(app.selected_date);
                 if let Some(idx) = app.day_selected_event_idx {

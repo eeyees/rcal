@@ -574,4 +574,19 @@ mod tests {
             "Cursor must be set inside HelpModal"
         );
     }
+
+    #[test]
+    fn test_month_view_enter_opens_new_event_modal() {
+        use rcal::app::ViewMode;
+        let db = Database::in_memory().unwrap();
+        let mut app = App::new(db).unwrap();
+
+        assert_eq!(app.current_view, ViewMode::Month);
+        assert!(matches!(app.modal, ActiveModal::None));
+
+        handle_crossterm_event(&mut app, make_key(KeyCode::Enter)).unwrap();
+
+        assert!(matches!(app.modal, ActiveModal::EventForm(_)));
+        assert_eq!(app.current_view, ViewMode::Month);
+    }
 }
