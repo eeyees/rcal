@@ -33,6 +33,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     // 1. Header Banner
     let day_name = app.lang.format_date_long(selected_date);
+    let holiday_badge = if let Some(h_name) = app.get_holiday(selected_date) {
+        format!(" 🎌 {} ", h_name)
+    } else {
+        String::new()
+    };
     let selected_event_hint = if let Some(idx) = app.day_selected_event_idx {
         if let Some(ev) = events_today.get(idx) {
             format!(" [선택: {} - Enter: 상세]", ev.title)
@@ -48,12 +53,30 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             format!(" {} ", day_name),
             if is_today {
                 theme.today_style()
+            } else if app.is_red_day(selected_date) {
+                Style::default()
+                    .fg(theme.danger)
+                    .add_modifier(Modifier::BOLD)
+            } else if app.is_blue_day(selected_date) {
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
                     .fg(theme.text_highlight)
                     .add_modifier(Modifier::BOLD)
             },
         ),
+        if !holiday_badge.is_empty() {
+            Span::styled(
+                holiday_badge,
+                Style::default()
+                    .fg(theme.danger)
+                    .add_modifier(Modifier::BOLD),
+            )
+        } else {
+            Span::raw("")
+        },
         if !selected_event_hint.is_empty() {
             Span::styled(
                 selected_event_hint,

@@ -837,6 +837,15 @@ impl Database {
         Ok(())
     }
 
+    pub fn delete_events_by_calendar(&self, calendar_id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM events WHERE calendar_id = ?1",
+            params![calendar_id],
+        )?;
+        Ok(())
+    }
+
     pub fn has_notified(&self, event_id: &str, notification_type: &str) -> Result<bool> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(

@@ -416,7 +416,10 @@ mod tests {
         assert_eq!(app.week_start_day, WeekStartDay::Monday);
 
         // Tab cycles across major tabs in big steps:
-        // WeekStart(1) -> Notifications(2) -> Theme(3) -> Language(4) -> WeekStart(1)
+        // WeekStart(1) -> Holidays(2) -> Notifications(3) -> Theme(4) -> Language(5) -> WeekStart(1)
+        handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::Holidays);
+
         handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
         assert_eq!(
             app.settings_section,
@@ -432,7 +435,7 @@ mod tests {
         handle_crossterm_event(&mut app, make_key(KeyCode::Tab)).unwrap();
         assert_eq!(app.settings_section, rcal::app::SettingsSection::WeekStart);
 
-        // BackTab (Shift+Tab) cycles backwards (WeekStart -> Language -> Theme -> Notifications -> WeekStart)
+        // BackTab (Shift+Tab) cycles backwards
         handle_crossterm_event(&mut app, make_key(KeyCode::BackTab)).unwrap();
         assert_eq!(app.settings_section, rcal::app::SettingsSection::Language);
 
@@ -444,6 +447,9 @@ mod tests {
             app.settings_section,
             rcal::app::SettingsSection::Notifications
         );
+
+        handle_crossterm_event(&mut app, make_key(KeyCode::BackTab)).unwrap();
+        assert_eq!(app.settings_section, rcal::app::SettingsSection::Holidays);
 
         handle_crossterm_event(&mut app, make_key(KeyCode::BackTab)).unwrap();
         assert_eq!(app.settings_section, rcal::app::SettingsSection::WeekStart);

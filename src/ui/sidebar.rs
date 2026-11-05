@@ -161,8 +161,9 @@ fn render_mini_calendar(f: &mut Frame, app: &mut App, chunk: Rect) {
     for (i, dow) in dows.iter().enumerate() {
         let col_date = grid_start_date + ChronoDuration::days(i as i64);
         let weekday = col_date.weekday();
-        let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
-        let color = if is_weekend {
+        let color = if weekday == chrono::Weekday::Sun {
+            theme.danger
+        } else if weekday == chrono::Weekday::Sat {
             theme.accent
         } else {
             theme.text_muted
@@ -195,21 +196,31 @@ fn render_mini_calendar(f: &mut Frame, app: &mut App, chunk: Rect) {
 
             let day_num_str = format!("{:2}", current_cell_date.day());
 
+            let is_red = app.is_red_day(current_cell_date);
+            let is_blue = app.is_blue_day(current_cell_date);
+
             let day_style = if is_today {
                 theme.today_style()
             } else if is_selected {
                 theme.selected_day_style()
             } else if is_current_month {
-                let weekday = current_cell_date.weekday();
-                let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
-                let color = if is_weekend {
+                let color = if is_red {
+                    theme.danger
+                } else if is_blue {
                     theme.accent
                 } else {
                     theme.text_normal
                 };
                 Style::default().fg(color)
             } else {
-                Style::default().fg(theme.text_dim)
+                let color = if is_red {
+                    theme.danger
+                } else if is_blue {
+                    theme.accent
+                } else {
+                    theme.text_dim
+                };
+                Style::default().fg(color).add_modifier(Modifier::DIM)
             };
 
             row_spans.push(Span::styled(day_num_str, day_style));

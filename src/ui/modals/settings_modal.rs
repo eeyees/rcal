@@ -7,6 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{App, SettingsSection};
+use crate::holidays::HolidayRegion;
 use crate::model::WeekStartDay;
 use crate::mouse::HitTarget;
 use crate::ui::theme::{Theme, ThemeCategory, ThemeMode};
@@ -98,6 +99,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     // 3. Tab Content Area
     // =========================================================================
     let mut week_cursor_rect = Rect::default();
+    let mut holiday_cursor_rect = Rect::default();
     let mut notif_cursor_rect = Rect::default();
     let mut theme_cursor_rect = Rect::default();
     let mut lang_cursor_rect = Rect::default();
@@ -105,6 +107,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     match active_tab {
         SettingsSection::WeekStart => {
             week_cursor_rect = render_week_start_tab(f, app, main_chunks[3]);
+        }
+        SettingsSection::Holidays => {
+            holiday_cursor_rect = render_holidays_tab(f, app, main_chunks[3]);
         }
         SettingsSection::Notifications => {
             notif_cursor_rect = render_notifications_tab(f, app, main_chunks[3]);
@@ -140,7 +145,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             _ => " Tab Nav  ",
         }),
         Span::styled(
-            "[1~4]",
+            "[1~5]",
             Style::default()
                 .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
@@ -213,6 +218,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 week_cursor_rect.y,
             ));
         }
+        SettingsSection::Holidays => {
+            f.set_cursor_position((
+                holiday_cursor_rect.x + holiday_cursor_rect.width / 2,
+                holiday_cursor_rect.y,
+            ));
+        }
         SettingsSection::Notifications => {
             f.set_cursor_position((
                 notif_cursor_rect.x + notif_cursor_rect.width / 2,
@@ -249,10 +260,11 @@ fn render_tabs_bar(f: &mut Frame, app: &mut App, area: Rect, active_tab: Setting
     let tab_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Ratio(1, 4),
-            Constraint::Ratio(1, 4),
-            Constraint::Ratio(1, 4),
-            Constraint::Ratio(1, 4),
+            Constraint::Ratio(1, 5),
+            Constraint::Ratio(1, 5),
+            Constraint::Ratio(1, 5),
+            Constraint::Ratio(1, 5),
+            Constraint::Ratio(1, 5),
         ])
         .split(area);
 
@@ -542,6 +554,253 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
             Line::from(vec![
                 Span::styled("• Applies to: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
                 Span::raw("Month view grid, Week timeline, and Mini calendars across the application."),
+            ]),
+        ],
+    };
+    f.render_widget(Paragraph::new(g_lines), g_inner);
+
+    active_rect
+}
+
+// =============================================================================
+// Tab 2: Public Holiday Calendar Content
+// =============================================================================
+fn render_holidays_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
+    let theme = app.theme;
+    let lang = app.lang;
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1), // Title
+            Constraint::Length(1), // Subtitle
+            Constraint::Length(1), // Spacer
+            Constraint::Length(1), // 4 Buttons
+            Constraint::Length(1), // Spacer
+            Constraint::Length(8), // Holidays sample preview box
+            Constraint::Length(1), // Spacer
+            Constraint::Length(4), // Tips & Guide Box
+            Constraint::Min(0),
+        ])
+        .split(area);
+
+    let is_focused = app.settings_section == SettingsSection::Holidays;
+    let title_style = if is_focused {
+        Style::default()
+            .fg(theme.text_highlight)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+            .fg(theme.secondary)
+            .add_modifier(Modifier::BOLD)
+    };
+
+    let (title_text, subtitle_text) = match lang {
+        crate::i18n::Language::Ko => (
+            "▶ 🎌 공휴일 캘린더 국가 설정 (Public Holiday Calendar)",
+            "각 국가의 법정 공휴일을 캘린더에 동기화하고 토/일과 동일하게 빨간 날로 표기합니다.",
+        ),
+        crate::i18n::Language::Ja => (
+            "▶ 🎌 祝日カレンダー設定 (Public Holiday Calendar)",
+            "各国の祝日をカレンダーに同期し、日曜日と同様に赤色でハイライト表示します。",
+        ),
+        _ => (
+            "▶ 🎌 Public Holiday Calendar Region",
+            "Sync national legal holidays and highlight them in red alongside weekends.",
+        ),
+    };
+
+    f.render_widget(Paragraph::new(Span::styled(title_text, title_style)), chunks[0]);
+    f.render_widget(
+        Paragraph::new(Span::styled(subtitle_text, Style::default().fg(theme.text_muted))),
+        chunks[1],
+    );
+
+    // 4 Region Buttons
+    let btn_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(20), // KR
+            Constraint::Length(2),
+            Constraint::Length(20), // US
+            Constraint::Length(2),
+            Constraint::Length(20), // JP
+            Constraint::Length(2),
+            Constraint::Length(20), // OFF
+            Constraint::Min(0),
+        ])
+        .split(chunks[3]);
+
+    let options = match lang {
+        crate::i18n::Language::Ko => [
+            (HolidayRegion::Kr, "🇰🇷 대한민국 (KR)", "k"),
+            (HolidayRegion::Us, "🇺🇸 미국 (US)", "u"),
+            (HolidayRegion::Jp, "🇯🇵 일본 (JP)", "j"),
+            (HolidayRegion::None, "🚫 끄기 (Off)", "x"),
+        ],
+        crate::i18n::Language::Ja => [
+            (HolidayRegion::Kr, "🇰🇷 韓国 (KR)", "k"),
+            (HolidayRegion::Us, "🇺🇸 米国 (US)", "u"),
+            (HolidayRegion::Jp, "🇯🇵 日本 (JP)", "j"),
+            (HolidayRegion::None, "🚫 オフ (Off)", "x"),
+        ],
+        _ => [
+            (HolidayRegion::Kr, "🇰🇷 S. Korea (KR)", "k"),
+            (HolidayRegion::Us, "🇺🇸 USA (US)", "u"),
+            (HolidayRegion::Jp, "🇯🇵 Japan (JP)", "j"),
+            (HolidayRegion::None, "🚫 Off (None)", "x"),
+        ],
+    };
+
+    let mut active_rect = btn_chunks[0];
+    let btn_indices = [0, 2, 4, 6];
+
+    for (idx, (region, label, key)) in options.iter().enumerate() {
+        let is_selected = app.holiday_region == *region;
+        let rect = btn_chunks[btn_indices[idx]];
+        if is_selected {
+            active_rect = rect;
+        }
+
+        let prefix = if is_selected { "● " } else { "○ " };
+        let text = format!("{}[{}] {}", prefix, key, label);
+
+        let style = if is_selected {
+            Style::default()
+                .fg(if theme.mode.is_light() {
+                    Color::White
+                } else {
+                    Color::Black
+                })
+                .bg(theme.primary)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            theme.button_style()
+        };
+
+        f.render_widget(
+            Paragraph::new(Line::from(vec![Span::raw(text)]))
+                .style(style)
+                .alignment(Alignment::Center),
+            rect,
+        );
+        app.hit_map.register(rect, HitTarget::ModalSettingHoliday(*region));
+    }
+
+    // Preview Box: List of upcoming / registered holidays for selected region
+    let p_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border))
+        .title(Span::styled(
+            match lang {
+                crate::i18n::Language::Ko => " 📅 적용된 주요 공휴일 목록 미리보기 ",
+                crate::i18n::Language::Ja => " 📅 適用された主な祝日プレビュー ",
+                _ => " 📅 Registered Public Holidays Preview ",
+            },
+            Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
+        ));
+    let p_inner = p_block.inner(chunks[5]);
+    f.render_widget(p_block, chunks[5]);
+
+    use chrono::Datelike;
+    let cur_year = app.selected_date.year();
+    let sample_holidays = crate::holidays::get_holidays(app.holiday_region, cur_year);
+
+    let mut p_lines = Vec::new();
+    if sample_holidays.is_empty() {
+        p_lines.push(Line::from(vec![Span::styled(
+            match lang {
+                crate::i18n::Language::Ko => "  (공휴일 표시가 꺼져 있습니다. 국가를 선택하면 자동으로 활성화됩니다.)",
+                crate::i18n::Language::Ja => "  (祝日カレンダーはオフです。国を選択すると自動的に有効になります。)",
+                _ => "  (Public holiday calendar is off. Select a region to activate.)",
+            },
+            Style::default().fg(theme.text_dim),
+        )]));
+    } else {
+        let max_show = (p_inner.height as usize).min(sample_holidays.len());
+        for h in sample_holidays.iter().take(max_show) {
+            let wd = match lang {
+                crate::i18n::Language::Ko => match h.date.weekday() {
+                    chrono::Weekday::Mon => "월",
+                    chrono::Weekday::Tue => "화",
+                    chrono::Weekday::Wed => "수",
+                    chrono::Weekday::Thu => "목",
+                    chrono::Weekday::Fri => "금",
+                    chrono::Weekday::Sat => "토",
+                    chrono::Weekday::Sun => "일",
+                },
+                _ => match h.date.weekday() {
+                    chrono::Weekday::Mon => "Mon",
+                    chrono::Weekday::Tue => "Tue",
+                    chrono::Weekday::Wed => "Wed",
+                    chrono::Weekday::Thu => "Thu",
+                    chrono::Weekday::Fri => "Fri",
+                    chrono::Weekday::Sat => "Sat",
+                    chrono::Weekday::Sun => "Sun",
+                },
+            };
+            p_lines.push(Line::from(vec![
+                Span::styled(
+                    format!("  • {:04}-{:02}-{:02} ({})  ", h.date.year(), h.date.month(), h.date.day(), wd),
+                    Style::default().fg(theme.danger).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    &h.name,
+                    Style::default().fg(theme.text_normal),
+                ),
+            ]));
+        }
+        if sample_holidays.len() > max_show {
+            let remain = sample_holidays.len() - max_show;
+            p_lines.push(Line::from(vec![
+                Span::styled(format!("    ... 외 {}개 공휴일", remain), Style::default().fg(theme.text_dim)),
+            ]));
+        }
+    }
+    f.render_widget(Paragraph::new(p_lines), p_inner);
+
+    // Tips & Guide Box
+    let g_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border))
+        .title(Span::styled(
+            match lang {
+                crate::i18n::Language::Ko => " 💡 공휴일 표시 안내 및 조작 팁 ",
+                crate::i18n::Language::Ja => " 💡 祝日表示ガイド＆ヒント ",
+                _ => " 💡 Holiday Display Tips ",
+            },
+            Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD),
+        ));
+    let g_inner = g_block.inner(chunks[7]);
+    f.render_widget(g_block, chunks[7]);
+
+    let g_lines = match lang {
+        crate::i18n::Language::Ko => vec![
+            Line::from(vec![
+                Span::styled("• 빨간 날 표기: ", Style::default().fg(theme.danger).add_modifier(Modifier::BOLD)),
+                Span::raw("월간/주간/일간 및 사이드바 미니 달력에서 공휴일 날짜가 일요일처럼 빨간색으로 강조됩니다."),
+            ]),
+            Line::from(vec![
+                Span::styled("• 명칭 표시: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::raw("월간 달력 셀 상단에 공휴일 명칭(예: 삼일절, 광복절 등)이 함께 뱃지로 출력됩니다."),
+            ]),
+            Line::from(vec![
+                Span::styled("• 단축키: ", Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)),
+                Span::raw("[k] 대한민국, [u] 미국, [j] 일본, [x] 끄기, [←/→/↑/↓] 선택 변경"),
+            ]),
+        ],
+        _ => vec![
+            Line::from(vec![
+                Span::styled("• Red Day Styling: ", Style::default().fg(theme.danger).add_modifier(Modifier::BOLD)),
+                Span::raw("Public holidays are highlighted in red like Sundays across Month, Week, and Mini calendar."),
+            ]),
+            Line::from(vec![
+                Span::styled("• Name Badges: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::raw("Holiday names (e.g. Independence Day) appear as compact badges inside calendar cells."),
+            ]),
+            Line::from(vec![
+                Span::styled("• Shortcuts: ", Style::default().fg(theme.text_highlight).add_modifier(Modifier::BOLD)),
+                Span::raw("[k] South Korea, [u] USA, [j] Japan, [x] Off, [Arrow keys] Navigate"),
             ]),
         ],
     };

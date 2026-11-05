@@ -61,6 +61,7 @@ pub enum HitTarget {
     ModalCalSaveVisibility,
     ModalSettingTab(crate::app::SettingsSection),
     ModalSettingWeekStart(WeekStartDay),
+    ModalSettingHoliday(crate::holidays::HolidayRegion),
     ModalSettingNotificationToggle,
     ModalSettingNotificationLead(u32),
     ModalSettingNotificationSound,
@@ -103,6 +104,7 @@ impl HitTarget {
                 | HitTarget::ModalCalSaveVisibility
                 | HitTarget::ModalSettingTab(_)
                 | HitTarget::ModalSettingWeekStart(_)
+                | HitTarget::ModalSettingHoliday(_)
                 | HitTarget::ModalSettingNotificationToggle
                 | HitTarget::ModalSettingNotificationLead(_)
                 | HitTarget::ModalSettingNotificationSound

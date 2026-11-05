@@ -643,16 +643,22 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.set_week_start_day(crate::model::WeekStartDay::Sunday);
                 }
                 KeyCode::Char('2') => {
-                    app.settings_section = SettingsSection::Notifications;
+                    app.settings_section = SettingsSection::Holidays;
                 }
                 KeyCode::Char('3') => {
-                    app.settings_section = SettingsSection::Theme;
+                    app.settings_section = SettingsSection::Notifications;
                 }
                 KeyCode::Char('4') => {
+                    app.settings_section = SettingsSection::Theme;
+                }
+                KeyCode::Char('5') => {
                     app.settings_section = SettingsSection::Language;
                 }
 
                 // Global direct shortcuts in Settings modal:
+                KeyCode::Char('H') => {
+                    app.settings_section = SettingsSection::Holidays;
+                }
                 KeyCode::Char('n') | KeyCode::Char('N') => {
                     app.settings_section = SettingsSection::Notifications;
                     app.toggle_notifications();
@@ -722,6 +728,36 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                         KeyCode::Char('t') => {
                             app.set_week_start_day(crate::model::WeekStartDay::Saturday);
+                        }
+                        KeyCode::Enter => {
+                            app.close_modal();
+                        }
+                        _ => {}
+                    },
+                    SettingsSection::Holidays => match norm_code {
+                        KeyCode::Right | KeyCode::Down => {
+                            let all = crate::holidays::HolidayRegion::ALL;
+                            let cur_pos = all.iter().position(|r| *r == app.holiday_region).unwrap_or(0);
+                            let next_pos = (cur_pos + 1) % all.len();
+                            let _ = app.set_holiday_region(all[next_pos]);
+                        }
+                        KeyCode::Left | KeyCode::Up => {
+                            let all = crate::holidays::HolidayRegion::ALL;
+                            let cur_pos = all.iter().position(|r| *r == app.holiday_region).unwrap_or(0);
+                            let prev_pos = if cur_pos == 0 { all.len() - 1 } else { cur_pos - 1 };
+                            let _ = app.set_holiday_region(all[prev_pos]);
+                        }
+                        KeyCode::Char('k') | KeyCode::Char('K') => {
+                            let _ = app.set_holiday_region(crate::holidays::HolidayRegion::Kr);
+                        }
+                        KeyCode::Char('u') | KeyCode::Char('U') => {
+                            let _ = app.set_holiday_region(crate::holidays::HolidayRegion::Us);
+                        }
+                        KeyCode::Char('j') | KeyCode::Char('J') => {
+                            let _ = app.set_holiday_region(crate::holidays::HolidayRegion::Jp);
+                        }
+                        KeyCode::Char('x') | KeyCode::Char('X') | KeyCode::Char('0') => {
+                            let _ = app.set_holiday_region(crate::holidays::HolidayRegion::None);
                         }
                         KeyCode::Enter => {
                             app.close_modal();

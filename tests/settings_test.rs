@@ -134,23 +134,27 @@ fn test_settings_modal_tab_section_navigation() -> anyhow::Result<()> {
         handle_crossterm_event(app, CrosstermEvent::Key(key_ev)).unwrap();
     };
 
-    // 1. Tab moves to Section 2: Notifications
+    // 1. Tab moves to Section 2: Holidays
+    send_key(&mut app, KeyCode::Tab);
+    assert_eq!(app.settings_section, SettingsSection::Holidays);
+
+    // 2. Tab moves to Section 3: Notifications
     send_key(&mut app, KeyCode::Tab);
     assert_eq!(app.settings_section, SettingsSection::Notifications);
 
-    // 2. Tab moves to Section 3: Theme
+    // 3. Tab moves to Section 4: Theme
     send_key(&mut app, KeyCode::Tab);
     assert_eq!(app.settings_section, SettingsSection::Theme);
 
-    // 3. Tab moves to Section 4: Language
+    // 4. Tab moves to Section 5: Language
     send_key(&mut app, KeyCode::Tab);
     assert_eq!(app.settings_section, SettingsSection::Language);
 
-    // 4. Tab wraps directly back to Section 1: WeekStart (1 -> 2 -> 3 -> 4 -> 1)
+    // 5. Tab wraps directly back to Section 1: WeekStart (1 -> 2 -> 3 -> 4 -> 5 -> 1)
     send_key(&mut app, KeyCode::Tab);
     assert_eq!(app.settings_section, SettingsSection::WeekStart);
 
-    // 5. BackTab (Shift+Tab) goes backwards: WeekStart -> Language -> Theme -> Notifications -> WeekStart
+    // 6. BackTab (Shift+Tab) goes backwards: WeekStart -> Language -> Theme -> Notifications -> Holidays -> WeekStart
     send_key(&mut app, KeyCode::BackTab);
     assert_eq!(app.settings_section, SettingsSection::Language);
 
@@ -159,6 +163,9 @@ fn test_settings_modal_tab_section_navigation() -> anyhow::Result<()> {
 
     send_key(&mut app, KeyCode::BackTab);
     assert_eq!(app.settings_section, SettingsSection::Notifications);
+
+    send_key(&mut app, KeyCode::BackTab);
+    assert_eq!(app.settings_section, SettingsSection::Holidays);
 
     send_key(&mut app, KeyCode::BackTab);
     assert_eq!(app.settings_section, SettingsSection::WeekStart);
@@ -183,6 +190,10 @@ fn test_settings_modal_tab_section_navigation() -> anyhow::Result<()> {
     send_key(&mut app, KeyCode::Left);
     assert_eq!(app.week_start_day, WeekStartDay::Sunday);
     assert_eq!(app.settings_section, SettingsSection::WeekStart);
+
+    // Tab moves to Holidays section
+    send_key(&mut app, KeyCode::Tab);
+    assert_eq!(app.settings_section, SettingsSection::Holidays);
 
     // Tab moves to Notifications section
     send_key(&mut app, KeyCode::Tab);
@@ -308,6 +319,7 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
 
     let text_normal = app.theme.text_normal;
     let accent = app.theme.accent;
+    let danger = app.theme.danger;
 
     // Helper to find cell date position and verify character color
     let find_date_fg = |app: &App,
@@ -346,15 +358,15 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
         "Saturday in Monday-start mode must be colored with weekend accent"
     );
 
-    // Mar 8, 2099 is Sunday: should be weekend accent
+    // Mar 8, 2099 is Sunday: should be red day (danger)
     let sun_fg = find_date_fg(
         &app,
         &terminal,
         NaiveDate::from_ymd_opt(2099, 3, 8).unwrap(),
     );
     assert_eq!(
-        sun_fg, accent,
-        "Sunday in Monday-start mode must be colored with weekend accent"
+        sun_fg, danger,
+        "Sunday in Monday-start mode must be colored with holiday/sunday danger color"
     );
 
     // 2. Sunday as First Day of Week
@@ -387,8 +399,8 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
         NaiveDate::from_ymd_opt(2099, 3, 8).unwrap(),
     );
     assert_eq!(
-        sun_fg_sun, accent,
-        "Sunday in Sunday-start mode must be weekend accent"
+        sun_fg_sun, danger,
+        "Sunday in Sunday-start mode must be weekend/sunday danger color"
     );
 
     // 3. Saturday as First Day of Week
@@ -411,8 +423,8 @@ fn test_month_view_weekend_coloring_with_week_start_modes() -> anyhow::Result<()
         NaiveDate::from_ymd_opt(2099, 3, 8).unwrap(),
     );
     assert_eq!(
-        sun_fg_sat, accent,
-        "Sunday in Saturday-start mode must be weekend accent"
+        sun_fg_sat, danger,
+        "Sunday in Saturday-start mode must be weekend/sunday danger color"
     );
 
     let mon_fg_sat = find_date_fg(
@@ -577,17 +589,17 @@ fn test_settings_bracket_and_number_keys_navigation() -> anyhow::Result<()> {
 
     // ']' advances tab
     send_key(&mut app, KeyCode::Char(']'));
-    assert_eq!(app.settings_section, SettingsSection::Notifications);
+    assert_eq!(app.settings_section, SettingsSection::Holidays);
 
     send_key(&mut app, KeyCode::Char(']'));
-    assert_eq!(app.settings_section, SettingsSection::Theme);
+    assert_eq!(app.settings_section, SettingsSection::Notifications);
 
     // '[' goes to previous tab
     send_key(&mut app, KeyCode::Char('['));
-    assert_eq!(app.settings_section, SettingsSection::Notifications);
+    assert_eq!(app.settings_section, SettingsSection::Holidays);
 
-    // '4' directly jumps to Language tab
-    send_key(&mut app, KeyCode::Char('4'));
+    // '5' directly jumps to Language tab
+    send_key(&mut app, KeyCode::Char('5'));
     assert_eq!(app.settings_section, SettingsSection::Language);
 
     // ']' from Language tab wraps directly to WeekStart (cyclic)
@@ -600,9 +612,12 @@ fn test_settings_bracket_and_number_keys_navigation() -> anyhow::Result<()> {
 
     // Number keys directly jump from any tab
     send_key(&mut app, KeyCode::Char('2'));
-    assert_eq!(app.settings_section, SettingsSection::Notifications);
+    assert_eq!(app.settings_section, SettingsSection::Holidays);
 
     send_key(&mut app, KeyCode::Char('3'));
+    assert_eq!(app.settings_section, SettingsSection::Notifications);
+
+    send_key(&mut app, KeyCode::Char('4'));
     assert_eq!(app.settings_section, SettingsSection::Theme);
 
     send_key(&mut app, KeyCode::Char('1'));
@@ -625,16 +640,20 @@ fn test_settings_bracket_and_number_keys_navigation() -> anyhow::Result<()> {
     assert_eq!(app.settings_section, SettingsSection::WeekStart);
     assert_eq!(app.week_start_day, WeekStartDay::Sunday);
 
-    // '2' from WeekStart goes to Notifications
+    // '2' from WeekStart goes to Holidays
     send_key(&mut app, KeyCode::Char('2'));
+    assert_eq!(app.settings_section, SettingsSection::Holidays);
+
+    // '3' from Holidays goes to Notifications
+    send_key(&mut app, KeyCode::Char('3'));
     assert_eq!(app.settings_section, SettingsSection::Notifications);
 
-    // '3' from Notifications goes to Theme
-    send_key(&mut app, KeyCode::Char('3'));
+    // '4' from Notifications goes to Theme
+    send_key(&mut app, KeyCode::Char('4'));
     assert_eq!(app.settings_section, SettingsSection::Theme);
 
-    // '4' from Theme goes to Language
-    send_key(&mut app, KeyCode::Char('4'));
+    // '5' from Theme goes to Language
+    send_key(&mut app, KeyCode::Char('5'));
     assert_eq!(app.settings_section, SettingsSection::Language);
 
     Ok(())

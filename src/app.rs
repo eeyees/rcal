@@ -1,6 +1,9 @@
 use anyhow::Result;
 use chrono::{Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime, TimeZone};
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
+
+use crate::holidays::{get_holidays_range, HolidayRegion};
 
 use crate::i18n::Language;
 use crate::model::{CalDavAccount, Calendar, Event, ProviderType, SyncStatus, WeekStartDay};
@@ -255,6 +258,7 @@ impl ThemeModalState {
 pub enum SettingsSection {
     #[default]
     WeekStart,
+    Holidays,
     Notifications,
     Theme,
     Language,
@@ -262,16 +266,18 @@ pub enum SettingsSection {
 }
 
 impl SettingsSection {
-    pub const ALL: [SettingsSection; 5] = [
+    pub const ALL: [SettingsSection; 6] = [
         SettingsSection::WeekStart,
+        SettingsSection::Holidays,
         SettingsSection::Notifications,
         SettingsSection::Theme,
         SettingsSection::Language,
         SettingsSection::Close,
     ];
 
-    pub const TABS: [SettingsSection; 4] = [
+    pub const TABS: [SettingsSection; 5] = [
         SettingsSection::WeekStart,
+        SettingsSection::Holidays,
         SettingsSection::Notifications,
         SettingsSection::Theme,
         SettingsSection::Language,
@@ -286,26 +292,33 @@ impl SettingsSection {
                 crate::i18n::Language::ZhTw => "📅 1. 一週起始日",
                 _ => "📅 1. Week Start",
             },
+            Self::Holidays => match lang {
+                crate::i18n::Language::Ko => "🎌 2. 공휴일 설정",
+                crate::i18n::Language::Ja => "🎌 2. 祝日設定",
+                crate::i18n::Language::ZhCn => "🎌 2. 节假日设置",
+                crate::i18n::Language::ZhTw => "🎌 2. 節假日設定",
+                _ => "🎌 2. Holidays",
+            },
             Self::Notifications => match lang {
-                crate::i18n::Language::Ko => "🔔 2. 바탕화면 알림",
-                crate::i18n::Language::Ja => "🔔 2. 通知設定",
-                crate::i18n::Language::ZhCn => "🔔 2. 桌面通知",
-                crate::i18n::Language::ZhTw => "🔔 2. 桌面通知",
-                _ => "🔔 2. Notifications",
+                crate::i18n::Language::Ko => "🔔 3. 바탕화면 알림",
+                crate::i18n::Language::Ja => "🔔 3. 通知設定",
+                crate::i18n::Language::ZhCn => "🔔 3. 桌面通知",
+                crate::i18n::Language::ZhTw => "🔔 3. 桌面通知",
+                _ => "🔔 3. Notifications",
             },
             Self::Theme => match lang {
-                crate::i18n::Language::Ko => "🎨 3. 색상 테마",
-                crate::i18n::Language::Ja => "🎨 3. カラーテーマ",
-                crate::i18n::Language::ZhCn => "🎨 3. 颜色主题",
-                crate::i18n::Language::ZhTw => "🎨 3. 顏色主題",
-                _ => "🎨 3. Themes",
+                crate::i18n::Language::Ko => "🎨 4. 색상 테마",
+                crate::i18n::Language::Ja => "🎨 4. カラーテーマ",
+                crate::i18n::Language::ZhCn => "🎨 4. 颜色主题",
+                crate::i18n::Language::ZhTw => "🎨 4. 顏色主題",
+                _ => "🎨 4. Themes",
             },
             Self::Language => match lang {
-                crate::i18n::Language::Ko => "🌐 4. 언어 설정",
-                crate::i18n::Language::Ja => "🌐 4. 表示言語",
-                crate::i18n::Language::ZhCn => "🌐 4. 语言设置",
-                crate::i18n::Language::ZhTw => "🌐 4. 語言設置",
-                _ => "🌐 4. Language",
+                crate::i18n::Language::Ko => "🌐 5. 언어 설정",
+                crate::i18n::Language::Ja => "🌐 5. 表示言語",
+                crate::i18n::Language::ZhCn => "🌐 5. 语言设置",
+                crate::i18n::Language::ZhTw => "🌐 5. 語言設置",
+                _ => "🌐 5. Language",
             },
             Self::Close => "[ ✕ ]",
         }
@@ -313,7 +326,8 @@ impl SettingsSection {
 
     pub fn next(self) -> Self {
         match self {
-            Self::WeekStart => Self::Notifications,
+            Self::WeekStart => Self::Holidays,
+            Self::Holidays => Self::Notifications,
             Self::Notifications => Self::Theme,
             Self::Theme => Self::Language,
             Self::Language => Self::WeekStart,
@@ -324,7 +338,8 @@ impl SettingsSection {
     pub fn prev(self) -> Self {
         match self {
             Self::WeekStart => Self::Language,
-            Self::Notifications => Self::WeekStart,
+            Self::Holidays => Self::WeekStart,
+            Self::Notifications => Self::Holidays,
             Self::Theme => Self::Notifications,
             Self::Language => Self::Theme,
             Self::Close => Self::Language,
@@ -375,8 +390,11 @@ pub struct App {
     pub theme_category: ThemeCategory,
     pub show_sidebar: bool,
     pub notification_config: NotificationConfig,
+    pub holiday_region: HolidayRegion,
+    pub holidays_cache: HashMap<NaiveDate, String>,
     pub settings_section: SettingsSection,
     pub settings_lang_idx: usize,
+    pub settings_holiday_idx: usize,
 
     // Synchronization state
     pub is_syncing: bool,
@@ -418,6 +436,16 @@ impl App {
         theme_config.apply_to(&mut theme);
         let theme_category = theme_mode.category();
         let notification_config = NotificationConfig::load_from_db(&db);
+        let holiday_region = db
+            .get_setting("holiday_region")
+            .ok()
+            .flatten()
+            .map(|s| HolidayRegion::from_code(&s))
+            .unwrap_or_else(HolidayRegion::default_from_locale);
+        let settings_holiday_idx = HolidayRegion::ALL
+            .iter()
+            .position(|r| *r == holiday_region)
+            .unwrap_or(0);
 
         let mut app = Self {
             running: true,
@@ -439,8 +467,11 @@ impl App {
             theme_category,
             show_sidebar: true,
             notification_config,
+            holiday_region,
+            holidays_cache: HashMap::new(),
             settings_section: SettingsSection::WeekStart,
             settings_lang_idx: 0,
+            settings_holiday_idx,
             is_syncing: false,
             last_sync_status: None,
             sync_tx: None,
@@ -449,6 +480,7 @@ impl App {
 
         app.reload_calendars()?;
         app.reload_events()?;
+        app.rebuild_holidays_cache();
         Ok(app)
     }
 
@@ -688,6 +720,68 @@ impl App {
         let label = day.label(self.lang);
         let msg = self.lang.msg_week_start_changed(label);
         self.set_status(msg);
+    }
+
+    pub fn set_holiday_region(&mut self, region: HolidayRegion) -> Result<()> {
+        self.holiday_region = region;
+        self.settings_holiday_idx = HolidayRegion::ALL
+            .iter()
+            .position(|r| *r == region)
+            .unwrap_or(0);
+        let _ = self.db.set_setting("holiday_region", region.code());
+        self.rebuild_holidays_cache();
+        let msg = match self.lang {
+            Language::Ko => format!("🎌  공휴일 국가 설정 변경: {}", region.label(self.lang)),
+            Language::Ja => format!("🎌  祝日カレンダー変更: {}", region.label(self.lang)),
+            _ => format!("🎌  Holiday region set to: {}", region.label(self.lang)),
+        };
+        self.set_status(msg);
+        Ok(())
+    }
+
+    pub fn rebuild_holidays_cache(&mut self) {
+        self.holidays_cache.clear();
+        let holidays_cal_enabled = self
+            .calendars
+            .iter()
+            .find(|c| c.id == "cal_holidays")
+            .map(|c| c.enabled)
+            .unwrap_or(true);
+
+        if !holidays_cal_enabled || self.holiday_region == HolidayRegion::None {
+            return;
+        }
+
+        // 1. Built-in national holiday definitions for selected region
+        let cur_year = self.selected_date.year();
+        let holidays = get_holidays_range(self.holiday_region, cur_year - 2, cur_year + 3);
+        for h in holidays {
+            self.holidays_cache.insert(h.date, h.name);
+        }
+
+        // 2. Also incorporate any user-defined or synced events in 'cal_holidays' calendar
+        for ev in &self.events_cache {
+            if ev.calendar_id == "cal_holidays" {
+                self.holidays_cache
+                    .insert(ev.start_time.date_naive(), ev.title.clone());
+            }
+        }
+    }
+
+    pub fn get_holiday(&self, date: NaiveDate) -> Option<&str> {
+        self.holidays_cache.get(&date).map(|s| s.as_str())
+    }
+
+    pub fn is_holiday(&self, date: NaiveDate) -> bool {
+        self.holidays_cache.contains_key(&date)
+    }
+
+    pub fn is_red_day(&self, date: NaiveDate) -> bool {
+        date.weekday() == chrono::Weekday::Sun || self.is_holiday(date)
+    }
+
+    pub fn is_blue_day(&self, date: NaiveDate) -> bool {
+        date.weekday() == chrono::Weekday::Sat && !self.is_holiday(date)
     }
 
     pub fn toggle_notifications(&mut self) {
@@ -1169,6 +1263,7 @@ impl App {
         self.db.toggle_calendar(cal_id)?;
         self.reload_calendars()?;
         self.reload_events()?;
+        self.rebuild_holidays_cache();
         self.set_status("Calendar visibility toggled");
         Ok(())
     }
@@ -1208,6 +1303,11 @@ impl App {
                 HitTarget::ModalSettingWeekStart(day) => {
                     self.settings_section = SettingsSection::WeekStart;
                     self.set_week_start_day(day);
+                }
+
+                HitTarget::ModalSettingHoliday(region) => {
+                    self.settings_section = SettingsSection::Holidays;
+                    let _ = self.set_holiday_region(region);
                 }
 
                 HitTarget::ModalSettingNotificationToggle => {

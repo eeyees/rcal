@@ -103,13 +103,17 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             current_date.month(),
             current_date.day()
         );
-        let is_weekend = current_date.weekday() == chrono::Weekday::Sat
-            || current_date.weekday() == chrono::Weekday::Sun;
+        let is_red = app.is_red_day(current_date);
+        let is_blue = app.is_blue_day(current_date);
         let header_style = if is_today {
             theme.today_style()
         } else if is_selected {
             theme.selected_day_style()
-        } else if is_weekend {
+        } else if is_red {
+            Style::default()
+                .fg(theme.danger)
+                .add_modifier(Modifier::BOLD)
+        } else if is_blue {
             Style::default()
                 .fg(theme.accent)
                 .add_modifier(Modifier::BOLD)

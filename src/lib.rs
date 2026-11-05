@@ -1,5 +1,6 @@
 pub mod app;
 pub mod events;
+pub mod holidays;
 pub mod i18n;
 pub mod mcp;
 pub mod model;

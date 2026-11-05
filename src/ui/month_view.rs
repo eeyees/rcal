@@ -48,8 +48,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     for (i, dow) in dows.iter().enumerate() {
         let col_date = grid_start_date + Duration::days(i as i64);
         let weekday = col_date.weekday();
-        let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
-        let style = if is_weekend {
+        let style = if weekday == chrono::Weekday::Sun {
+            Style::default()
+                .fg(theme.danger)
+                .add_modifier(Modifier::BOLD)
+        } else if weekday == chrono::Weekday::Sat {
             Style::default()
                 .fg(theme.accent)
                 .add_modifier(Modifier::BOLD)
@@ -106,14 +109,18 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             // Day Number - consistent format across all states so text never shifts on focus/selection change
             let day_num_str = format!("{}", current_cell_date.day());
             let day_text = format!(" {} ", day_num_str);
+            let is_red = app.is_red_day(current_cell_date);
+            let is_blue = app.is_blue_day(current_cell_date);
+            let holiday_name = app.get_holiday(current_cell_date);
+
             let day_span = if is_today {
                 Span::styled(day_text, theme.today_style())
             } else if is_selected {
                 Span::styled(day_text, theme.selected_day_style())
             } else if is_current_month {
-                let weekday = current_cell_date.weekday();
-                let is_weekend = weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun;
-                let color = if is_weekend {
+                let color = if is_red {
+                    theme.danger
+                } else if is_blue {
                     theme.accent
                 } else {
                     theme.text_normal
@@ -123,15 +130,42 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     Style::default().fg(color).add_modifier(Modifier::BOLD),
                 )
             } else {
-                Span::styled(day_text, Style::default().fg(theme.text_dim))
+                let color = if is_red {
+                    theme.danger
+                } else if is_blue {
+                    theme.accent
+                } else {
+                    theme.text_dim
+                };
+                Span::styled(day_text, Style::default().fg(color).add_modifier(Modifier::DIM))
             };
-            cell_lines.push(Line::from(vec![day_span]));
 
-            // Filter events for this cell
+            if let Some(h_name) = holiday_name {
+                let max_badge_len = (inner.width as usize).saturating_sub(day_num_str.len() + 4);
+                let badge_text = if h_name.chars().count() > max_badge_len && max_badge_len > 2 {
+                    let truncated: String = h_name.chars().take(max_badge_len - 1).collect();
+                    format!(" {truncated}…")
+                } else {
+                    format!(" {h_name}")
+                };
+                cell_lines.push(Line::from(vec![
+                    day_span,
+                    Span::styled(
+                        badge_text,
+                        Style::default()
+                            .fg(theme.danger)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]));
+            } else {
+                cell_lines.push(Line::from(vec![day_span]));
+            }
+
+            // Filter events for this cell (holidays already highlighted above)
             let events_for_day: Vec<&_> = app
                 .events_cache
                 .iter()
-                .filter(|ev| ev.occurs_on(current_cell_date))
+                .filter(|ev| ev.occurs_on(current_cell_date) && ev.calendar_id != "cal_holidays")
                 .collect();
 
             let max_displayable = inner.height.saturating_sub(1) as usize;
