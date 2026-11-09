@@ -594,7 +594,10 @@ impl App {
                 self.day_selected_event_idx = None;
             }
             ViewMode::Agenda => {
-                self.agenda_selected_index += 1;
+                let count = self.agenda_events().len();
+                if count > 0 && self.agenda_selected_index + 1 < count {
+                    self.agenda_selected_index += 1;
+                }
             }
         }
     }
@@ -623,6 +626,51 @@ impl App {
         timed.sort_by_key(|e| e.start_time);
         all_day.extend(timed);
         all_day
+    }
+
+    pub fn collect_agenda_occurrences(events: &[Event]) -> Vec<(NaiveDate, &Event)> {
+        if events.is_empty() {
+            return Vec::new();
+        }
+        let today = Local::now().date_naive();
+        let lookahead_days = 60;
+
+        let mut upcoming_occurrences: Vec<(NaiveDate, &Event)> = Vec::new();
+        for d_offset in 0..=lookahead_days {
+            let current_date = today + chrono::Duration::days(d_offset);
+            for ev in events {
+                if ev.occurs_on(current_date) {
+                    upcoming_occurrences.push((current_date, ev));
+                }
+            }
+        }
+
+        if upcoming_occurrences.is_empty() {
+            for ev in events {
+                upcoming_occurrences.push((ev.start_time.date_naive(), ev));
+            }
+        }
+
+        upcoming_occurrences.sort_by(|(d1, e1), (d2, e2)| {
+            d1.cmp(d2)
+                .then_with(|| e2.all_day.cmp(&e1.all_day))
+                .then_with(|| e1.start_time.time().cmp(&e2.start_time.time()))
+        });
+
+        upcoming_occurrences
+    }
+
+    pub fn agenda_events(&self) -> Vec<(NaiveDate, &Event)> {
+        Self::collect_agenda_occurrences(&self.events_cache)
+    }
+
+    pub fn clamp_agenda_index(&mut self) {
+        let count = self.agenda_events().len();
+        if count == 0 {
+            self.agenda_selected_index = 0;
+        } else if self.agenda_selected_index >= count {
+            self.agenda_selected_index = count - 1;
+        }
     }
 
     // Modal triggers
@@ -1165,6 +1213,7 @@ impl App {
     pub fn delete_event(&mut self, event_id: &str) -> Result<()> {
         self.db.delete_event(event_id)?;
         self.reload_events()?;
+        self.clamp_agenda_index();
         self.close_modal();
         self.set_status(self.lang.msg_deleted());
         Ok(())

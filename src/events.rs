@@ -1107,8 +1107,26 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('2') | KeyCode::Char('w') | KeyCode::Char('W') => {
             app.current_view = ViewMode::Week
         }
-        KeyCode::Char('3') | KeyCode::Char('d') | KeyCode::Char('D') => {
+        KeyCode::Char('3') => {
             app.current_view = ViewMode::Day
+        }
+        KeyCode::Char('d') | KeyCode::Char('D') => {
+            if app.current_view == ViewMode::Agenda {
+                let items = app.agenda_events();
+                if let Some((_, ev)) = items.get(app.agenda_selected_index) {
+                    app.request_delete_event(&ev.id.clone());
+                }
+            } else {
+                app.current_view = ViewMode::Day;
+            }
+        }
+        KeyCode::Delete | KeyCode::Backspace => {
+            if app.current_view == ViewMode::Agenda {
+                let items = app.agenda_events();
+                if let Some((_, ev)) = items.get(app.agenda_selected_index) {
+                    app.request_delete_event(&ev.id.clone());
+                }
+            }
         }
         KeyCode::Char('4') | KeyCode::Char('a') => app.current_view = ViewMode::Agenda,
 
@@ -1146,7 +1164,10 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             ViewMode::Agenda => {
-                app.agenda_selected_index += 1;
+                let count = app.agenda_events().len();
+                if count > 0 && app.agenda_selected_index + 1 < count {
+                    app.agenda_selected_index += 1;
+                }
             }
         },
         KeyCode::Char('[') => app.nav_prev(),
@@ -1212,9 +1233,8 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             } else if app.current_view == ViewMode::Agenda {
-                let mut sorted: Vec<&_> = app.events_cache.iter().collect();
-                sorted.sort_by_key(|e| e.start_time);
-                if let Some(ev) = sorted.get(app.agenda_selected_index) {
+                let items = app.agenda_events();
+                if let Some((_, ev)) = items.get(app.agenda_selected_index) {
                     app.open_event_detail_modal(ev.id.clone());
                 }
             }

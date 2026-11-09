@@ -19,7 +19,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    if app.events_cache.is_empty() {
+    let upcoming_occurrences = App::collect_agenda_occurrences(&app.events_cache);
+    if upcoming_occurrences.is_empty() {
         let p =
             Paragraph::new("No upcoming events found. Press 'n' or click '+ New' to create one.")
                 .style(
@@ -30,34 +31,6 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         f.render_widget(p, inner);
         return;
     }
-
-    let today = Local::now().date_naive();
-    let lookahead_days = 60;
-
-    // Collect occurrences for upcoming days (including recurring events)
-    let mut upcoming_occurrences: Vec<(NaiveDate, &crate::model::Event)> = Vec::new();
-    for d_offset in 0..=lookahead_days {
-        let current_date = today + chrono::Duration::days(d_offset);
-        for ev in &app.events_cache {
-            if ev.occurs_on(current_date) {
-                upcoming_occurrences.push((current_date, ev));
-            }
-        }
-    }
-
-    // Fallback: If no upcoming events in next 60 days, show all events sorted by start_time
-    if upcoming_occurrences.is_empty() {
-        for ev in &app.events_cache {
-            upcoming_occurrences.push((ev.start_time.date_naive(), ev));
-        }
-    }
-
-    // Sort by occurrence date, then all-day first, then time
-    upcoming_occurrences.sort_by(|(d1, e1), (d2, e2)| {
-        d1.cmp(d2)
-            .then_with(|| e2.all_day.cmp(&e1.all_day))
-            .then_with(|| e1.start_time.time().cmp(&e2.start_time.time()))
-    });
 
     let mut current_y = inner.y;
     let max_y = inner.y + inner.height;
