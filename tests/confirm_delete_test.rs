@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use chrono::Local;
+    use chrono::{Local, TimeZone};
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
@@ -224,7 +224,10 @@ mod tests {
         app.reload_events().unwrap();
 
         let cal_id = app.calendars[0].id.clone();
-        let now = Local::now();
+        let today = Local::now().date_naive();
+        let now = Local
+            .from_local_datetime(&today.and_hms_opt(10, 0, 0).unwrap())
+            .unwrap();
 
         // 과거 일정 2개 (과거 일정이 DB에 있어도 화면의 오늘 일정이 정확히 선택되어 삭제되어야 함)
         let past_ev1 = Event::new(
@@ -298,7 +301,10 @@ mod tests {
         app.reload_events().unwrap();
 
         let cal_id = app.calendars[0].id.clone();
-        let now = Local::now();
+        let today = Local::now().date_naive();
+        let now = Local
+            .from_local_datetime(&today.and_hms_opt(10, 0, 0).unwrap())
+            .unwrap();
 
         // 2개의 오늘/미래 일정 생성
         let ev1 = Event::new(

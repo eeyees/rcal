@@ -56,15 +56,27 @@ impl EventFormState {
         default_cal_id: String,
         default_hour: Option<u32>,
     ) -> Self {
-        let hour = default_hour.unwrap_or(9);
+        let (start_time_str, end_time_str) = if let Some(hour) = default_hour {
+            (
+                format!("{:02}:00", hour),
+                format!("{:02}:00", (hour + 1).min(23)),
+            )
+        } else {
+            let now = Local::now();
+            let end = now + chrono::Duration::minutes(30);
+            (
+                now.format("%H:%M").to_string(),
+                end.format("%H:%M").to_string(),
+            )
+        };
         Self {
             is_new: true,
             event_id: None,
             calendar_id: default_cal_id,
             title: String::new(),
             date_str: date.format("%Y-%m-%d").to_string(),
-            start_time_str: format!("{:02}:00", hour),
-            end_time_str: format!("{:02}:00", (hour + 1).min(23)),
+            start_time_str,
+            end_time_str,
             all_day: false,
             location: String::new(),
             description: String::new(),
@@ -374,6 +386,7 @@ pub struct App {
     pub selected_date: NaiveDate,
     pub selected_hour: u32,
     pub day_selected_event_idx: Option<usize>,
+    pub week_selected_event_idx: Option<usize>,
     pub agenda_selected_index: usize,
 
     pub db: Database,
@@ -453,6 +466,7 @@ impl App {
             selected_date: today,
             selected_hour: 9,
             day_selected_event_idx: None,
+            week_selected_event_idx: None,
             agenda_selected_index: 0,
             db,
             calendars: Vec::new(),
@@ -568,6 +582,7 @@ impl App {
             }
             ViewMode::Week => {
                 self.selected_date = self.selected_date - ChronoDuration::days(7);
+                self.week_selected_event_idx = None;
             }
             ViewMode::Day => {
                 self.selected_date = self.selected_date - ChronoDuration::days(1);
@@ -588,6 +603,7 @@ impl App {
             }
             ViewMode::Week => {
                 self.selected_date = self.selected_date + ChronoDuration::days(7);
+                self.week_selected_event_idx = None;
             }
             ViewMode::Day => {
                 self.selected_date = self.selected_date + ChronoDuration::days(1);
@@ -605,6 +621,7 @@ impl App {
     pub fn nav_today(&mut self) {
         self.selected_date = Local::now().date_naive();
         self.day_selected_event_idx = None;
+        self.week_selected_event_idx = None;
         let formatted = self.lang.format_month_year(self.selected_date);
         self.set_status(self.lang.msg_jump_today(&formatted));
     }
@@ -626,6 +643,18 @@ impl App {
         timed.sort_by_key(|e| e.start_time);
         all_day.extend(timed);
         all_day
+    }
+
+    pub fn events_for_week(&self, base_date: NaiveDate) -> Vec<(NaiveDate, Event)> {
+        let week_start = self.week_start_day.week_start_date(base_date);
+        let mut events = Vec::new();
+        for col in 0..7 {
+            let date = week_start + ChronoDuration::days(col);
+            for ev in self.events_for_day(date) {
+                events.push((date, ev));
+            }
+        }
+        events
     }
 
     pub fn collect_agenda_occurrences(events: &[Event]) -> Vec<(NaiveDate, &Event)> {
@@ -1138,9 +1167,12 @@ impl App {
             let start = Local
                 .from_local_datetime(&date.and_time(start_time_part))
                 .unwrap();
-            let end = Local
+            let mut end = Local
                 .from_local_datetime(&date.and_time(end_time_part))
                 .unwrap();
+            if end < start {
+                end = end + ChronoDuration::days(1);
+            }
             (start, end)
         };
 
@@ -1214,6 +1246,22 @@ impl App {
         self.db.delete_event(event_id)?;
         self.reload_events()?;
         self.clamp_agenda_index();
+        if let Some(idx) = self.week_selected_event_idx {
+            let count = self.events_for_week(self.selected_date).len();
+            if count == 0 {
+                self.week_selected_event_idx = None;
+            } else if idx >= count {
+                self.week_selected_event_idx = Some(count - 1);
+            }
+        }
+        if let Some(idx) = self.day_selected_event_idx {
+            let count = self.events_for_day(self.selected_date).len();
+            if count == 0 {
+                self.day_selected_event_idx = None;
+            } else if idx >= count {
+                self.day_selected_event_idx = Some(count - 1);
+            }
+        }
         self.close_modal();
         self.set_status(self.lang.msg_deleted());
         Ok(())

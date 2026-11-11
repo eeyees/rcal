@@ -1102,13 +1102,18 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
 
         // View switching
         KeyCode::Char('1') | KeyCode::Char('m') | KeyCode::Char('M') => {
-            app.current_view = ViewMode::Month
+            app.current_view = ViewMode::Month;
+            app.week_selected_event_idx = None;
+            app.day_selected_event_idx = None;
         }
         KeyCode::Char('2') | KeyCode::Char('w') | KeyCode::Char('W') => {
-            app.current_view = ViewMode::Week
+            app.current_view = ViewMode::Week;
+            app.week_selected_event_idx = None;
+            app.day_selected_event_idx = None;
         }
         KeyCode::Char('3') => {
-            app.current_view = ViewMode::Day
+            app.current_view = ViewMode::Day;
+            app.week_selected_event_idx = None;
         }
         KeyCode::Char('d') | KeyCode::Char('D') => {
             if app.current_view == ViewMode::Agenda {
@@ -1116,8 +1121,16 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 if let Some((_, ev)) = items.get(app.agenda_selected_index) {
                     app.request_delete_event(&ev.id.clone());
                 }
+            } else if app.current_view == ViewMode::Week && app.week_selected_event_idx.is_some() {
+                let week_events = app.events_for_week(app.selected_date);
+                if let Some(idx) = app.week_selected_event_idx {
+                    if let Some((_, ev)) = week_events.get(idx) {
+                        app.request_delete_event(&ev.id.clone());
+                    }
+                }
             } else {
                 app.current_view = ViewMode::Day;
+                app.week_selected_event_idx = None;
             }
         }
         KeyCode::Delete | KeyCode::Backspace => {
@@ -1126,22 +1139,43 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                 if let Some((_, ev)) = items.get(app.agenda_selected_index) {
                     app.request_delete_event(&ev.id.clone());
                 }
+            } else if app.current_view == ViewMode::Week {
+                let week_events = app.events_for_week(app.selected_date);
+                if let Some(idx) = app.week_selected_event_idx {
+                    if let Some((_, ev)) = week_events.get(idx) {
+                        app.request_delete_event(&ev.id.clone());
+                    }
+                }
+            } else if app.current_view == ViewMode::Day {
+                let day_events = app.events_for_day(app.selected_date);
+                if let Some(idx) = app.day_selected_event_idx {
+                    if let Some(ev) = day_events.get(idx) {
+                        app.request_delete_event(&ev.id.clone());
+                    }
+                }
             }
         }
-        KeyCode::Char('4') | KeyCode::Char('a') => app.current_view = ViewMode::Agenda,
+        KeyCode::Char('4') | KeyCode::Char('a') => {
+            app.current_view = ViewMode::Agenda;
+            app.week_selected_event_idx = None;
+            app.day_selected_event_idx = None;
+        }
 
         // Navigation
         KeyCode::Char('h') | KeyCode::Left => {
             app.selected_date = app.selected_date - Duration::days(1);
             app.day_selected_event_idx = None;
+            app.week_selected_event_idx = None;
         }
         KeyCode::Char('l') | KeyCode::Right => {
             app.selected_date = app.selected_date + Duration::days(1);
             app.day_selected_event_idx = None;
+            app.week_selected_event_idx = None;
         }
         KeyCode::Char('k') | KeyCode::Up => match app.current_view {
             ViewMode::Month | ViewMode::Week => {
                 app.selected_date = app.selected_date - Duration::days(7);
+                app.week_selected_event_idx = None;
             }
             ViewMode::Day => {
                 if app.selected_hour > 0 {
@@ -1157,6 +1191,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('j') | KeyCode::Down => match app.current_view {
             ViewMode::Month | ViewMode::Week => {
                 app.selected_date = app.selected_date + Duration::days(7);
+                app.week_selected_event_idx = None;
             }
             ViewMode::Day => {
                 if app.selected_hour < 23 {
@@ -1187,7 +1222,7 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('T') => app.open_theme_modal(),
         KeyCode::Char('?') => app.open_help_modal(),
 
-        // Selection / Cycling in Day View
+        // Selection / Cycling in Day and Week View
         KeyCode::Tab => {
             if app.current_view == ViewMode::Day {
                 let day_events = app.events_for_day(app.selected_date);
@@ -1197,6 +1232,18 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         None => 0,
                     };
                     app.day_selected_event_idx = Some(next_idx);
+                }
+            } else if app.current_view == ViewMode::Week {
+                let week_events = app.events_for_week(app.selected_date);
+                if !week_events.is_empty() {
+                    let next_idx = match app.week_selected_event_idx {
+                        Some(idx) => (idx + 1) % week_events.len(),
+                        None => 0,
+                    };
+                    app.week_selected_event_idx = Some(next_idx);
+                    if let Some((d, _)) = week_events.get(next_idx) {
+                        app.selected_date = *d;
+                    }
                 }
             }
         }
@@ -1209,6 +1256,18 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         Some(idx) => idx - 1,
                     };
                     app.day_selected_event_idx = Some(prev_idx);
+                }
+            } else if app.current_view == ViewMode::Week {
+                let week_events = app.events_for_week(app.selected_date);
+                if !week_events.is_empty() {
+                    let prev_idx = match app.week_selected_event_idx {
+                        Some(0) | None => week_events.len() - 1,
+                        Some(idx) => idx - 1,
+                    };
+                    app.week_selected_event_idx = Some(prev_idx);
+                    if let Some((d, _)) = week_events.get(prev_idx) {
+                        app.selected_date = *d;
+                    }
                 }
             }
         }
@@ -1231,6 +1290,15 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                     {
                         app.open_event_detail_modal(ev.id.clone());
                     }
+                }
+            } else if app.current_view == ViewMode::Week {
+                let week_events = app.events_for_week(app.selected_date);
+                if let Some(idx) = app.week_selected_event_idx {
+                    if let Some((_, ev)) = week_events.get(idx) {
+                        app.open_event_detail_modal(ev.id.clone());
+                    }
+                } else {
+                    app.open_new_event_modal(None);
                 }
             } else if app.current_view == ViewMode::Agenda {
                 let items = app.agenda_events();

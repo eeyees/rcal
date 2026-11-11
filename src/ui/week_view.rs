@@ -15,6 +15,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let selected_date = app.selected_date;
     let theme = &app.theme;
 
+    let selected_event_info = if let Some(idx) = app.week_selected_event_idx {
+        app.events_for_week(selected_date)
+            .get(idx)
+            .map(|(d, e)| (*d, e.id.clone()))
+    } else {
+        None
+    };
+
     // Determine week start based on week_start_day setting
     let week_start = app.week_start_day.week_start_date(selected_date);
 
@@ -139,24 +147,47 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             .filter(|ev| ev.all_day && ev.occurs_on(current_date))
             .collect();
 
-        if let Some(first_ev) = all_day_events_on_day.first() {
-            let ev_cal = app.calendars.iter().find(|c| c.id == first_ev.calendar_id);
+        if !all_day_events_on_day.is_empty() {
+            let displayed_ev = all_day_events_on_day
+                .iter()
+                .find(|ev| {
+                    selected_event_info
+                        .as_ref()
+                        .map(|(d, id)| *d == current_date && id == &ev.id)
+                        .unwrap_or(false)
+                })
+                .copied()
+                .unwrap_or_else(|| all_day_events_on_day[0]);
+
+            let is_selected_event = selected_event_info
+                .as_ref()
+                .map(|(d, id)| *d == current_date && id == &displayed_ev.id)
+                .unwrap_or(false);
+
+            let ev_cal = app.calendars.iter().find(|c| c.id == displayed_ev.calendar_id);
             let cal_color = ev_cal.map(|c| c.ratatui_color()).unwrap_or(Color::Cyan);
             let count_suffix = if all_day_events_on_day.len() > 1 {
                 format!(" +{}", all_day_events_on_day.len() - 1)
             } else {
                 String::new()
             };
+
+            let prefix = if is_selected_event { "▶ ■ " } else { " ■ " };
+            let mut style = Style::default()
+                .fg(Color::Black)
+                .bg(cal_color)
+                .add_modifier(Modifier::BOLD);
+            if is_selected_event {
+                style = style.add_modifier(Modifier::UNDERLINED | Modifier::REVERSED);
+            }
+
             let all_day_p = Paragraph::new(Line::from(vec![Span::styled(
-                format!(" ■ {}{}", first_ev.title, count_suffix),
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(cal_color)
-                    .add_modifier(Modifier::BOLD),
+                format!("{}{}{}", prefix, displayed_ev.title, count_suffix),
+                style,
             )]));
             f.render_widget(all_day_p, col_chunks[1]);
             app.hit_map
-                .register(col_chunks[1], HitTarget::EventItem(first_ev.id.clone()));
+                .register(col_chunks[1], HitTarget::EventItem(displayed_ev.id.clone()));
         } else {
             let empty_block = Block::default()
                 .borders(Borders::BOTTOM)
@@ -204,17 +235,28 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             let ev_cal = app.calendars.iter().find(|c| c.id == ev.calendar_id);
             let cal_color = ev_cal.map(|c| c.ratatui_color()).unwrap_or(Color::Cyan);
 
+            let is_selected_event = selected_event_info
+                .as_ref()
+                .map(|(d, id)| *d == current_date && id == &ev.id)
+                .unwrap_or(false);
+
             let ev_hour = ev.start_time.hour();
             if ev_hour >= start_hour && ev_hour <= end_hour {
                 let slot_idx = (ev_hour - start_hour) as usize;
                 let target_rect = hour_chunks[slot_idx];
 
+                let prefix = if is_selected_event { "▶ " } else { " " };
+                let mut style = Style::default()
+                    .fg(Color::Black)
+                    .bg(cal_color)
+                    .add_modifier(Modifier::BOLD);
+                if is_selected_event {
+                    style = style.add_modifier(Modifier::UNDERLINED | Modifier::REVERSED);
+                }
+
                 let ev_block = Paragraph::new(Line::from(vec![Span::styled(
-                    format!(" {}", ev.title),
-                    Style::default()
-                        .fg(Color::Black)
-                        .bg(cal_color)
-                        .add_modifier(Modifier::BOLD),
+                    format!("{}{}", prefix, ev.title),
+                    style,
                 )]));
                 f.render_widget(ev_block, target_rect);
                 app.hit_map
