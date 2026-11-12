@@ -32,6 +32,8 @@ Type "t"
 Sleep 600ms
 Type "2"
 Sleep 1.5s
+Tab
+Sleep 1s
 
 # 2. Week View Screenshot
 Screenshot "assets/week_view.png"
