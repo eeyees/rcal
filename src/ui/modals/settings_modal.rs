@@ -13,8 +13,14 @@ use crate::mouse::HitTarget;
 use crate::ui::theme::{Theme, ThemeCategory, ThemeMode};
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
-    let popup_width = 90.min(area.width.saturating_sub(2));
-    let popup_height = 29.min(area.height.saturating_sub(1));
+    // Responsive popup sizing: spacious and comfortable on modern terminals
+    // while adapting cleanly to smaller viewports.
+    let popup_width = 100
+        .min(area.width.saturating_sub(2))
+        .max(84.min(area.width.saturating_sub(2)));
+    let popup_height = 30
+        .min(area.height.saturating_sub(1))
+        .max(26.min(area.height.saturating_sub(1)));
 
     let popup_rect = Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
@@ -29,7 +35,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let lang = app.lang;
     let theme = app.theme;
     let t = lang.t();
-    let title = t.modal_settings_title;
+    let title = format!(" ⚙  {} ", t.modal_settings_title.trim());
 
     let block = Block::default()
         .borders(Borders::ALL)
@@ -44,28 +50,36 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let inner = block.inner(popup_rect);
     f.render_widget(block, popup_rect);
 
+    // Padding inside modal: 1 column margin on left and right for visual breathing room
+    let content_area = Rect {
+        x: inner.x + 1,
+        y: inner.y,
+        width: inner.width.saturating_sub(2),
+        height: inner.height,
+    };
+
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Subtitle / Dialog Header (0, y = inner.y)
-            Constraint::Length(1), // Top Tabs Bar (1, y = inner.y + 1)
-            Constraint::Length(1), // Divider (2, y = inner.y + 2)
-            Constraint::Min(19),   // Active Tab Expanded Content Area (3, y = inner.y + 3)
-            Constraint::Length(1), // Spacer (4)
+            Constraint::Length(1), // Dialog Header (0, y = inner.y)
+            Constraint::Length(1), // Top Tabs Navigation Bar (1, y = inner.y + 1)
+            Constraint::Length(1), // Sub-tab separator (2, y = inner.y + 2)
+            Constraint::Min(19),   // Active Tab Expanded Content Area (3, y = inner.y + 3..)
+            Constraint::Length(1), // Bottom Divider (4)
             Constraint::Length(1), // Keyboard navigation guide (5)
             Constraint::Length(1), // Close button (6)
         ])
-        .split(inner);
+        .split(content_area);
 
     // Header info line inside modal (consume click, no button hit target)
     let header_desc = match lang {
         crate::i18n::Language::Ko => {
-            " ⚙  환경설정 메뉴 | 상단 탭을 선택하여 각 항목별 상세 설정을 구성하세요."
+            " ⚙  환경설정 메뉴  │  상단 탭을 전환하여 항목별 설정을 자유롭게 구성하세요."
         }
         crate::i18n::Language::Ja => {
-            " ⚙  環境設定メニュー | 上部のタブを選択して各項目の詳細設定を行ってください。"
+            " ⚙  環境設定メニュー  │  上部タブで各項目の詳細設定を行ってください。"
         }
-        _ => " ⚙  Settings Menu | Select tabs above to customize options and preferences.",
+        _ => " ⚙  Preferences Menu  │  Switch tabs above to customize options and preferences.",
     };
     f.render_widget(
         Paragraph::new(Span::styled(
@@ -76,14 +90,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     );
 
     // Active tab determines which content is shown.
-    // When Close button is focused, continue displaying the previously active tab (Language by default).
     let active_tab = match app.settings_section {
         SettingsSection::Close => SettingsSection::Language,
         other => other,
     };
 
     // =========================================================================
-    // 1. Top Tabs Bar
+    // 1. Top Tabs Navigation Bar
     // =========================================================================
     render_tabs_bar(f, app, main_chunks[1], active_tab);
 
@@ -126,7 +139,16 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     }
 
     // =========================================================================
-    // 4. Footer & Close Button
+    // 4. Bottom Divider
+    // =========================================================================
+    let b_divider_char = "─".repeat(main_chunks[4].width as usize);
+    f.render_widget(
+        Paragraph::new(b_divider_char).style(divider_style),
+        main_chunks[4],
+    );
+
+    // =========================================================================
+    // 5. Navigation Guide & Close Button
     // =========================================================================
     let hint_line = Line::from(vec![
         Span::styled(
@@ -162,9 +184,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw(match lang {
-            crate::i18n::Language::Ko => " 항목변경  ",
-            crate::i18n::Language::Ja => " 項目変更  ",
-            _ => " Change  ",
+            crate::i18n::Language::Ko => " 항목선택  ",
+            crate::i18n::Language::Ja => " 項目選択  ",
+            _ => " Select  ",
         }),
         Span::styled(
             "[Esc/q]",
@@ -183,7 +205,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         main_chunks[5],
     );
 
-    // Close button
+    // Close button: beautifully centered with comfortable button width
     let is_close_focused = app.settings_section == SettingsSection::Close;
     let close_style = if is_close_focused {
         Style::default()
@@ -198,18 +220,29 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         theme.button_style()
     };
     let close_text = if is_close_focused {
-        format!("▶ {} ◀", t.settings_btn_close)
+        format!("▶ ✕ {} ◀", t.settings_btn_close)
     } else {
-        t.settings_btn_close.to_string()
+        format!("✕ {}", t.settings_btn_close)
     };
+
+    // Center button horizontally in footer
+    let close_btn_width = 24.min(main_chunks[6].width);
+    let close_btn_x = main_chunks[6].x + (main_chunks[6].width.saturating_sub(close_btn_width)) / 2;
+    let close_rect = Rect {
+        x: close_btn_x,
+        y: main_chunks[6].y,
+        width: close_btn_width,
+        height: 1,
+    };
+
     let close_btn = Paragraph::new(Line::from(vec![Span::raw(close_text)]))
         .style(close_style)
         .alignment(Alignment::Center);
-    f.render_widget(close_btn, main_chunks[6]);
-    app.hit_map.register(main_chunks[6], HitTarget::ModalClose);
+    f.render_widget(close_btn, close_rect);
+    app.hit_map.register(close_rect, HitTarget::ModalClose);
 
     // =========================================================================
-    // 5. Cursor Placement per Section
+    // 6. Cursor Placement per Section
     // =========================================================================
     match app.settings_section {
         SettingsSection::WeekStart => {
@@ -243,14 +276,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             ));
         }
         SettingsSection::Close => {
-            let rect = main_chunks[6];
-            f.set_cursor_position((rect.x + rect.width / 2, rect.y));
+            f.set_cursor_position((close_rect.x + close_rect.width / 2, close_rect.y));
         }
     }
 }
 
 // =============================================================================
-// Helper: Render Top Tabs Bar
+// Helper: Render Top Tabs Navigation Bar
 // =============================================================================
 fn render_tabs_bar(f: &mut Frame, app: &mut App, area: Rect, active_tab: SettingsSection) {
     let theme = app.theme;
@@ -270,9 +302,7 @@ fn render_tabs_bar(f: &mut Frame, app: &mut App, area: Rect, active_tab: Setting
 
     for (idx, sec) in tabs.iter().enumerate() {
         let is_selected = active_tab == *sec;
-        let prefix = if is_selected { "● " } else { "○ " };
         let title = sec.tab_title(lang);
-        let text = format!("{}{}", prefix, title);
 
         let style = if is_selected {
             Style::default()
@@ -288,7 +318,7 @@ fn render_tabs_bar(f: &mut Frame, app: &mut App, area: Rect, active_tab: Setting
         };
 
         let rect = tab_chunks[idx];
-        let p = Paragraph::new(Line::from(vec![Span::raw(text)]))
+        let p = Paragraph::new(Line::from(vec![Span::raw(title)]))
             .style(style)
             .alignment(Alignment::Center);
         f.render_widget(p, rect);
@@ -307,14 +337,14 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Title (y = inner.y + 3)
-            Constraint::Length(1), // Subtitle (y = inner.y + 4)
-            Constraint::Length(1), // Spacer (y = inner.y + 5)
-            Constraint::Length(1), // Buttons (y = inner.y + 6)
-            Constraint::Length(1), // Spacer (y = inner.y + 7)
-            Constraint::Length(8), // Calendar Preview Box (y = inner.y + 8..15)
-            Constraint::Length(1), // Spacer (y = inner.y + 16)
-            Constraint::Length(4), // Tips & Guide Box (y = inner.y + 17..20)
+            Constraint::Length(1), // Title (y = inner.y + 2)
+            Constraint::Length(1), // Subtitle (y = inner.y + 3)
+            Constraint::Length(1), // Spacer (y = inner.y + 4)
+            Constraint::Length(1), // 3 Option Buttons (y = inner.y + 5)
+            Constraint::Length(1), // Spacer (y = inner.y + 6)
+            Constraint::Length(8), // Calendar Live Table Preview Box (y = inner.y + 7..14)
+            Constraint::Length(1), // Spacer (y = inner.y + 15)
+            Constraint::Length(4), // Tips & Guide Box (y = inner.y + 16..19)
             Constraint::Min(0),
         ])
         .split(area);
@@ -345,29 +375,30 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         chunks[1],
     );
 
-    // 3 Buttons
+    // 3 Buttons: Sunday, Monday, Saturday
+    let btn_width = (chunks[3].width.saturating_sub(4)) / 3;
     let btn_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(26), // Sunday
+            Constraint::Length(btn_width),
             Constraint::Length(2),
-            Constraint::Length(26), // Monday
+            Constraint::Length(btn_width),
             Constraint::Length(2),
-            Constraint::Length(26), // Saturday
+            Constraint::Length(btn_width),
             Constraint::Min(0),
         ])
         .split(chunks[3]);
 
     let options = match lang {
         crate::i18n::Language::Ko => [
-            (WeekStartDay::Sunday, "일요일 (Sun)", "s"),
-            (WeekStartDay::Monday, "월요일 (Mon)", "m"),
-            (WeekStartDay::Saturday, "토요일 (Sat)", "t"),
+            (WeekStartDay::Sunday, "일요일 (Sunday)", "s"),
+            (WeekStartDay::Monday, "월요일 (Monday)", "m"),
+            (WeekStartDay::Saturday, "토요일 (Saturday)", "t"),
         ],
         crate::i18n::Language::Ja => [
-            (WeekStartDay::Sunday, "日曜日 (Sun)", "s"),
-            (WeekStartDay::Monday, "月曜日 (Mon)", "m"),
-            (WeekStartDay::Saturday, "土曜日 (Sat)", "t"),
+            (WeekStartDay::Sunday, "日曜日 (Sunday)", "s"),
+            (WeekStartDay::Monday, "月曜日 (Monday)", "m"),
+            (WeekStartDay::Saturday, "土曜日 (Saturday)", "t"),
         ],
         _ => [
             (WeekStartDay::Sunday, "Sunday (Sun)", "s"),
@@ -380,7 +411,7 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     for (idx, (day, label, key)) in options.iter().enumerate() {
         let is_selected = app.week_start_day == *day;
         let prefix = if is_selected { "● " } else { "○ " };
-        let text = format!("[ {}{} [{}] ]", prefix, label, key);
+        let text = format!("{}[{}] {}", prefix, key, label);
 
         let style = if is_selected {
             Style::default()
@@ -407,10 +438,10 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
             .register(rect, HitTarget::ModalSettingWeekStart(*day));
     }
 
-    // Calendar Preview Box
+    // Calendar Live Week Table Preview Box
     let preview_title = match lang {
-        crate::i18n::Language::Ko => " 📅 주간 배치 실시간 미리보기 (Live Week Preview) ",
-        crate::i18n::Language::Ja => " 📅 週の配置プレビュー (Live Week Preview) ",
+        crate::i18n::Language::Ko => " 📅 주간 배치 실시간 미리보기 (Live Week Layout Preview) ",
+        crate::i18n::Language::Ja => " 📅 週の配置プレビュー (Live Week Layout Preview) ",
         _ => " 📅 Live Week Layout Preview ",
     };
     let preview_block = Block::default()
@@ -425,6 +456,7 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let p_inner = preview_block.inner(chunks[5]);
     f.render_widget(preview_block, chunks[5]);
 
+    // Build responsive 7-column calendar preview table
     let (headers, dates) = match app.week_start_day {
         WeekStartDay::Sunday => (
             vec![
@@ -511,7 +543,7 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
     // Tips Box
     let guide_title = match lang {
-        crate::i18n::Language::Ko => " 💡 주 시작 요일 안내 ",
+        crate::i18n::Language::Ko => " 💡 주 시작 요일 설정 가이드 ",
         crate::i18n::Language::Ja => " 💡 週の開始曜日ガイド ",
         _ => " 💡 Week Start Guide ",
     };
@@ -528,31 +560,61 @@ fn render_week_start_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let g_lines = match lang {
         crate::i18n::Language::Ko => vec![
             Line::from(vec![
-                Span::styled("• 단축키: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "• 단축키: ",
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("[s] 일요일, [m] 월요일, [t] 토요일 또는 [←/→/↑/↓] 키로 즉시 변경 가능합니다."),
             ]),
             Line::from(vec![
-                Span::styled("• 반영범위: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "• 반영범위: ",
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("월간 뷰 그리드, 주간 뷰 타임라인, 미니 달력 등 모든 캘린더 화면에 즉시 적용됩니다."),
             ]),
         ],
         crate::i18n::Language::Ja => vec![
             Line::from(vec![
-                Span::styled("• ショートカット: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "• ショートカット: ",
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("[s] 日曜日、[m] 月曜日、[t] 土曜日、または [←/→/↑/↓] で即時切替可能。"),
             ]),
             Line::from(vec![
-                Span::styled("• 反映範囲: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "• 反映範囲: ",
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("月間グリッド・週間タイムライン・ミニカレンダーの表示が即座に更新されます。"),
             ]),
         ],
         _ => vec![
             Line::from(vec![
-                Span::styled("• Shortcuts: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "• Shortcuts: ",
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("[s] Sunday, [m] Monday, [t] Saturday, or [←/→/↑/↓] arrow keys."),
             ]),
             Line::from(vec![
-                Span::styled("• Applies to: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "• Applies to: ",
+                    Style::default()
+                        .fg(theme.accent)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("Month view grid, Week timeline, and Mini calendars across the application."),
             ]),
         ],
@@ -616,17 +678,18 @@ fn render_holidays_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         chunks[1],
     );
 
-    // 4 Region Buttons
+    // 4 Region Buttons with responsive widths
+    let btn_width = (chunks[3].width.saturating_sub(6)) / 4;
     let btn_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(20), // KR
+            Constraint::Length(btn_width), // KR
             Constraint::Length(2),
-            Constraint::Length(20), // US
+            Constraint::Length(btn_width), // US
             Constraint::Length(2),
-            Constraint::Length(20), // JP
+            Constraint::Length(btn_width), // JP
             Constraint::Length(2),
-            Constraint::Length(20), // OFF
+            Constraint::Length(btn_width), // OFF
             Constraint::Min(0),
         ])
         .split(chunks[3]);
@@ -687,14 +750,14 @@ fn render_holidays_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         app.hit_map.register(rect, HitTarget::ModalSettingHoliday(*region));
     }
 
-    // Preview Box: List of upcoming / registered holidays for selected region
+    // Preview Box: 2-column clean holiday grid
     let p_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
         .title(Span::styled(
             match lang {
-                crate::i18n::Language::Ko => " 📅 적용된 주요 공휴일 목록 미리보기 ",
-                crate::i18n::Language::Ja => " 📅 適用された主な祝日プレビュー ",
+                crate::i18n::Language::Ko => " 📅 적용된 주요 공휴일 목록 미리보기 (Live Holiday Preview) ",
+                crate::i18n::Language::Ja => " 📅 適用された主な祝日プレビュー (Live Holiday Preview) ",
                 _ => " 📅 Registered Public Holidays Preview ",
             },
             Style::default().fg(theme.primary).add_modifier(Modifier::BOLD),
@@ -708,19 +771,27 @@ fn render_holidays_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
     let mut p_lines = Vec::new();
     if sample_holidays.is_empty() {
+        p_lines.push(Line::from(vec![Span::raw("")]));
         p_lines.push(Line::from(vec![Span::styled(
             match lang {
-                crate::i18n::Language::Ko => "  (공휴일 표시가 꺼져 있습니다. 국가를 선택하면 자동으로 활성화됩니다.)",
-                crate::i18n::Language::Ja => "  (祝日カレンダーはオフです。国を選択すると自動的に有効になります。)",
-                _ => "  (Public holiday calendar is off. Select a region to activate.)",
+                crate::i18n::Language::Ko => "     (공휴일 표시가 꺼져 있습니다. 국가를 선택하면 자동으로 활성화됩니다.)",
+                crate::i18n::Language::Ja => "     (祝日カレンダーはオフです。国を選択すると自動的に有効になります。)",
+                _ => "     (Public holiday calendar is off. Select a region to activate.)",
             },
             Style::default().fg(theme.text_dim),
         )]));
     } else {
-        let max_show = (p_inner.height as usize).min(sample_holidays.len());
-        for h in sample_holidays.iter().take(max_show) {
-            let wd = match lang {
-                crate::i18n::Language::Ko => match h.date.weekday() {
+        // Show holidays in 2 parallel columns for generous, clean information density
+        let max_rows = p_inner.height as usize;
+        let col_cap = max_rows.max(1);
+        for row in 0..col_cap {
+            let left_idx = row;
+            let right_idx = row + col_cap;
+
+            let mut spans = Vec::new();
+            if left_idx < sample_holidays.len() {
+                let h = &sample_holidays[left_idx];
+                let wd = match h.date.weekday() {
                     chrono::Weekday::Mon => "월",
                     chrono::Weekday::Tue => "화",
                     chrono::Weekday::Wed => "수",
@@ -728,33 +799,49 @@ fn render_holidays_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
                     chrono::Weekday::Fri => "금",
                     chrono::Weekday::Sat => "토",
                     chrono::Weekday::Sun => "일",
-                },
-                _ => match h.date.weekday() {
-                    chrono::Weekday::Mon => "Mon",
-                    chrono::Weekday::Tue => "Tue",
-                    chrono::Weekday::Wed => "Wed",
-                    chrono::Weekday::Thu => "Thu",
-                    chrono::Weekday::Fri => "Fri",
-                    chrono::Weekday::Sat => "Sat",
-                    chrono::Weekday::Sun => "Sun",
-                },
-            };
-            p_lines.push(Line::from(vec![
-                Span::styled(
-                    format!("  • {:04}-{:02}-{:02} ({})  ", h.date.year(), h.date.month(), h.date.day(), wd),
+                };
+                spans.push(Span::styled(
+                    format!("  • {:02}-{:02} ({}) ", h.date.month(), h.date.day(), wd),
                     Style::default().fg(theme.danger).add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    &h.name,
-                    Style::default().fg(theme.text_normal),
-                ),
-            ]));
-        }
-        if sample_holidays.len() > max_show {
-            let remain = sample_holidays.len() - max_show;
-            p_lines.push(Line::from(vec![
-                Span::styled(format!("    ... 외 {}개 공휴일", remain), Style::default().fg(theme.text_dim)),
-            ]));
+                ));
+                let name = if h.name.chars().count() > 14 {
+                    let truncated: String = h.name.chars().take(13).collect();
+                    format!("{}…", truncated)
+                } else {
+                    format!("{:<14}", h.name)
+                };
+                spans.push(Span::styled(name, Style::default().fg(theme.text_normal)));
+            } else {
+                spans.push(Span::raw("                             "));
+            }
+
+            spans.push(Span::raw("    │  "));
+
+            if right_idx < sample_holidays.len() {
+                let h = &sample_holidays[right_idx];
+                let wd = match h.date.weekday() {
+                    chrono::Weekday::Mon => "월",
+                    chrono::Weekday::Tue => "화",
+                    chrono::Weekday::Wed => "수",
+                    chrono::Weekday::Thu => "목",
+                    chrono::Weekday::Fri => "금",
+                    chrono::Weekday::Sat => "토",
+                    chrono::Weekday::Sun => "일",
+                };
+                spans.push(Span::styled(
+                    format!("• {:02}-{:02} ({}) ", h.date.month(), h.date.day(), wd),
+                    Style::default().fg(theme.danger).add_modifier(Modifier::BOLD),
+                ));
+                let name = if h.name.chars().count() > 14 {
+                    let truncated: String = h.name.chars().take(13).collect();
+                    format!("{}…", truncated)
+                } else {
+                    format!("{:<14}", h.name)
+                };
+                spans.push(Span::styled(name, Style::default().fg(theme.text_normal)));
+            }
+
+            p_lines.push(Line::from(spans));
         }
     }
     f.render_widget(Paragraph::new(p_lines), p_inner);
@@ -810,7 +897,7 @@ fn render_holidays_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 }
 
 // =============================================================================
-// Tab 2: Desktop Notifications Content
+// Tab 3: Desktop Notifications Content
 // =============================================================================
 fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let theme = app.theme;
@@ -819,16 +906,16 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Title & Test button row (y = inner.y + 3)
-            Constraint::Length(1), // Subtitle (y = inner.y + 4)
-            Constraint::Length(1), // Spacer (y = inner.y + 5)
-            Constraint::Length(1), // Section 1 label: 알림 및 소리 제어 (y = inner.y + 6)
-            Constraint::Length(1), // Toggle & Sound buttons (y = inner.y + 7)
-            Constraint::Length(1), // Spacer (y = inner.y + 8)
-            Constraint::Length(1), // Lead times label (y = inner.y + 9)
-            Constraint::Length(1), // Lead times: 5 buttons (y = inner.y + 10)
-            Constraint::Length(1), // Spacer (y = inner.y + 11)
-            Constraint::Length(6), // Summary Box (y = inner.y + 12..17)
+            Constraint::Length(1), // Title & Test button row (y = inner.y + 2)
+            Constraint::Length(1), // Subtitle (y = inner.y + 3)
+            Constraint::Length(1), // Spacer (y = inner.y + 4)
+            Constraint::Length(1), // Section 1 label: 알림 및 소리 제어 (y = inner.y + 5)
+            Constraint::Length(1), // Toggle & Sound buttons (y = inner.y + 6)
+            Constraint::Length(1), // Spacer (y = inner.y + 7)
+            Constraint::Length(1), // Lead times label (y = inner.y + 8)
+            Constraint::Length(1), // Lead times: 5 buttons (y = inner.y + 9)
+            Constraint::Length(1), // Spacer (y = inner.y + 10)
+            Constraint::Length(6), // Summary Box (y = inner.y + 11..16)
             Constraint::Min(0),
         ])
         .split(area);
@@ -904,98 +991,70 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         chunks[3],
     );
 
-    // Toggle & Sound Controls (chunks[4])
+    // Toggle & Sound Buttons (chunks[4])
     let ctrl_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(22), // Toggle button
+            Constraint::Length(30), // Notification Toggle
             Constraint::Length(2),
-            Constraint::Length(22), // Sound button
+            Constraint::Length(30), // Sound Toggle
             Constraint::Min(0),
         ])
         .split(chunks[4]);
 
-    // 1. Toggle Button
     let notif_enabled = app.notification_config.enabled;
-    let toggle_label = match lang {
-        crate::i18n::Language::Ko => {
-            if notif_enabled {
-                "● 알림 켬 [n]"
-            } else {
-                "○ 알림 끔 [n]"
-            }
-        }
-        crate::i18n::Language::Ja => {
-            if notif_enabled {
-                "● 通知オン [n]"
-            } else {
-                "○ 通知オフ [n]"
-            }
-        }
-        _ => {
-            if notif_enabled {
-                "● Alerts ON [n]"
-            } else {
-                "○ Alerts OFF [n]"
-            }
-        }
+    let notif_toggle_text = match (lang, notif_enabled) {
+        (crate::i18n::Language::Ko, true) => "[ ● 알림 수신: 켜짐 (n) ]",
+        (crate::i18n::Language::Ko, false) => "[ ○ 알림 수신: 꺼짐 (n) ]",
+        (crate::i18n::Language::Ja, true) => "[ ● 通知: 有効 (n) ]",
+        (crate::i18n::Language::Ja, false) => "[ ○ 通知: 無効 (n) ]",
+        (_, true) => "[ ● Notification: ON (n) ]",
+        (_, false) => "[ ○ Notification: OFF (n) ]",
     };
-    let toggle_style = if notif_enabled {
+    let notif_style = if notif_enabled {
         Style::default()
             .fg(if theme.mode.is_light() {
                 Color::White
             } else {
                 Color::Black
             })
-            .bg(theme.primary)
-            .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
-    } else {
-        theme.button_style()
-    };
-    let toggle_p = Paragraph::new(Line::from(vec![Span::raw(toggle_label)]))
-        .style(toggle_style)
-        .alignment(Alignment::Center);
-    f.render_widget(toggle_p, ctrl_chunks[0]);
-    app.hit_map
-        .register(ctrl_chunks[0], HitTarget::ModalSettingNotificationToggle);
-
-    // 2. Sound Button
-    let sound_enabled = app.notification_config.sound;
-    let sound_label = match lang {
-        crate::i18n::Language::Ko => {
-            if sound_enabled {
-                "● 🔊  소리 켬 [o]"
-            } else {
-                "○ 🔇  무음 [o]"
-            }
-        }
-        crate::i18n::Language::Ja => {
-            if sound_enabled {
-                "● 🔊  音オン [o]"
-            } else {
-                "○ 🔇  消音 [o]"
-            }
-        }
-        _ => {
-            if sound_enabled {
-                "● 🔊  Sound ON [o]"
-            } else {
-                "○ 🔇  Mute [o]"
-            }
-        }
-    };
-    let sound_style = if sound_enabled {
-        Style::default()
-            .fg(theme.text_highlight)
-            .bg(theme.button_bg)
+            .bg(Color::LightGreen)
             .add_modifier(Modifier::BOLD)
     } else {
         theme.button_style()
     };
-    let sound_p = Paragraph::new(Line::from(vec![Span::raw(sound_label)]))
+    let p_notif = Paragraph::new(Line::from(vec![Span::raw(notif_toggle_text)]))
+        .style(notif_style)
+        .alignment(Alignment::Center);
+    f.render_widget(p_notif, ctrl_chunks[0]);
+    app.hit_map
+        .register(ctrl_chunks[0], HitTarget::ModalSettingNotificationToggle);
+
+    let sound_enabled = app.notification_config.sound;
+    let sound_toggle_text = match (lang, sound_enabled) {
+        (crate::i18n::Language::Ko, true) => "[ 🔊 효과음: 켜짐 (o) ]",
+        (crate::i18n::Language::Ko, false) => "[ 🔇 효과음: 무음 (o) ]",
+        (crate::i18n::Language::Ja, true) => "[ 🔊 サウンド: オン (o) ]",
+        (crate::i18n::Language::Ja, false) => "[ 🔇 サウンド: ミュート (o) ]",
+        (_, true) => "[ 🔊 Sound: ON (o) ]",
+        (_, false) => "[ 🔇 Sound: MUTED (o) ]",
+    };
+    let sound_style = if sound_enabled {
+        Style::default()
+            .fg(if theme.mode.is_light() {
+                Color::White
+            } else {
+                Color::Black
+            })
+            .bg(theme.accent)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        theme.button_style()
+    };
+    let p_sound = Paragraph::new(Line::from(vec![Span::raw(sound_toggle_text)]))
         .style(sound_style)
         .alignment(Alignment::Center);
-    f.render_widget(sound_p, ctrl_chunks[2]);
+    f.render_widget(p_sound, ctrl_chunks[2]);
     app.hit_map
         .register(ctrl_chunks[2], HitTarget::ModalSettingNotificationSound);
 
@@ -1019,15 +1078,15 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let lead_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(14), // 0m
+            Constraint::Length(16), // 0m
             Constraint::Length(1),
-            Constraint::Length(14), // 5m
+            Constraint::Length(16), // 5m
             Constraint::Length(1),
-            Constraint::Length(14), // 10m
+            Constraint::Length(16), // 10m
             Constraint::Length(1),
-            Constraint::Length(14), // 15m
+            Constraint::Length(16), // 15m
             Constraint::Length(1),
-            Constraint::Length(14), // 30m
+            Constraint::Length(16), // 30m
             Constraint::Min(0),
         ])
         .split(chunks[7]);
@@ -1165,7 +1224,7 @@ fn render_notifications_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 }
 
 // =============================================================================
-// Tab 3: Color Themes Content
+// Tab 4: Color Themes Content
 // =============================================================================
 fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let theme = app.theme;
@@ -1175,17 +1234,17 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Title & Theme Modal button (y = inner.y + 3)
-            Constraint::Length(1), // Current theme badge & info (y = inner.y + 4)
-            Constraint::Length(1), // Spacer (y = inner.y + 5)
-            Constraint::Length(1), // Category Tabs [Prev] [Dark] [Nature] [Vibrant] [Light] [Next] (y = inner.y + 6)
-            Constraint::Length(1), // Spacer (y = inner.y + 7)
-            Constraint::Length(1), // Theme Grid Row 1 (y = inner.y + 8)
-            Constraint::Length(1), // Theme Grid Row 2 (y = inner.y + 9)
-            Constraint::Length(1), // Spacer (y = inner.y + 10)
-            Constraint::Length(5), // Color Palette Preview Box (y = inner.y + 11..15)
-            Constraint::Length(1), // Spacer (y = inner.y + 16)
-            Constraint::Length(1), // Config file path (y = inner.y + 17)
+            Constraint::Length(1), // Title & Theme Modal button (y = inner.y + 2)
+            Constraint::Length(1), // Current theme badge & info (y = inner.y + 3)
+            Constraint::Length(1), // Spacer (y = inner.y + 4)
+            Constraint::Length(1), // Category Tabs [Prev] [Dark] [Nature] [Vibrant] [Light] [Next] (y = inner.y + 5)
+            Constraint::Length(1), // Spacer (y = inner.y + 6)
+            Constraint::Length(1), // Theme Grid Row 1 (y = inner.y + 7)
+            Constraint::Length(1), // Theme Grid Row 2 (y = inner.y + 8)
+            Constraint::Length(1), // Spacer (y = inner.y + 9)
+            Constraint::Length(5), // Color Palette Preview Box (y = inner.y + 10..14)
+            Constraint::Length(1), // Spacer (y = inner.y + 15)
+            Constraint::Length(1), // Config file path (y = inner.y + 16)
             Constraint::Min(0),
         ])
         .split(area);
@@ -1210,7 +1269,7 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
     let header_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Min(20), Constraint::Length(26)])
+        .constraints([Constraint::Min(20), Constraint::Length(28)])
         .split(chunks[0]);
 
     f.render_widget(
@@ -1222,9 +1281,9 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     );
 
     let open_modal_label = match lang {
-        crate::i18n::Language::Ko => "[ 🎨  전체 테마 모달 (T) ]",
-        crate::i18n::Language::Ja => "[ 🎨  テーマ一覧 (T) ]",
-        _ => "[ 🎨  Theme Modal (T) ]",
+        crate::i18n::Language::Ko => "[ 🎨 전체 37개 테마 모달 (T) ]",
+        crate::i18n::Language::Ja => "[ 🎨 全37テーマ一覧 (T) ]",
+        _ => "[ 🎨 All 37 Themes (T) ]",
     };
     let btn_open_modal = Paragraph::new(Line::from(vec![Span::raw(open_modal_label)]))
         .style(theme.button_style())
@@ -1254,17 +1313,17 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let cat_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Length(10), // [◀ Prev]
+            Constraint::Length(12), // [◀ Prev]
             Constraint::Length(1),
-            Constraint::Length(13), // Dark
+            Constraint::Length(14), // Dark
             Constraint::Length(1),
-            Constraint::Length(13), // Nature
+            Constraint::Length(14), // Nature
             Constraint::Length(1),
-            Constraint::Length(13), // Vibrant
+            Constraint::Length(14), // Vibrant
             Constraint::Length(1),
-            Constraint::Length(13), // Light
+            Constraint::Length(14), // Light
             Constraint::Length(1),
-            Constraint::Length(10), // [Next ▶]
+            Constraint::Length(12), // [Next ▶]
             Constraint::Min(0),
         ])
         .split(chunks[3]);
@@ -1324,11 +1383,11 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
     let mut selected_theme_rect: Option<Rect> = None;
 
-    // Row 1 themes (y = inner.y + 8)
+    // Row 1 themes (y = inner.y + 7)
     let row1_themes = &cat_themes[0..row1_count.min(num_in_cat)];
     let mut row1_constraints = Vec::with_capacity(row1_themes.len() * 2 + 1);
     for _ in 0..row1_themes.len() {
-        row1_constraints.push(Constraint::Length(16));
+        row1_constraints.push(Constraint::Length(17));
         row1_constraints.push(Constraint::Length(1));
     }
     row1_constraints.push(Constraint::Min(0));
@@ -1369,12 +1428,12 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
             .register(rect, HitTarget::ModalSettingTheme(*mode));
     }
 
-    // Row 2 themes (y = inner.y + 9)
+    // Row 2 themes (y = inner.y + 8)
     if row2_count > 0 {
         let row2_themes = &cat_themes[row1_count..num_in_cat];
         let mut row2_constraints = Vec::with_capacity(row2_themes.len() * 2 + 1);
         for _ in 0..row2_themes.len() {
-            row2_constraints.push(Constraint::Length(16));
+            row2_constraints.push(Constraint::Length(17));
             row2_constraints.push(Constraint::Length(1));
         }
         row2_constraints.push(Constraint::Min(0));
@@ -1436,19 +1495,47 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
     let pal_lines = vec![
         Line::from(vec![
-            Span::styled("  ■ Primary: ", Style::default().fg(theme.primary).add_modifier(Modifier::BOLD)),
-            Span::styled("■■■■■  ", Style::default().fg(theme.primary)),
-            Span::styled("  ■ Secondary: ", Style::default().fg(theme.secondary).add_modifier(Modifier::BOLD)),
-            Span::styled("■■■■■  ", Style::default().fg(theme.secondary)),
-            Span::styled("  ■ Accent: ", Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-            Span::styled("■■■■■", Style::default().fg(theme.accent)),
+            Span::styled(
+                "  ■ Primary: ",
+                Style::default()
+                    .fg(theme.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("█████   ", Style::default().fg(theme.primary)),
+            Span::styled(
+                "■ Secondary: ",
+                Style::default()
+                    .fg(theme.secondary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("█████   ", Style::default().fg(theme.secondary)),
+            Span::styled(
+                "■ Accent: ",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("█████   ", Style::default().fg(theme.accent)),
+            Span::styled(
+                "■ Danger: ",
+                Style::default()
+                    .fg(theme.danger)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("█████", Style::default().fg(theme.danger)),
         ]),
-        Line::from(vec![
-            Span::styled(format!("  • 테마 명칭: {} ({:?})", app.theme.mode.label(lang), app.theme.mode), Style::default().fg(theme.text_highlight)),
-        ]),
-        Line::from(vec![
-            Span::styled("  • 단축키: [c] 다음 테마   [C/p] 이전 테마   [↑/↓] 카테고리 전환   [T] 37개 테마 상세 모달", Style::default().fg(theme.text_dim)),
-        ]),
+        Line::from(vec![Span::styled(
+            format!(
+                "  • 테마 명칭: {} ({:?})",
+                app.theme.mode.label(lang),
+                app.theme.mode
+            ),
+            Style::default().fg(theme.text_highlight),
+        )]),
+        Line::from(vec![Span::styled(
+            "  • 단축키: [c] 다음 테마   [C/p] 이전 테마   [←/→] 테마 탐색   [T] 37개 테마 상세 모달",
+            Style::default().fg(theme.text_dim),
+        )]),
     ];
     f.render_widget(Paragraph::new(pal_lines), pal_inner);
 
@@ -1471,7 +1558,7 @@ fn render_theme_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 }
 
 // =============================================================================
-// Tab 4: Language Selection Content
+// Tab 5: Language Selection Content
 // =============================================================================
 fn render_language_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let theme = app.theme;
@@ -1481,14 +1568,14 @@ fn render_language_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Title & Current lang badge (y = inner.y + 3)
-            Constraint::Length(1), // Instruction desc (y = inner.y + 4)
-            Constraint::Length(1), // Spacer (y = inner.y + 5)
-            Constraint::Length(3), // Info Banner Box (y = inner.y + 6..8)
-            Constraint::Length(1), // Spacer (y = inner.y + 9)
-            Constraint::Length(6), // 4 cols x 6 rows grid (y = inner.y + 10..15)
-            Constraint::Length(1), // Spacer (y = inner.y + 16)
-            Constraint::Length(1), // Current lang summary (y = inner.y + 17)
+            Constraint::Length(1), // Title & Current lang badge (y = inner.y + 2)
+            Constraint::Length(1), // Instruction desc (y = inner.y + 3)
+            Constraint::Length(1), // Spacer (y = inner.y + 4)
+            Constraint::Length(3), // Info Banner Box (y = inner.y + 5..7)
+            Constraint::Length(1), // Spacer (y = inner.y + 8)
+            Constraint::Length(6), // 4 cols x 6 rows grid (y = inner.y + 9..14)
+            Constraint::Length(1), // Spacer (y = inner.y + 15)
+            Constraint::Length(1), // Current lang summary (y = inner.y + 16)
             Constraint::Min(0),
         ])
         .split(area);
@@ -1552,7 +1639,7 @@ fn render_language_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
         b_inner,
     );
 
-    // 4 cols x 6 rows grid (chunks[5]) (y = inner.y + 10..15)
+    // 4 cols x 6 rows grid (chunks[5]) (y = inner.y + 9..14)
     let all_langs = crate::i18n::Language::ALL;
     let grid_area = chunks[5];
     let num_cols = 4;
@@ -1630,7 +1717,7 @@ fn render_language_tab(f: &mut Frame, app: &mut App, area: Rect) -> Rect {
 
     // Summary line (chunks[7])
     let summary_text = format!(
-        "  현재 선택된 언어: {} ({})",
+        "  현재 선택된 언어: {} ({})  |  단축키: [Enter/Space] 선택 적용",
         app.lang.label(),
         app.lang.code()
     );
