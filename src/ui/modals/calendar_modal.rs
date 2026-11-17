@@ -12,7 +12,8 @@ use crate::mouse::HitTarget;
 
 pub fn render(f: &mut Frame, app: &mut App, state: &CalendarModalState, area: Rect) {
     let popup_width = 72.min(area.width.saturating_sub(4));
-    let popup_height = 20.min(area.height.saturating_sub(4));
+    let desired_height = (app.calendars.len() as u16 + 8).clamp(18, 24);
+    let popup_height = desired_height.min(area.height.saturating_sub(2));
 
     let popup_rect = Rect {
         x: area.x + (area.width.saturating_sub(popup_width)) / 2,
@@ -262,11 +263,26 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
         chunks[1],
     );
 
-    for (idx, cal) in calendars.iter().enumerate() {
-        let row_y = chunks[2].y + idx as u16;
-        if row_y >= chunks[2].y + chunks[2].height {
-            break;
-        }
+    let visible_rows = chunks[2].height as usize;
+    let selected_idx = state
+        .selected_calendar_idx
+        .min(calendars.len().saturating_sub(1));
+    let scroll_offset = if visible_rows == 0 || calendars.len() <= visible_rows {
+        0
+    } else if selected_idx >= visible_rows {
+        selected_idx.saturating_sub(visible_rows - 1)
+    } else {
+        0
+    };
+
+    for (vis_idx, (idx, cal)) in calendars
+        .iter()
+        .enumerate()
+        .skip(scroll_offset)
+        .take(visible_rows)
+        .enumerate()
+    {
+        let row_y = chunks[2].y + vis_idx as u16;
 
         let row_rect = Rect {
             x: chunks[2].x,
@@ -300,10 +316,10 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
 
         let is_selected = idx == state.selected_calendar_idx;
         let bullet = if is_selected { " ▶ " } else { "   " };
-        let num_badge = if idx < 9 {
-            format!("[{}] ", idx + 1)
+        let num_badge = if calendars.len() >= 10 {
+            format!("[{:>2}] ", idx + 1)
         } else {
-            "    ".to_string()
+            format!("[{}] ", idx + 1)
         };
 
         let info_line = Line::from(vec![
@@ -428,7 +444,8 @@ fn render_calendar_list(f: &mut Frame, app: &mut App, state: &CalendarModalState
         let sel_idx = state
             .selected_calendar_idx
             .min(calendars.len().saturating_sub(1));
-        let cursor_y = chunks[2].y + sel_idx as u16;
+        let cursor_rel = sel_idx.saturating_sub(scroll_offset);
+        let cursor_y = chunks[2].y + (cursor_rel as u16).min(chunks[2].height.saturating_sub(1));
         f.set_cursor_position((chunks[2].x + 1, cursor_y));
     }
 }

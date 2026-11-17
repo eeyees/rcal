@@ -34,6 +34,7 @@ async fn main() -> Result<()> {
                     );
                     println!("Usage: rcal [OPTIONS] [COMMAND]\n");
                     println!("Commands:");
+                    println!("  auth <google|ms|list>  1-Click browser OAuth authentication (Google, Microsoft 365)");
                     println!("  notify                 Check upcoming events and trigger notifications once");
                     println!(
                         "  notify --daemon        Run notification checker daemon in background"
@@ -42,6 +43,7 @@ async fn main() -> Result<()> {
                     println!("  mcp, --mcp             Run Model Context Protocol (MCP) server over stdio");
                     println!();
                     println!("Options:");
+                    println!("  --auth <google|ms>     1-Click browser OAuth login");
                     println!("  --db <PATH>            Path to SQLite database file");
                     println!(
                         "  -v, --version          Print version information (CalVer: YYYY.MM.DD.N)"
@@ -63,6 +65,12 @@ async fn main() -> Result<()> {
     {
         let db = Database::new(custom_db.as_deref())?;
         rcal::mcp::run_stdio(db).await?;
+        return Ok(());
+    }
+
+    // CLI Auth commands (e.g. rcal auth google, rcal --auth google)
+    if args.len() > 1 && (args[1] == "auth" || args[1] == "--auth") {
+        handle_auth_command(&args, custom_db.as_deref()).await?;
         return Ok(());
     }
 
@@ -339,4 +347,130 @@ fn parse_db_flag(args: &[String]) -> Option<std::path::PathBuf> {
         }
     }
     None
+}
+
+async fn handle_auth_command(args: &[String], custom_db: Option<&std::path::Path>) -> Result<()> {
+    let sub = args.get(2).map(|s| s.as_str()).unwrap_or("help");
+    match sub {
+        "google" | "gmail" | "gcal" => {
+            println!("🔐 rcal Google Calendar 1-Click Authentication");
+            let db = Database::new(custom_db)?;
+
+            let file_arg = args.get(3).map(|s| s.as_str());
+            if let Some(src) = file_arg {
+                if let Ok(saved) = rcal::sync::oauth::save_credentials_file(src) {
+                    println!("✓ Saved Google credentials to {}", saved.display());
+                }
+            }
+
+            let (_, _, source) =
+                rcal::sync::oauth::OAuth2Config::resolve_google_credentials_with_source(file_arg, None);
+            println!("• Credentials Source: {}", source);
+            println!("🌐 Opening web browser for Google sign-in (waiting at http://127.0.0.1:8088)...");
+            println!("⏳ Please complete authentication in your browser (Timeout: 120s)...");
+
+            match rcal::sync::oauth::execute_google_one_click_flow(file_arg, None).await {
+                Ok(account) => {
+                    let user_email = account.username.clone();
+                    db.save_account(&account)?;
+                    println!("\n✅ Successfully authenticated Google account: {}", user_email);
+                    println!("✓ Saved to database.");
+
+                    println!("🔄 Discovering calendars from Google...");
+                    match SyncEngine::sync_account(&db, &account).await {
+                        Ok((calendars, events)) => {
+                            println!("✓ Synced {} calendar(s) and {} event(s).", calendars, events);
+                        }
+                        Err(err) => {
+                            println!("ℹ Calendar discovery: {}", err);
+                        }
+                    }
+                    println!("\n🎉 All set! Run 'rcal' to open your calendar.");
+                }
+                Err(e) => {
+                    eprintln!("\n❌ Google authentication failed: {}", e);
+                }
+            }
+        }
+        "ms" | "microsoft" | "office365" | "m365" => {
+            println!("🔐 rcal Microsoft 365 1-Click Authentication");
+            let db = Database::new(custom_db)?;
+            println!("🌐 Opening web browser for Microsoft sign-in (waiting at http://127.0.0.1:8088)...");
+            println!("⏳ Please complete authentication in your browser (Timeout: 120s)...");
+
+            match rcal::sync::oauth::execute_microsoft_one_click_flow(None, None).await {
+                Ok(account) => {
+                    let user_email = account.username.clone();
+                    db.save_account(&account)?;
+                    println!("\n✅ Successfully authenticated Microsoft 365 account: {}", user_email);
+                    println!("✓ Saved to database.");
+
+                    println!("🔄 Discovering calendars from Microsoft Graph...");
+                    match SyncEngine::sync_account(&db, &account).await {
+                        Ok((calendars, events)) => {
+                            println!("✓ Synced {} calendar(s) and {} event(s).", calendars, events);
+                        }
+                        Err(err) => {
+                            println!("ℹ Calendar discovery: {}", err);
+                        }
+                    }
+                    println!("\n🎉 All set! Run 'rcal' to open your calendar.");
+                }
+                Err(e) => {
+                    eprintln!("\n❌ Microsoft authentication failed: {}", e);
+                }
+            }
+        }
+        "set-credentials" | "credentials" => {
+            let path_arg = args.get(3).map(|s| s.as_str());
+            if let Some(src) = path_arg {
+                match rcal::sync::oauth::save_credentials_file(src) {
+                    Ok(dest) => {
+                        println!("✅ Google credentials successfully saved to:");
+                        println!("   {}", dest.display());
+                        println!("\nYou can now run 'rcal auth google' or use 1-Click Login inside rcal!");
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Failed to save credentials: {}", e);
+                    }
+                }
+            } else {
+                eprintln!("Usage: rcal auth set-credentials <PATH_TO_client_secret.json>");
+            }
+        }
+        "list" => {
+            let db = Database::new(custom_db)?;
+            let accounts = db.get_accounts()?;
+            println!("📋 Registered Calendar Accounts ({}):", accounts.len());
+            if accounts.is_empty() {
+                println!("  (No accounts configured. Run 'rcal auth google' or 'rcal auth ms' to connect.)");
+            } else {
+                for (i, acc) in accounts.iter().enumerate() {
+                    let auth_desc = if acc.auth_type == rcal::model::AuthType::OAuth2 {
+                        "OAuth2"
+                    } else {
+                        "Basic"
+                    };
+                    println!(
+                        "  [{}] {} ({}) - Provider: {}, Auth: {}",
+                        i + 1,
+                        acc.name,
+                        acc.username,
+                        acc.provider.as_str(),
+                        auth_desc
+                    );
+                }
+            }
+        }
+        _ => {
+            println!("rcal auth - Multi-cloud Calendar Authentication\n");
+            println!("Usage: rcal auth <COMMAND>\n");
+            println!("Commands:");
+            println!("  google [JSON_PATH]     1-Click browser sign-in for Google Calendar");
+            println!("  ms                     1-Click browser sign-in for Microsoft 365");
+            println!("  set-credentials <PATH> Save client_secret.json to ~/.config/rcal/");
+            println!("  list                   List registered accounts");
+        }
+    }
+    Ok(())
 }

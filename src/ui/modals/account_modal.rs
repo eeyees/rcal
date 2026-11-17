@@ -183,7 +183,7 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
         " Username:  "
     };
     let user_placeholder = if state.provider_idx == 2 {
-        "(GCP Desktop Client ID)"
+        "(Auto: config, gogcli, or enter JSON path / ID)"
     } else if is_oauth {
         "(Client ID / Key)"
     } else {
@@ -215,7 +215,7 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
         " Password:  "
     };
     let pw_display = if state.provider_idx == 2 && state.password.is_empty() {
-        "(Client Secret / Optional)".to_string()
+        "(Auto detected / Optional)".to_string()
     } else if is_oauth && state.password.is_empty() {
         "(OAuth Token / Secret)".to_string()
     } else if state.password.is_empty() {
@@ -296,9 +296,9 @@ fn render_add_form(f: &mut Frame, app: &mut App, state: &AccountModalState, area
             0 => " Naver: ID and 2-step verification App Password (애플리케이션 비밀번호).",
             1 => " Apple iCloud: Apple ID email and iCloud App-Specific Password.",
             2 => match app.lang {
-                crate::i18n::Language::Ko => " Google: GCP '데스크톱 앱' Client ID 입력 후 [ 🌐 1-Click Login ] 클릭 (RCAL_GOOGLE_CLIENT_ID)",
-                crate::i18n::Language::Ja => " Google: GCPデスクトップClient ID入力後 [ 🌐 1-Click Login ]をクリック",
-                _ => " Google: Enter GCP Desktop Client ID then click [ 🌐 1-Click Login ] (or env var)",
+                crate::i18n::Language::Ko => " Google: [ 🌐 1-Click Login ] 클릭 시 브라우저 즉시 연결 (gogcli/JSON 자동 감지 지원)",
+                crate::i18n::Language::Ja => " Google: [ 🌐 1-Click Login ]をクリックしてブラウザログイン (自動認識)",
+                _ => " Google: Click [ 🌐 1-Click Login ] for instant browser sign-in (auto-detects gogcli/JSON)",
             },
             3 => match app.lang {
                 crate::i18n::Language::Ko => " MS 365: [ 🌐 1-Click Login ] 클릭으로 브라우저 즉시 로그인 (공용 Client ID 지원)",

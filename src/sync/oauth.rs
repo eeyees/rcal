@@ -68,27 +68,63 @@ impl OAuth2Config {
         user_id: Option<&str>,
         user_secret: Option<&str>,
     ) -> (String, String) {
-        let env_id = std::env::var("RCAL_GOOGLE_CLIENT_ID").ok();
-        let env_secret = std::env::var("RCAL_GOOGLE_CLIENT_SECRET").ok();
+        let (cid, sec, _) = Self::resolve_google_credentials_with_source(user_id, user_secret);
+        (cid, sec)
+    }
 
-        let client_id = user_id
+    pub fn resolve_google_credentials_with_source(
+        user_id: Option<&str>,
+        user_secret: Option<&str>,
+    ) -> (String, String, String) {
+        // 1. If user passed a file path in user_id (.json or existing file)
+        if let Some(raw_input) = user_id.map(str::trim).filter(|s| !s.is_empty()) {
+            let path = std::path::Path::new(raw_input);
+            if (raw_input.ends_with(".json") || path.exists()) && path.is_file() {
+                if let Some((cid, sec)) = load_credentials_from_file(path) {
+                    return (cid, sec, format!("File: {}", path.display()));
+                }
+            }
+        }
+
+        // 2. User explicitly provided custom client ID
+        let user_id_clean = user_id.map(str::trim).filter(|s| !s.is_empty());
+        if let Some(uid) = user_id_clean {
+            if !Self::is_placeholder_google_client(uid) {
+                let sec = user_secret.map(str::trim).unwrap_or_default().to_string();
+                return (uid.to_string(), sec, "Custom user input".to_string());
+            }
+        }
+
+        // 3. Environment variables
+        if let Ok(env_id) = std::env::var("RCAL_GOOGLE_CLIENT_ID").or_else(|_| std::env::var("GOOGLE_CLIENT_ID")) {
+            let env_id = env_id.trim().to_string();
+            if !env_id.is_empty() {
+                let env_sec = std::env::var("RCAL_GOOGLE_CLIENT_SECRET")
+                    .or_else(|_| std::env::var("GOOGLE_CLIENT_SECRET"))
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string();
+                return (env_id, env_sec, "Environment variable".to_string());
+            }
+        }
+
+        // 4. Auto-detect from filesystem (rcal config, gogcli config, Downloads)
+        if let Some((cid, sec, path)) = find_google_credentials_file() {
+            return (cid, sec, format!("Auto-detected: {}", path.display()));
+        }
+
+        // 5. Fallback to default desktop client ID
+        let sec = user_secret
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string)
-            .or(env_id)
-            .unwrap_or_else(|| {
-                // Default registered Desktop Application Client ID for rcal open-source
-                Self::GOOGLE_PLACEHOLDER_CLIENT_ID.to_string()
-            });
-
-        let client_secret = user_secret
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string)
-            .or(env_secret)
             .unwrap_or_default();
 
-        (client_id, client_secret)
+        (
+            Self::GOOGLE_PLACEHOLDER_CLIENT_ID.to_string(),
+            sec,
+            "Default rcal client".to_string(),
+        )
     }
 
     pub fn resolve_microsoft_credentials(
@@ -507,17 +543,146 @@ pub async fn execute_microsoft_one_click_flow(
     Ok(account)
 }
 
+/// Parse client_id and client_secret from a Google Cloud credentials JSON string
+pub fn parse_google_credentials_json(content: &str) -> Option<(String, String)> {
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(content) {
+        // 1. check "installed" (Standard desktop app)
+        if let Some(installed) = val.get("installed") {
+            if let Some(client_id) = installed.get("client_id").and_then(|v| v.as_str()) {
+                let client_secret = installed
+                    .get("client_secret")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                return Some((client_id.trim().to_string(), client_secret.trim().to_string()));
+            }
+        }
+        // 2. check "web"
+        if let Some(web) = val.get("web") {
+            if let Some(client_id) = web.get("client_id").and_then(|v| v.as_str()) {
+                let client_secret = web
+                    .get("client_secret")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                return Some((client_id.trim().to_string(), client_secret.trim().to_string()));
+            }
+        }
+        // 3. check root "client_id" (Flat config like gogcli)
+        if let Some(client_id) = val.get("client_id").and_then(|v| v.as_str()) {
+            let client_secret = val
+                .get("client_secret")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+            return Some((client_id.trim().to_string(), client_secret.trim().to_string()));
+        }
+    }
+    None
+}
+
+/// Load credentials from a file path
+pub fn load_credentials_from_file<P: AsRef<std::path::Path>>(path: P) -> Option<(String, String)> {
+    let p = path.as_ref();
+    if p.exists() && p.is_file() {
+        if let Ok(content) = std::fs::read_to_string(p) {
+            return parse_google_credentials_json(&content);
+        }
+    }
+    None
+}
+
+/// Automatically locate Google OAuth credentials file from common locations
+pub fn find_google_credentials_file() -> Option<(String, String, std::path::PathBuf)> {
+    let mut candidate_paths = Vec::new();
+
+    // 1. Explicit env vars
+    if let Ok(path_str) = std::env::var("RCAL_GOOGLE_CREDENTIALS") {
+        candidate_paths.push(std::path::PathBuf::from(path_str));
+    }
+    if let Ok(path_str) = std::env::var("GOOGLE_APPLICATION_CREDENTIALS") {
+        candidate_paths.push(std::path::PathBuf::from(path_str));
+    }
+
+    // 2. rcal config dir
+    if let Some(config_dir) = dirs::config_dir() {
+        candidate_paths.push(config_dir.join("rcal").join("client_secret.json"));
+        candidate_paths.push(config_dir.join("rcal").join("credentials.json"));
+        candidate_paths.push(config_dir.join("gogcli").join("credentials.json"));
+    }
+
+    // 3. home dir ~/.config and ~/.gogcli
+    if let Some(home) = dirs::home_dir() {
+        candidate_paths.push(home.join(".config").join("rcal").join("client_secret.json"));
+        candidate_paths.push(home.join(".config").join("rcal").join("credentials.json"));
+        candidate_paths.push(home.join(".config").join("gogcli").join("credentials.json"));
+        candidate_paths.push(home.join(".gogcli").join("credentials.json"));
+    }
+
+    for path in candidate_paths {
+        if let Some((cid, sec)) = load_credentials_from_file(&path) {
+            return Some((cid, sec, path));
+        }
+    }
+
+    // 4. Check Downloads directory for client_secret*.json
+    if let Some(download_dir) = dirs::download_dir() {
+        if let Ok(entries) = std::fs::read_dir(download_dir) {
+            let mut matches = Vec::new();
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if let Some(file_name) = p.file_name().and_then(|n| n.to_str()) {
+                    if file_name.starts_with("client_secret") && file_name.ends_with(".json") {
+                        if let Ok(meta) = entry.metadata() {
+                            let mtime = meta.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                            matches.push((mtime, p));
+                        }
+                    }
+                }
+            }
+            matches.sort_by(|a, b| b.0.cmp(&a.0)); // latest first
+            for (_, p) in matches {
+                if let Some((cid, sec)) = load_credentials_from_file(&p) {
+                    return Some((cid, sec, p));
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Save credentials file to standard ~/.config/rcal/client_secret.json
+pub fn save_credentials_file<P: AsRef<std::path::Path>>(src_path: P) -> Result<std::path::PathBuf> {
+    let src = src_path.as_ref();
+    if !src.exists() {
+        return Err(anyhow!("Source credentials file does not exist: {}", src.display()));
+    }
+    let content = std::fs::read_to_string(src)
+        .with_context(|| format!("Failed to read source file: {}", src.display()))?;
+
+    if parse_google_credentials_json(&content).is_none() {
+        return Err(anyhow!(
+            "Invalid Google credentials JSON file. Expected Google OAuth desktop app JSON."
+        ));
+    }
+
+    let target_dir = dirs::config_dir()
+        .map(|p| p.join("rcal"))
+        .or_else(|| dirs::home_dir().map(|h| h.join(".config").join("rcal")))
+        .ok_or_else(|| anyhow!("Could not determine configuration directory"))?;
+
+    std::fs::create_dir_all(&target_dir)?;
+    let target_file = target_dir.join("client_secret.json");
+    std::fs::write(&target_file, &content)?;
+    Ok(target_file)
+}
+
 /// Complete 1-Click Browser OAuth2 Flow for Google Calendar
 pub async fn execute_google_one_click_flow(
     user_id: Option<&str>,
     user_secret: Option<&str>,
 ) -> Result<CalDavAccount> {
-    let (client_id, client_secret) = OAuth2Config::resolve_google_credentials(user_id, user_secret);
-    if OAuth2Config::is_placeholder_google_client(&client_id) {
-        return Err(anyhow!(
-            "Google Client ID가 필요합니다:\n• Google Cloud Console에서 '데스크톱 앱' OAuth Client ID 발급 후 입력\n• 또는 RCAL_GOOGLE_CLIENT_ID 환경변수를 설정해주세요."
-        ));
-    }
+    let (client_id, client_secret, source) =
+        OAuth2Config::resolve_google_credentials_with_source(user_id, user_secret);
+
     let config = OAuth2Config::for_google(&client_id, &client_secret);
 
     let state = uuid::Uuid::new_v4().to_string();
@@ -533,7 +698,13 @@ pub async fn execute_google_one_click_flow(
     let code = listen_for_oauth_code(8088, &state, 120, "Google Calendar").await?;
 
     // Exchange authorization code for tokens
-    let token_resp = config.exchange_code(&code).await?;
+    let token_resp = config.exchange_code(&code).await.map_err(|e| {
+        anyhow!(
+            "Google OAuth 토큰 발급 실패 (Source: {}):\n{}\n\n💡 Tip: Google Cloud Console에서 데스크톱 앱 JSON을 내려받아 다음 명령어로 등록하면 가장 확실합니다:\n  rcal auth set-credentials ~/Downloads/client_secret_*.json",
+            source,
+            e
+        )
+    })?;
 
     // Auto-detect user email or account label
     let email = fetch_google_user_email(&token_resp.access_token)
@@ -601,5 +772,52 @@ pub mod urlencoding {
             i += 1;
         }
         String::from_utf8_lossy(&result).to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_google_credentials_json_installed() {
+        let json = r#"{
+            "installed": {
+                "client_id": "test-client-id.apps.googleusercontent.com",
+                "client_secret": "test-secret-123",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth"
+            }
+        }"#;
+        let res = parse_google_credentials_json(json);
+        assert_eq!(
+            res,
+            Some((
+                "test-client-id.apps.googleusercontent.com".to_string(),
+                "test-secret-123".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_google_credentials_json_flat() {
+        let json = r#"{
+            "client_id": "flat-client-id.apps.googleusercontent.com",
+            "client_secret": "flat-secret-456"
+        }"#;
+        let res = parse_google_credentials_json(json);
+        assert_eq!(
+            res,
+            Some((
+                "flat-client-id.apps.googleusercontent.com".to_string(),
+                "flat-secret-456".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn test_resolve_google_credentials_with_source() {
+        let (cid, _sec, src) = OAuth2Config::resolve_google_credentials_with_source(None, None);
+        assert!(!cid.is_empty());
+        assert!(!src.is_empty());
     }
 }

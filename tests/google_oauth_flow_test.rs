@@ -238,15 +238,11 @@ fn test_microsoft_preset_account_modal_interaction() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_google_one_click_placeholder_rejection() {
-    use rcal::sync::oauth::execute_google_one_click_flow;
-
-    // When no client ID or dummy placeholder is provided, execute_google_one_click_flow returns helpful error
-    let res = execute_google_one_click_flow(None, None).await;
-    assert!(res.is_err());
-    let err_msg = res.unwrap_err().to_string();
-    assert!(err_msg.contains("Google Client ID가 필요합니다"));
-    assert!(err_msg.contains("RCAL_GOOGLE_CLIENT_ID"));
+async fn test_google_one_click_credentials_resolution() {
+    // When no client ID is provided, credentials resolution finds source without blocking
+    let (cid, _sec, source) = OAuth2Config::resolve_google_credentials_with_source(None, None);
+    assert!(!cid.is_empty());
+    assert!(!source.is_empty());
 }
 
 #[test]

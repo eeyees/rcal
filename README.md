@@ -233,6 +233,27 @@ flowchart LR
 | **TimeTree** (🇯🇵) | Community / Bridge | 🔍 **Under Evaluation** | Japan's #1 shared calendar (public developer API currently closed; monitoring ecosystem) |
 
 To configure your accounts, press `a` inside `rcal` or select the **Accounts** menu in the sidebar.  
+You can also authenticate directly from the command line without opening the TUI:
+
+```bash
+# 🌐 1-Click Google Calendar Authentication (opens browser for instant sign-in)
+rcal auth google
+
+# 🌐 Or authenticate with your own Google Cloud credentials JSON (gogcli style):
+rcal auth google ~/Downloads/client_secret_*.json
+
+# 💾 Save credentials JSON permanently to ~/.config/rcal/:
+rcal auth set-credentials ~/Downloads/client_secret_*.json
+
+# 🌐 1-Click Microsoft 365 / Outlook Authentication
+rcal auth ms
+
+# 📋 View registered cloud accounts
+rcal auth list
+```
+
+> **Auto-Detection**: `rcal` automatically searches for Google credentials in `~/.config/rcal/`, `~/.config/gogcli/credentials.json` (shares setup with `gogcli`!), and `~/Downloads/client_secret*.json`.
+
 For in-depth analysis and roadmap on East Asian (Japan & China) providers, refer to the [East Asian Calendar Integration Plan](docs/cloud_integration_plan.md).
 
 ---

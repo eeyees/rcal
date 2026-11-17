@@ -458,6 +458,13 @@ fn handle_key_event(app: &mut App, key: KeyEvent) -> Result<()> {
                         cal_state.selected_calendar_idx = num;
                     }
                 }
+                // Number 0: toggle 10th calendar (index 9)
+                KeyCode::Char('0') => {
+                    if let Some(cal) = app.calendars.get(9) {
+                        cal_state.toggle_calendar_id(&cal.id, cal.enabled);
+                        cal_state.selected_calendar_idx = 9;
+                    }
+                }
                 // Save and apply visibility changes: Enter, 's', or 'S'
                 KeyCode::Enter | KeyCode::Char('s') | KeyCode::Char('S') => {
                     cal_action_save_visibility = true;

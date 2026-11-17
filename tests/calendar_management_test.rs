@@ -264,4 +264,94 @@ mod tests {
         let cals = app.db.get_calendars().unwrap();
         assert_eq!(cals[0].enabled, false);
     }
+
+    #[test]
+    fn test_calendar_modal_more_than_9_calendars_shows_all_numbers() {
+        use ratatui::backend::TestBackend;
+        use ratatui::Terminal;
+        use rcal::app::App;
+
+        let db = Database::in_memory().unwrap();
+
+        // Create 11 additional calendars so total is 12 (default + 11)
+        for i in 1..=11 {
+            let cal = Calendar {
+                id: format!("cal_test_{}", i),
+                account_id: None,
+                name: format!("Cal {}", i),
+                color_code: "#4285F4".to_string(),
+                provider: ProviderType::Local,
+                enabled: true,
+                is_default: false,
+                remote_url: None,
+                ctag: None,
+            };
+            db.save_calendar(&cal).unwrap();
+        }
+
+        let mut app = App::new(db).unwrap();
+        assert!(app.calendars.len() >= 12);
+
+        app.open_calendar_modal();
+
+        let backend = TestBackend::new(100, 30);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|f| {
+                rcal::ui::render(f, &mut app);
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content_str: String = buffer.content().iter().map(|c| c.symbol()).collect();
+
+        // Verify that numbers 1 through 10+ appear in the rendered modal
+        assert!(content_str.contains("[ 1]"));
+        assert!(content_str.contains("[ 9]"));
+        assert!(content_str.contains("[10]"));
+    }
+
+    #[test]
+    fn test_calendar_modal_0_key_toggles_10th_calendar() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use rcal::app::{ActiveModal, App};
+        use rcal::events::handle_crossterm_event;
+
+        let db = Database::in_memory().unwrap();
+        for i in 1..=10 {
+            let cal = Calendar {
+                id: format!("cal_test_{}", i),
+                account_id: None,
+                name: format!("Cal {}", i),
+                color_code: "#4285F4".to_string(),
+                provider: ProviderType::Local,
+                enabled: true,
+                is_default: false,
+                remote_url: None,
+                ctag: None,
+            };
+            db.save_calendar(&cal).unwrap();
+        }
+
+        let mut app = App::new(db).unwrap();
+        assert!(app.calendars.len() >= 11);
+        let tenth_id = app.calendars[9].id.clone();
+        assert!(app.calendars[9].enabled);
+
+        let make_key =
+            |code: KeyCode| crossterm::event::Event::Key(KeyEvent::new(code, KeyModifiers::NONE));
+
+        // Open calendar modal
+        handle_crossterm_event(&mut app, make_key(KeyCode::Char('v'))).unwrap();
+
+        // Press '0' to toggle 10th calendar (index 9)
+        handle_crossterm_event(&mut app, make_key(KeyCode::Char('0'))).unwrap();
+
+        if let ActiveModal::CalendarManager(ref state) = app.modal {
+            assert_eq!(state.is_calendar_enabled(&tenth_id, true), false);
+            assert_eq!(state.selected_calendar_idx, 9);
+        } else {
+            panic!("Modal should be CalendarManager");
+        }
+    }
 }
